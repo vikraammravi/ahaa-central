@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Banner } from "@/components/shared/Banner";
 import { LoadingState, Spinner } from "@/components/shared/Spinner";
 import { supabase } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import type { CatalogItem } from "@/lib/supabase/types";
 
 const HST = 0.13;
@@ -24,6 +25,7 @@ function stockBadge(available: number): StatusKind {
 
 export default function BranchOrderPage() {
   const router = useRouter();
+  const { userId, profile } = useCurrentUser();
   const [items, setItems] = useState<CatalogItem[] | null>(null);
   const [qty, setQty] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
@@ -69,16 +71,9 @@ export default function BranchOrderPage() {
     setSubmitting(true);
     setError(null);
     try {
-      // Resolve current user's location
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
       if (!userId) throw new Error("Not signed in");
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("location_id")
-        .eq("id", userId)
-        .single();
-      if (!profile?.location_id) throw new Error("No branch assigned to your account");
+      if (!profile?.location_id)
+        throw new Error("No branch assigned to your account");
 
       const { data: order, error: orderErr } = await supabase
         .from("orders")

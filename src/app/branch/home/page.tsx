@@ -10,17 +10,13 @@ import { KpiGrid, type Kpi } from "@/components/shared/KpiCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Banner } from "@/components/shared/Banner";
 import { supabase } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import { ORDER_STATUS_BADGE, ORDER_STATUS_LABEL } from "@/lib/orders";
 import { StatusBadge } from "@/components/ui/status-badge";
-import type {
-  CateringEvent,
-  Location,
-  Order,
-  Profile,
-} from "@/lib/supabase/types";
+import type { CateringEvent, Location, Order } from "@/lib/supabase/types";
 
 export default function BranchHomePage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { profile, loading: userLoading, error: userError } = useCurrentUser();
   const [branch, setBranch] = useState<Location | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [catering, setCatering] = useState<CateringEvent[]>([]);
@@ -28,47 +24,38 @@ export default function BranchHomePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (userLoading) return;
+    if (!profile?.location_id) {
+      setLoading(false);
+      return;
+    }
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) {
-        setLoading(false);
-        return;
-      }
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", u.user.id)
-        .single();
-      setProfile(p as Profile);
-
-      if (p?.location_id) {
-        const [{ data: l }, { data: o, error: oe }, { data: c, error: ce }] =
-          await Promise.all([
-            supabase
-              .from("locations")
-              .select("*")
-              .eq("id", p.location_id)
-              .single(),
-            supabase
-              .from("orders")
-              .select("*")
-              .eq("location_id", p.location_id)
-              .order("created_at", { ascending: false }),
-            supabase
-              .from("catering_events")
-              .select("*")
-              .eq("location_id", p.location_id)
-              .order("event_datetime"),
-          ]);
-        setBranch(l as Location);
-        if (oe) setError(oe.message);
-        else setOrders((o as Order[]) ?? []);
-        if (ce) setError(ce.message);
-        else setCatering((c as CateringEvent[]) ?? []);
-      }
+      const [{ data: l }, { data: o, error: oe }, { data: c, error: ce }] =
+        await Promise.all([
+          supabase
+            .from("locations")
+            .select("*")
+            .eq("id", profile.location_id)
+            .single(),
+          supabase
+            .from("orders")
+            .select("*")
+            .eq("location_id", profile.location_id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("catering_events")
+            .select("*")
+            .eq("location_id", profile.location_id)
+            .order("event_datetime"),
+        ]);
+      setBranch(l as Location);
+      if (oe) setError(oe.message);
+      else setOrders((o as Order[]) ?? []);
+      if (ce) setError(ce.message);
+      else setCatering((c as CateringEvent[]) ?? []);
       setLoading(false);
     })();
-  }, []);
+  }, [userLoading, profile?.location_id]);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -112,6 +99,9 @@ export default function BranchHomePage() {
     },
   ];
 
+  const pageError = error ?? userError;
+  const showLoading = userLoading || loading;
+
   return (
     <div className="max-w-[1200px] mx-auto space-y-4 lg:space-y-6">
       <PageHeader
@@ -120,7 +110,7 @@ export default function BranchHomePage() {
         subtitle="Central kitchen and catering — all in one place."
       />
 
-      {error && <Banner tone="danger">{error}</Banner>}
+      {pageError && <Banner tone="danger">{pageError}</Banner>}
 
       <Card className="bg-forest text-white border-transparent">
         <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -143,7 +133,7 @@ export default function BranchHomePage() {
         </CardContent>
       </Card>
 
-      {loading ? (
+      {showLoading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="h-24 bg-muted animate-pulse rounded-2xl" />
@@ -165,7 +155,7 @@ export default function BranchHomePage() {
             </Link>
           </CardHeader>
           <CardContent className="divide-y divide-border">
-            {orders.length === 0 && !loading && (
+            {orders.length === 0 && !showLoading && (
               <EmptyState
                 title="No orders yet"
                 body="Start your first daily restock."
@@ -203,7 +193,7 @@ export default function BranchHomePage() {
             </Link>
           </CardHeader>
           <CardContent className="divide-y divide-border">
-            {upcomingCatering.length === 0 && !loading && (
+            {upcomingCatering.length === 0 && !showLoading && (
               <EmptyState
                 title="No events booked"
                 body="Log a catering booking to start tracking prep and payments."

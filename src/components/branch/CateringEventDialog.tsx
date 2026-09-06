@@ -6,24 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
+import { FormSelect } from "@/components/shared/FormSelect";
 import { supabase } from "@/lib/supabase/client";
+import { CATERING_STATUSES, CATERING_STATUS_LABEL } from "@/lib/catering";
 import type { CateringEvent, CateringStatus } from "@/lib/supabase/types";
 
 type Mode = "create" | "edit";
-
-const STATUSES: CateringStatus[] = [
-  "INQUIRY",
-  "CONFIRMED",
-  "COMPLETED",
-  "CANCELLED",
-];
-
-const statusLabel: Record<CateringStatus, string> = {
-  INQUIRY: "Inquiry",
-  CONFIRMED: "Confirmed",
-  COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
-};
 
 // Reusable create/edit dialog for a branch's catering event.
 // Pass no `event` for create; pass one for edit.
@@ -205,18 +193,12 @@ export function CateringEventDialog({
           />
         </FormField>
         <FormField label="Status" htmlFor="cx-status">
-          <select
+          <FormSelect<CateringStatus>
             id="cx-status"
             value={status}
-            onChange={(e) => setStatus(e.target.value as CateringStatus)}
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {statusLabel[s]}
-              </option>
-            ))}
-          </select>
+            onChange={setStatus}
+            options={CATERING_STATUSES.map((s) => ({ value: s, label: CATERING_STATUS_LABEL[s] }))}
+          />
         </FormField>
       </div>
 

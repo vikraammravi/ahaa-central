@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
+import { FormSelect } from "@/components/shared/FormSelect";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase/client";
 import type {
@@ -54,6 +55,13 @@ export function ProfileEditDialog({
     onSaved();
   }
 
+  const branchOptions = [
+    { value: "", label: "—" },
+    ...locations
+      .filter((l) => !l.is_central)
+      .map((l) => ({ value: l.id, label: l.name })),
+  ];
+
   return (
     <FormDialog
       open={open}
@@ -82,27 +90,27 @@ export function ProfileEditDialog({
 
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Role" htmlFor="p-role">
-          <select
+          <FormSelect<UserRole>
             id="p-role"
             value={role}
-            onChange={(e) => setRole(e.target.value as UserRole)}
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-          >
-            <option value="CENTRAL_ADMIN">Central Admin</option>
-            <option value="BRANCH_MANAGER">Branch Manager</option>
-          </select>
+            onChange={setRole}
+            options={[
+              { value: "CENTRAL_ADMIN", label: "Central Admin" },
+              { value: "BRANCH_MANAGER", label: "Branch Manager" },
+            ]}
+          />
         </FormField>
         <FormField label="Status" htmlFor="p-status">
-          <select
+          <FormSelect<ProfileStatus>
             id="p-status"
             value={status}
-            onChange={(e) => setStatus(e.target.value as ProfileStatus)}
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-          >
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="disabled">Disabled</option>
-          </select>
+            onChange={setStatus}
+            options={[
+              { value: "active", label: "Active" },
+              { value: "pending", label: "Pending" },
+              { value: "disabled", label: "Disabled" },
+            ]}
+          />
         </FormField>
       </div>
 
@@ -115,22 +123,14 @@ export function ProfileEditDialog({
             : "Assign the branch this manager will operate."
         }
       >
-        <select
+        <FormSelect
           id="p-loc"
           value={locationId}
-          onChange={(e) => setLocationId(e.target.value)}
+          onChange={setLocationId}
+          options={branchOptions}
           disabled={role === "CENTRAL_ADMIN"}
-          className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm disabled:opacity-50"
-        >
-          <option value="">—</option>
-          {locations
-            .filter((l) => !l.is_central)
-            .map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-        </select>
+          className="disabled:opacity-50"
+        />
       </FormField>
     </FormDialog>
   );

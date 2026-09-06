@@ -6,16 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
+import { FormSelect } from "@/components/shared/FormSelect";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem, UnitMeasurement } from "@/lib/supabase/types";
 
-const CATEGORIES = ["Batter", "Curry", "Chutney", "Sweet", "Pantry"];
-const UNITS: UnitMeasurement[] = ["Bucket", "Tray", "Piece", "Can"];
+const CATEGORIES = ["Batter", "Curry", "Chutney", "Sweet", "Pantry"] as const;
+const UNITS: readonly UnitMeasurement[] = ["Bucket", "Tray", "Piece", "Can"];
 
-type Mode = "create" | "edit";
-
-// Reusable — pass no `item` to create; pass one to edit.
-// Optional `trigger` overrides the default "Add Item" button.
 export function CatalogItemDialog({
   item,
   trigger,
@@ -29,10 +26,10 @@ export function CatalogItemDialog({
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 }) {
-  const mode: Mode = item ? "edit" : "create";
+  const mode = item ? "edit" : "create";
 
   const [name, setName] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [unit, setUnit] = useState<UnitMeasurement>(UNITS[0]);
   const [price, setPrice] = useState("");
   const [isTaxable, setIsTaxable] = useState(true);
@@ -68,7 +65,9 @@ export function CatalogItemDialog({
     const { error } =
       mode === "edit"
         ? await supabase.from("catalog_items").update(payload).eq("id", item!.id)
-        : await supabase.from("catalog_items").insert({ ...payload, available_stock: 0 });
+        : await supabase
+            .from("catalog_items")
+            .insert({ ...payload, available_stock: 0 });
     if (error) throw new Error(error.message);
     onSaved?.();
   }
@@ -105,28 +104,20 @@ export function CatalogItemDialog({
 
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Category" htmlFor="ci-cat">
-          <select
+          <FormSelect
             id="ci-cat"
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
+            onChange={setCategory}
+            options={CATEGORIES}
+          />
         </FormField>
         <FormField label="Unit" htmlFor="ci-unit">
-          <select
+          <FormSelect<UnitMeasurement>
             id="ci-unit"
             value={unit}
-            onChange={(e) => setUnit(e.target.value as UnitMeasurement)}
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-          >
-            {UNITS.map((u) => (
-              <option key={u}>{u}</option>
-            ))}
-          </select>
+            onChange={setUnit}
+            options={UNITS}
+          />
         </FormField>
       </div>
 

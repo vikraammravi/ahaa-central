@@ -16,6 +16,7 @@ import {
   ORDER_STATUS_BADGE,
   ORDER_STATUS_FLOW,
   ORDER_STATUS_LABEL,
+  nextAdminStatus,
 } from "@/lib/orders";
 import type { Order, OrderLine, OrderStatus } from "@/lib/supabase/types";
 
@@ -23,14 +24,6 @@ type OrderWithLocation = Order & { locations: { name: string } | null };
 type LineWithItem = OrderLine & {
   catalog_items: { name: string; unit_type: string } | null;
 };
-
-// Admin advances: SUBMITTED → PREPARING → READY (stops).
-// Branch owns: READY → COMPLETED (via "Mark as Picked Up").
-function adminNext(status: OrderStatus): OrderStatus | null {
-  if (status === "SUBMITTED") return "PREPARING";
-  if (status === "PREPARING") return "READY";
-  return null;
-}
 
 export function OrderDetail({
   orderId,
@@ -122,7 +115,7 @@ export function OrderDetail({
 
   async function advanceAdmin() {
     if (!order) return;
-    const next = adminNext(order.status);
+    const next = nextAdminStatus(order.status);
     if (!next) return;
     const { error } = await supabase
       .from("orders")
@@ -181,7 +174,7 @@ export function OrderDetail({
 
   const requested = Number(order.total_amount);
   const final = Number(order.final_total_amount);
-  const adminAdvanceTarget = canEdit ? adminNext(order.status) : null;
+  const adminAdvanceTarget = canEdit ? nextAdminStatus(order.status) : null;
   const canPickup = !canEdit && order.status === "READY";
   const canPickupEdit = canPickup; // branch may adjust at pickup time
   const canCancel = !canEdit && order.status === "SUBMITTED";

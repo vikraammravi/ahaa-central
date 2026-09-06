@@ -5,7 +5,7 @@ import { Users, MapPin, Clock, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Banner } from "@/components/shared/Banner";
@@ -13,20 +13,9 @@ import { LoadingState } from "@/components/shared/Spinner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { CateringEventDialog } from "@/components/branch/CateringEventDialog";
 import { supabase } from "@/lib/supabase/client";
-import type { CateringEvent, CateringStatus } from "@/lib/supabase/types";
-
-const statusKind: Record<CateringStatus, StatusKind> = {
-  INQUIRY: "pending",
-  CONFIRMED: "in-stock",
-  COMPLETED: "completed",
-  CANCELLED: "error",
-};
-const statusLabel: Record<CateringStatus, string> = {
-  INQUIRY: "Inquiry",
-  CONFIRMED: "Confirmed",
-  COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
-};
+import { useCurrentUser } from "@/lib/useCurrentUser";
+import { CATERING_STATUS_BADGE, CATERING_STATUS_LABEL } from "@/lib/catering";
+import type { CateringEvent } from "@/lib/supabase/types";
 
 type ChecklistItem = { label: string; done?: boolean };
 
@@ -37,8 +26,9 @@ function checklistProgress(raw: unknown): { done: number; total: number } {
 }
 
 export default function BranchCateringPage() {
+  const { profile } = useCurrentUser();
+  const locationId = profile?.location_id ?? null;
   const [events, setEvents] = useState<CateringEvent[] | null>(null);
-  const [locationId, setLocationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<CateringEvent | null>(null);
@@ -46,17 +36,7 @@ export default function BranchCateringPage() {
   async function load() {
     setLoading(true);
     setError(null);
-
-    const { data: u } = await supabase.auth.getUser();
-    if (u.user) {
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("location_id")
-        .eq("id", u.user.id)
-        .single();
-      setLocationId(p?.location_id ?? null);
-    }
-
+    // RLS scopes events to this branch manager's location automatically.
     const { data, error } = await supabase
       .from("catering_events")
       .select("*")
@@ -117,8 +97,8 @@ export default function BranchCateringPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge
-                        status={statusKind[e.status]}
-                        label={statusLabel[e.status]}
+                        status={CATERING_STATUS_BADGE[e.status]}
+                        label={CATERING_STATUS_LABEL[e.status]}
                       />
                     </div>
                   </div>

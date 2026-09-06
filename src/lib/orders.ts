@@ -17,7 +17,7 @@ export const ORDER_STATUS_BADGE: Record<OrderStatus, StatusKind> = {
   CANCELLED: "error",
 };
 
-// Order status flow used by the dispatch board and admin advance-status action
+// Happy-path flow shown in the timeline; excludes CANCELLED (side exit).
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
   "SUBMITTED",
   "PREPARING",
@@ -25,8 +25,13 @@ export const ORDER_STATUS_FLOW: OrderStatus[] = [
   "COMPLETED",
 ];
 
-export function nextOrderStatus(current: OrderStatus): OrderStatus | null {
-  const idx = ORDER_STATUS_FLOW.indexOf(current);
-  if (idx < 0 || idx === ORDER_STATUS_FLOW.length - 1) return null;
-  return ORDER_STATUS_FLOW[idx + 1];
+/**
+ * The next status the admin should advance to.
+ * Admin owns Submitted → Preparing → Ready; branch owns Ready → Completed.
+ * Returns null once the order is Ready — waiting on branch pickup.
+ */
+export function nextAdminStatus(current: OrderStatus): OrderStatus | null {
+  if (current === "SUBMITTED") return "PREPARING";
+  if (current === "PREPARING") return "READY";
+  return null;
 }
