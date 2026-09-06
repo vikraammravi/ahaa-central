@@ -15,9 +15,9 @@ import type { NavEntry } from "@/components/shared/SidebarNav";
 
 const entries: NavEntry[] = [
   { label: "Home", href: "/branch/home", icon: Home },
-  { label: "Daily Order", href: "/branch/order", icon: ShoppingBag },
+  { label: "New Kitchen Order", href: "/branch/order", icon: ShoppingBag },
+  { label: "Kitchen Orders", href: "/branch/invoices", icon: FileText },
   { label: "Catering", href: "/branch/catering", icon: CalendarDays },
-  { label: "Invoices", href: "/branch/invoices", icon: FileText },
   { label: "Notifications", href: "/branch/notifications", icon: Bell },
   { label: "Profile", href: "/branch/profile", icon: MoreHorizontal },
 ];
@@ -25,8 +25,8 @@ const entries: NavEntry[] = [
 const bottomItems: BottomNavItem[] = [
   { label: "Home", href: "/branch/home", icon: Home },
   { label: "Order", href: "/branch/order", icon: ShoppingBag },
+  { label: "Kitchen", href: "/branch/invoices", icon: FileText },
   { label: "Catering", href: "/branch/catering", icon: CalendarDays },
-  { label: "Invoices", href: "/branch/invoices", icon: FileText },
   { label: "More", href: "/branch/profile", icon: MoreHorizontal },
 ];
 

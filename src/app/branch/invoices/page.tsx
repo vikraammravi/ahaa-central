@@ -67,7 +67,7 @@ export default function BranchInvoicesPage() {
   return (
     <div className="max-w-[1000px] mx-auto space-y-5">
       <PageHeader
-        title="Orders"
+        title="Kitchen Orders"
         subtitle="Every order you've placed with the central kitchen."
       />
       {error && <Banner tone="danger">{error}</Banner>}
