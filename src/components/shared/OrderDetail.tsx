@@ -187,8 +187,22 @@ export function OrderDetail({
   const final = Number(order.final_total_amount);
   const adminAdvanceTarget = canEdit ? adminNext(order.status) : null;
   const canPickup = !canEdit && order.status === "READY";
-  const canPickupEdit = canPickup; // branch may adjust down at pickup time
+  const canPickupEdit = canPickup; // branch may adjust at pickup time
   const canCancel = !canEdit && order.status === "SUBMITTED";
+
+  // Live preview of the total based on current in-flight edits.
+  // Mirrors the DB trigger's math: HST 13% on taxable lines only.
+  const liveSubtotal = lines.reduce((s, l) => {
+    const q = edits[l.id]?.fulfilled ?? l.fulfilled_quantity;
+    return s + q * Number(l.unit_price);
+  }, 0);
+  const liveTax = lines.reduce((s, l) => {
+    const q = edits[l.id]?.fulfilled ?? l.fulfilled_quantity;
+    return l.is_taxable ? s + q * Number(l.unit_price) * 0.13 : s;
+  }, 0);
+  const liveTotal = liveSubtotal + liveTax;
+  const previewChanged =
+    canPickupEdit && Math.abs(liveTotal - final) > 0.005;
 
   const columns: Column<LineWithItem>[] = [
     {
@@ -215,10 +229,11 @@ export function OrderDetail({
       header: canPickupEdit ? "Picked Up" : "Fulfilled",
       align: "right",
       render: (r) => {
-        // Editable for admin (up to requested) OR for branch at pickup
-        // (down from what admin prepared — can't take more than was made).
+        // Editable for admin OR for branch at pickup. Both are capped at the
+        // originally requested quantity — branch can pick up more or less
+        // than what admin recorded, up to what they asked for.
         const editable = canEdit || canPickupEdit;
-        const maxValue = canEdit ? r.quantity : r.fulfilled_quantity;
+        const maxValue = r.quantity;
         if (!editable) return r.fulfilled_quantity;
         return (
           <Input
@@ -311,18 +326,38 @@ export function OrderDetail({
             />
           </CardHeader>
           <CardContent>
-            <div className={canEdit ? "grid grid-cols-3 gap-4 text-sm" : "grid grid-cols-2 gap-4 text-sm"}>
+            <div
+              className={
+                canEdit
+                  ? "grid grid-cols-3 gap-4 text-sm"
+                  : "grid grid-cols-2 gap-4 text-sm"
+              }
+            >
               <div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide">
                   Requested
                 </div>
-                <div className="mt-1 font-semibold">CA${requested.toFixed(2)}</div>
+                <div className="mt-1 font-semibold">
+                  CA${requested.toFixed(2)}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Final
+                  {canPickupEdit ? "You'll be charged" : "Final"}
                 </div>
-                <div className="mt-1 font-semibold">CA${final.toFixed(2)}</div>
+                <div
+                  className={
+                    "mt-1 font-semibold " +
+                    (canPickupEdit && previewChanged ? "text-saffron-hover" : "")
+                  }
+                >
+                  CA${(canPickupEdit ? liveTotal : final).toFixed(2)}
+                </div>
+                {canPickupEdit && previewChanged && (
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    was CA${final.toFixed(2)}
+                  </div>
+                )}
               </div>
               {canEdit && (
                 <div>
@@ -407,7 +442,9 @@ export function OrderDetail({
                 disabled={pickingUp}
               >
                 <PackageCheck className="size-4" />
-                {pickingUp ? "Confirming…" : "Mark as Picked Up"}
+                {pickingUp
+                  ? "Confirming…"
+                  : `Confirm Pickup · CA$${liveTotal.toFixed(2)}`}
               </Button>
             )}
 
