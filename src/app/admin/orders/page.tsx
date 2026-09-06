@@ -97,21 +97,7 @@ export default function AdminOrdersPage() {
       key: "final",
       header: "Final",
       align: "right",
-      render: (r) => {
-        const req = Number(r.total_amount);
-        const fin = Number(r.final_total_amount);
-        const diff = req - fin;
-        return (
-          <div>
-            <div>CA${fin.toFixed(2)}</div>
-            {diff > 0 && (
-              <div className="text-[11px] text-[#DC2626]">
-                −CA${diff.toFixed(2)} shortage
-              </div>
-            )}
-          </div>
-        );
-      },
+      render: (r) => `CA$${Number(r.final_total_amount).toFixed(2)}`,
     },
     {
       key: "status",

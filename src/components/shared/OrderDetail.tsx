@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PackageCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ import {
   ORDER_STATUS_BADGE,
   ORDER_STATUS_FLOW,
   ORDER_STATUS_LABEL,
-  nextOrderStatus,
 } from "@/lib/orders";
 import type { Order, OrderLine, OrderStatus } from "@/lib/supabase/types";
 
@@ -22,8 +22,14 @@ type LineWithItem = OrderLine & {
   catalog_items: { name: string; unit_type: string } | null;
 };
 
-// Reusable order-detail view. `canEdit` toggles inline fulfillment editing
-// and the "Advance status" button (admin only).
+// Admin advances: SUBMITTED → PREPARING → READY (stops).
+// Branch owns: READY → COMPLETED (via "Mark as Picked Up").
+function adminNext(status: OrderStatus): OrderStatus | null {
+  if (status === "SUBMITTED") return "PREPARING";
+  if (status === "PREPARING") return "READY";
+  return null;
+}
+
 export function OrderDetail({
   orderId,
   canEdit,
@@ -39,6 +45,7 @@ export function OrderDetail({
     Record<string, { fulfilled: number; reason: string }>
   >({});
   const [saving, setSaving] = useState(false);
+  const [pickingUp, setPickingUp] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -111,9 +118,9 @@ export function OrderDetail({
     }
   }
 
-  async function advance() {
+  async function advanceAdmin() {
     if (!order) return;
-    const next = nextOrderStatus(order.status);
+    const next = adminNext(order.status);
     if (!next) return;
     const { error } = await supabase
       .from("orders")
@@ -121,6 +128,18 @@ export function OrderDetail({
       .eq("id", order.id);
     if (error) setError(error.message);
     else load();
+  }
+
+  async function branchPickup() {
+    if (!order) return;
+    setPickingUp(true);
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: "COMPLETED" })
+      .eq("id", order.id);
+    if (error) setError(error.message);
+    else load();
+    setPickingUp(false);
   }
 
   if (loading) {
@@ -140,11 +159,10 @@ export function OrderDetail({
       header: "Product",
       render: (r) => (
         <div>
-          <div className="font-medium">
-            {r.catalog_items?.name ?? "—"}
-          </div>
+          <div className="font-medium">{r.catalog_items?.name ?? "—"}</div>
           <div className="text-xs text-muted-foreground">
-            {r.catalog_items?.unit_type ?? ""} · CA${Number(r.unit_price).toFixed(2)}
+            {r.catalog_items?.unit_type ?? ""} · CA$
+            {Number(r.unit_price).toFixed(2)}
           </div>
         </div>
       ),
@@ -184,35 +202,37 @@ export function OrderDetail({
           r.fulfilled_quantity
         ),
     },
-    {
-      key: "shortage",
-      header: "Shortage Reason",
-      hideOn: "sm",
-      render: (r) => {
-        const req = r.quantity;
-        const ful = edits[r.id]?.fulfilled ?? r.fulfilled_quantity;
-        if (req === ful) return <span className="text-muted-foreground">—</span>;
-        if (canEdit) {
-          return (
-            <Input
-              value={edits[r.id]?.reason ?? r.shortage_reason ?? ""}
-              onChange={(e) =>
-                setEdits((p) => ({
-                  ...p,
-                  [r.id]: {
-                    ...(p[r.id] ?? { fulfilled: r.fulfilled_quantity }),
-                    reason: e.target.value,
-                  },
-                }))
-              }
-              placeholder="e.g. Out of stock"
-              className="h-9"
-            />
-          );
-        }
-        return r.shortage_reason ?? "—";
-      },
-    },
+    // Shortage reason column only shown to admin (who enters it)
+    ...(canEdit
+      ? [
+          {
+            key: "shortage",
+            header: "Shortage Reason",
+            hideOn: "sm" as const,
+            render: (r: LineWithItem) => {
+              const req = r.quantity;
+              const ful = edits[r.id]?.fulfilled ?? r.fulfilled_quantity;
+              if (req === ful) return <span className="text-muted-foreground">—</span>;
+              return (
+                <Input
+                  value={edits[r.id]?.reason ?? r.shortage_reason ?? ""}
+                  onChange={(e) =>
+                    setEdits((p) => ({
+                      ...p,
+                      [r.id]: {
+                        ...(p[r.id] ?? { fulfilled: r.fulfilled_quantity }),
+                        reason: e.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="e.g. Out of stock"
+                  className="h-9"
+                />
+              );
+            },
+          },
+        ]
+      : []),
     {
       key: "line_total",
       header: "Final",
@@ -223,12 +243,19 @@ export function OrderDetail({
 
   const requested = Number(order.total_amount);
   const final = Number(order.final_total_amount);
-  const variance = requested - final;
-  const next = nextOrderStatus(order.status);
+  const adminAdvanceTarget = canEdit ? adminNext(order.status) : null;
+  const canPickup = !canEdit && order.status === "READY";
 
   return (
     <div className="space-y-5">
       {error && <Banner tone="danger">{error}</Banner>}
+
+      {canPickup && (
+        <Banner tone="success">
+          Your order is ready at the central kitchen. Confirm pickup below to
+          complete it.
+        </Banner>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
@@ -248,7 +275,7 @@ export function OrderDetail({
             />
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className={canEdit ? "grid grid-cols-3 gap-4 text-sm" : "grid grid-cols-2 gap-4 text-sm"}>
               <div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide">
                   Requested
@@ -261,19 +288,24 @@ export function OrderDetail({
                 </div>
                 <div className="mt-1 font-semibold">CA${final.toFixed(2)}</div>
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Variance
+              {canEdit && (
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide">
+                    Variance
+                  </div>
+                  <div
+                    className={
+                      "mt-1 font-semibold " +
+                      (requested - final > 0
+                        ? "text-[#C1272D]"
+                        : "text-[#15803D]")
+                    }
+                  >
+                    {requested - final > 0 ? "−" : ""}CA$
+                    {Math.abs(requested - final).toFixed(2)}
+                  </div>
                 </div>
-                <div
-                  className={
-                    "mt-1 font-semibold " +
-                    (variance > 0 ? "text-[#DC2626]" : "text-[#15803D]")
-                  }
-                >
-                  {variance > 0 ? "−" : ""}CA${Math.abs(variance).toFixed(2)}
-                </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -319,9 +351,27 @@ export function OrderDetail({
                 );
               })}
             </ol>
-            {canEdit && next && (
-              <Button className="w-full mt-4" onClick={advance}>
-                Advance to {ORDER_STATUS_LABEL[next]}
+
+            {adminAdvanceTarget && (
+              <Button className="w-full mt-4" onClick={advanceAdmin}>
+                Mark as {ORDER_STATUS_LABEL[adminAdvanceTarget]}
+              </Button>
+            )}
+
+            {canEdit && order.status === "READY" && (
+              <div className="mt-4 text-xs text-muted-foreground text-center">
+                Waiting for branch to pick up.
+              </div>
+            )}
+
+            {canPickup && (
+              <Button
+                className="w-full mt-4"
+                onClick={branchPickup}
+                disabled={pickingUp}
+              >
+                <PackageCheck className="size-4" />
+                {pickingUp ? "Confirming…" : "Mark as Picked Up"}
               </Button>
             )}
           </CardContent>
@@ -331,11 +381,7 @@ export function OrderDetail({
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold">Line Items</h2>
         {canEdit && (
-          <Button
-            size="sm"
-            disabled={!dirty || saving}
-            onClick={saveFulfillment}
-          >
+          <Button size="sm" disabled={!dirty || saving} onClick={saveFulfillment}>
             {saving ? "Saving…" : "Save Fulfillment"}
           </Button>
         )}
@@ -351,5 +397,4 @@ export function OrderDetail({
   );
 }
 
-// Only exported so pages can use consistent types
 export type { OrderStatus };

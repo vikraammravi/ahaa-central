@@ -13,8 +13,14 @@ import {
   ORDER_STATUS_BADGE,
   ORDER_STATUS_FLOW,
   ORDER_STATUS_LABEL,
-  nextOrderStatus,
 } from "@/lib/orders";
+
+// Admin advances up to READY only; branch owns COMPLETED via pickup.
+function adminNext(status: OrderStatus): OrderStatus | null {
+  if (status === "SUBMITTED") return "PREPARING";
+  if (status === "PREPARING") return "READY";
+  return null;
+}
 import type { Order, OrderStatus } from "@/lib/supabase/types";
 
 type OrderWithLocation = Order & { locations: { name: string } | null };
@@ -54,7 +60,7 @@ export default function AdminDispatchPage() {
   }, [orders]);
 
   async function advance(order: OrderWithLocation) {
-    const next = nextOrderStatus(order.status);
+    const next = adminNext(order.status);
     if (!next) return;
     const { error } = await supabase
       .from("orders")
@@ -96,7 +102,7 @@ export default function AdminDispatchPage() {
               <div className="space-y-2">
                 {grouped[col].length === 0 && <EmptyState title="No orders" />}
                 {grouped[col].map((o) => {
-                  const next = nextOrderStatus(o.status);
+                  const next = adminNext(o.status);
                   return (
                     <Card key={o.id}>
                       <CardContent className="p-3 space-y-2">
@@ -126,7 +132,7 @@ export default function AdminDispatchPage() {
                             className="w-full"
                             onClick={() => advance(o)}
                           >
-                            Advance to {ORDER_STATUS_LABEL[next]}
+                            Mark as {ORDER_STATUS_LABEL[next]}
                           </Button>
                         )}
                       </CardContent>
