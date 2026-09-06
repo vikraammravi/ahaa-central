@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Plus, Users, MapPin, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Users, MapPin, Clock, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Banner } from "@/components/shared/Banner";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { CateringEventDialog } from "@/components/branch/CateringEventDialog";
 import { supabase } from "@/lib/supabase/client";
 import type { CateringEvent, CateringStatus } from "@/lib/supabase/types";
 
@@ -36,20 +37,46 @@ function checklistProgress(raw: unknown): { done: number; total: number } {
 
 export default function BranchCateringPage() {
   const [events, setEvents] = useState<CateringEvent[] | null>(null);
+  const [locationId, setLocationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<CateringEvent | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+
+    const { data: u } = await supabase.auth.getUser();
+    if (u.user) {
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("location_id")
+        .eq("id", u.user.id)
+        .single();
+      setLocationId(p?.location_id ?? null);
+    }
+
+    const { data, error } = await supabase
+      .from("catering_events")
+      .select("*")
+      .order("event_datetime");
+    if (error) setError(error.message);
+    else setEvents(data as CateringEvent[]);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("catering_events")
-        .select("*")
-        .order("event_datetime");
-      if (error) setError(error.message);
-      else setEvents(data as CateringEvent[]);
-      setLoading(false);
-    })();
+    load();
   }, []);
+
+  async function handleDelete(id: string) {
+    const { error } = await supabase
+      .from("catering_events")
+      .delete()
+      .eq("id", id);
+    if (error) setError(error.message);
+    else load();
+  }
 
   return (
     <div className="max-w-[900px] mx-auto space-y-4">
@@ -57,9 +84,7 @@ export default function BranchCateringPage() {
         title="Catering"
         subtitle="Upcoming events at your branch."
         actions={
-          <Button size="lg" disabled>
-            <Plus className="size-4" /> Add Event
-          </Button>
+          <CateringEventDialog locationId={locationId} onSaved={load} />
         }
       />
       {error && <Banner tone="danger">{error}</Banner>}
@@ -71,7 +96,10 @@ export default function BranchCateringPage() {
           ))}
         </div>
       ) : !events || events.length === 0 ? (
-        <EmptyState title="No upcoming catering events" />
+        <EmptyState
+          title="No catering events yet"
+          body="Log your first booking to start tracking prep and payments."
+        />
       ) : (
         <div className="space-y-3">
           {events.map((e) => {
@@ -90,7 +118,12 @@ export default function BranchCateringPage() {
                         {e.customer_phone}
                       </div>
                     </div>
-                    <StatusBadge status={statusKind[e.status]} label={statusLabel[e.status]} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge
+                        status={statusKind[e.status]}
+                        label={statusLabel[e.status]}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -112,7 +145,9 @@ export default function BranchCateringPage() {
                   {total > 0 && (
                     <div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Preparation</span>
+                        <span className="text-muted-foreground">
+                          Preparation
+                        </span>
                         <span className="font-medium">
                           {done} / {total} tasks
                         </span>
@@ -120,11 +155,45 @@ export default function BranchCateringPage() {
                       <Progress value={pct} className="mt-1.5 h-2" />
                     </div>
                   )}
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditing(e)}
+                    >
+                      <Pencil className="size-3.5" /> Edit
+                    </Button>
+                    <ConfirmDialog
+                      trigger={
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="size-3.5" /> Delete
+                        </Button>
+                      }
+                      title={`Delete "${e.customer_name}" event?`}
+                      description="This booking will be permanently removed."
+                      confirmLabel="Delete"
+                      onConfirm={() => handleDelete(e.id)}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+      )}
+
+      {editing && (
+        <CateringEventDialog
+          event={editing}
+          locationId={locationId}
+          open
+          onOpenChange={(v) => !v && setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            load();
+          }}
+        />
       )}
     </div>
   );
