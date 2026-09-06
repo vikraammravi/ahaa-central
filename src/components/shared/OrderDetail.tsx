@@ -134,13 +134,32 @@ export function OrderDetail({
   async function branchPickup() {
     if (!order) return;
     setPickingUp(true);
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: "COMPLETED" })
-      .eq("id", order.id);
-    if (error) setError(error.message);
-    else load();
-    setPickingUp(false);
+    setError(null);
+    try {
+      // Persist any qty edits the branch made at pickup (values are already
+      // capped in the input to ≤ what admin prepared). The DB trigger
+      // recalculates final_total_amount automatically.
+      for (const line of lines) {
+        const e = edits[line.id];
+        if (!e) continue;
+        if (e.fulfilled === line.fulfilled_quantity) continue;
+        const { error: lineErr } = await supabase
+          .from("order_lines")
+          .update({ fulfilled_quantity: e.fulfilled })
+          .eq("id", line.id);
+        if (lineErr) throw lineErr;
+      }
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: "COMPLETED" })
+        .eq("id", order.id);
+      if (error) throw error;
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to confirm pickup");
+    } finally {
+      setPickingUp(false);
+    }
   }
 
   async function cancelOrder() {
@@ -164,6 +183,13 @@ export function OrderDetail({
 
   if (!order) return <EmptyState title="Order not found" />;
 
+  const requested = Number(order.total_amount);
+  const final = Number(order.final_total_amount);
+  const adminAdvanceTarget = canEdit ? adminNext(order.status) : null;
+  const canPickup = !canEdit && order.status === "READY";
+  const canPickupEdit = canPickup; // branch may adjust down at pickup time
+  const canCancel = !canEdit && order.status === "SUBMITTED";
+
   const columns: Column<LineWithItem>[] = [
     {
       key: "product",
@@ -186,14 +212,19 @@ export function OrderDetail({
     },
     {
       key: "fulfilled",
-      header: "Fulfilled",
+      header: canPickupEdit ? "Picked Up" : "Fulfilled",
       align: "right",
-      render: (r) =>
-        canEdit ? (
+      render: (r) => {
+        // Editable for admin (up to requested) OR for branch at pickup
+        // (down from what admin prepared — can't take more than was made).
+        const editable = canEdit || canPickupEdit;
+        const maxValue = canEdit ? r.quantity : r.fulfilled_quantity;
+        if (!editable) return r.fulfilled_quantity;
+        return (
           <Input
             type="number"
             min={0}
-            max={r.quantity}
+            max={maxValue}
             value={edits[r.id]?.fulfilled ?? r.fulfilled_quantity}
             onChange={(e) =>
               setEdits((p) => ({
@@ -202,16 +233,15 @@ export function OrderDetail({
                   ...(p[r.id] ?? { reason: r.shortage_reason ?? "" }),
                   fulfilled: Math.max(
                     0,
-                    Math.min(r.quantity, Number(e.target.value) || 0),
+                    Math.min(maxValue, Number(e.target.value) || 0),
                   ),
                 },
               }))
             }
             className="w-20 h-9 text-right ml-auto"
           />
-        ) : (
-          r.fulfilled_quantity
-        ),
+        );
+      },
     },
     // Shortage reason column only shown to admin (who enters it)
     ...(canEdit
@@ -252,20 +282,14 @@ export function OrderDetail({
     },
   ];
 
-  const requested = Number(order.total_amount);
-  const final = Number(order.final_total_amount);
-  const adminAdvanceTarget = canEdit ? adminNext(order.status) : null;
-  const canPickup = !canEdit && order.status === "READY";
-  const canCancel = !canEdit && order.status === "SUBMITTED";
-
   return (
     <div className="space-y-5">
       {error && <Banner tone="danger">{error}</Banner>}
 
       {canPickup && (
         <Banner tone="success">
-          Your order is ready at the central kitchen. Confirm pickup below to
-          complete it.
+          Your order is ready. Adjust any quantities you're actually taking,
+          then confirm pickup to complete it.
         </Banner>
       )}
 
