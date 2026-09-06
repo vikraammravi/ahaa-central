@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 160" role="img" aria-label="Aaha - Truly South">
+  <defs>
+    <style>
+      .word { font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif; font-weight: 700; }
+      .tag  { font-family: 'Inter', system-ui, sans-serif; font-weight: 600; letter-spacing: 0.35em; }
+    </style>
+  </defs>
+  <g>
+    <text x="240" y="98" text-anchor="middle" class="word" fill="#F0A020" font-size="128">Aaha</text>
+    <circle cx="332" cy="96" r="6" fill="#F0A020"/>
+    <circle cx="352" cy="96" r="6" fill="#F0A020"/>
+    <g transform="translate(370, 20)">
+      <path d="M6 0 L14 0 L18 60 L2 60 Z" fill="#7BB840"/>
+      <rect x="0" y="66" width="20" height="20" rx="2" fill="none" stroke="#7BB840" stroke-width="2.5"/>
+      <path d="M4 76 C 7 72, 10 80, 13 76 S 18 74, 16 78" fill="none" stroke="#7BB840" stroke-width="2"/>
+    </g>
+  </g>
+  <g transform="translate(240, 140)">
+    <line x1="-160" y1="0" x2="-70" y2="0" stroke="#F0A020" stroke-width="1.5"/>
+    <line x1="70"   y1="0" x2="160" y2="0" stroke="#F0A020" stroke-width="1.5"/>
+    <text x="0" y="4" text-anchor="middle" class="tag" fill="#F0A020" font-size="14">TRULY SOUTH</text>
+  </g>
+</svg>
