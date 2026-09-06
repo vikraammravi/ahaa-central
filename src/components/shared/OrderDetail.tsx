@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type Column } from "./DataTable";
 import { Banner } from "./Banner";
 import { EmptyState } from "./EmptyState";
+import { LoadingState } from "./Spinner";
 import { supabase } from "@/lib/supabase/client";
 import {
   ORDER_STATUS_BADGE,
@@ -173,12 +174,7 @@ export function OrderDetail({
   }
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-24 bg-muted animate-pulse rounded-2xl" />
-        <div className="h-64 bg-muted animate-pulse rounded-2xl" />
-      </div>
-    );
+    return <LoadingState label="Loading order…" minHeight="min-h-80" />;
   }
 
   if (!order) return <EmptyState title="Order not found" />;

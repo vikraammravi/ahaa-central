@@ -10,6 +10,7 @@ import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Banner } from "@/components/shared/Banner";
+import { LoadingState, Spinner } from "@/components/shared/Spinner";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem } from "@/lib/supabase/types";
 
@@ -126,11 +127,7 @@ export default function BranchOrderPage() {
       />
 
       {loading ? (
-        <div className="space-y-2">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 bg-muted animate-pulse rounded-2xl" />
-          ))}
-        </div>
+        <LoadingState label="Loading products…" />
       ) : filtered.length === 0 ? (
         <EmptyState title="No products available" />
       ) : (
@@ -187,6 +184,7 @@ export default function BranchOrderPage() {
             </div>
           </div>
           <Button size="lg" onClick={placeOrder} disabled={submitting}>
+            {submitting && <Spinner size="xs" className="text-primary-foreground" />}
             {submitting ? "Placing…" : "Place Order"}
           </Button>
         </div>

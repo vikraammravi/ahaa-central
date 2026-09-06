@@ -9,6 +9,7 @@ import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Banner } from "@/components/shared/Banner";
+import { LoadingState } from "@/components/shared/Spinner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { CateringEventDialog } from "@/components/branch/CateringEventDialog";
 import { supabase } from "@/lib/supabase/client";
@@ -90,11 +91,7 @@ export default function BranchCateringPage() {
       {error && <Banner tone="danger">{error}</Banner>}
 
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="h-40 bg-muted animate-pulse rounded-2xl" />
-          ))}
-        </div>
+        <LoadingState label="Loading events…" />
       ) : !events || events.length === 0 ? (
         <EmptyState
           title="No catering events yet"

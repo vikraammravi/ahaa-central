@@ -8,6 +8,7 @@ import { Banner } from "@/components/shared/Banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/shared/Spinner";
 import { supabase } from "@/lib/supabase/client";
 
 function LoginInner() {
@@ -126,6 +127,7 @@ function LoginInner() {
           className="w-full"
           disabled={submitting}
         >
+          {submitting && <Spinner size="xs" className="text-primary-foreground" />}
           {submitting ? "Signing in…" : "Sign In"}
         </Button>
       </form>

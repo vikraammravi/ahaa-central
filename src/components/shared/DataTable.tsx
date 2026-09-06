@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmptyState } from "./EmptyState";
+import { LoadingState } from "./Spinner";
 
 export type Column<T> = {
   key: string;
@@ -56,14 +57,7 @@ export function DataTable<T>({
   if (loading) {
     return (
       <div className="border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">
-        <div className="p-4 space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="h-11 bg-muted animate-pulse rounded-lg"
-            />
-          ))}
-        </div>
+        <LoadingState minHeight="min-h-64" />
       </div>
     );
   }

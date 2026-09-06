@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "./Spinner";
 
 // Reusable "are you sure?" dialog. Wrap any trigger; supply an onConfirm.
 export function ConfirmDialog({
@@ -66,6 +67,7 @@ export function ConfirmDialog({
             onClick={handleConfirm}
             disabled={busy}
           >
+            {busy && <Spinner size="xs" />}
             {busy ? "Working…" : confirmLabel}
           </Button>
         </DialogFooter>

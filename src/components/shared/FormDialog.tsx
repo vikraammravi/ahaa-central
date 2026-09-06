@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "./Spinner";
 
 // Reusable form-in-a-dialog wrapper.
 // Uncontrolled: pass a `trigger`.
@@ -81,6 +82,7 @@ export function FormDialog({
               {cancelLabel}
             </Button>
             <Button type="submit" disabled={busy}>
+              {busy && <Spinner size="xs" className="text-primary-foreground" />}
               {busy ? "Saving…" : submitLabel}
             </Button>
           </DialogFooter>

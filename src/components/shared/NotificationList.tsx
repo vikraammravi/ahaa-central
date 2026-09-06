@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "./EmptyState";
+import { LoadingState } from "./Spinner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem, Order } from "@/lib/supabase/types";
@@ -107,13 +108,7 @@ export function NotificationList({ audience }: { audience: "admin" | "branch" })
   }, [audience]);
 
   if (loading) {
-    return (
-      <div className="space-y-2">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-16 bg-muted animate-pulse rounded-2xl" />
-        ))}
-      </div>
-    );
+    return <LoadingState label="Loading notifications…" />;
   }
 
   if (!items || items.length === 0) {
