@@ -293,7 +293,29 @@ export function OrderDetail({
       key: "line_total",
       header: "Final",
       align: "right",
-      render: (r) => `CA$${Number(r.final_line_total ?? 0).toFixed(2)}`,
+      render: (r) => {
+        // Live preview: while admin edits or branch is at pickup, reflect
+        // the in-flight quantity change. Otherwise show the stored value.
+        const previewing = canEdit || canPickupEdit;
+        const q = previewing
+          ? edits[r.id]?.fulfilled ?? r.fulfilled_quantity
+          : r.fulfilled_quantity;
+        const live = q * Number(r.unit_price);
+        const stored = Number(r.final_line_total ?? 0);
+        const changed = previewing && Math.abs(live - stored) > 0.005;
+        return (
+          <div>
+            <div className={changed ? "font-medium text-saffron-hover" : ""}>
+              CA${live.toFixed(2)}
+            </div>
+            {changed && (
+              <div className="text-[11px] text-muted-foreground">
+                was CA${stored.toFixed(2)}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
