@@ -6,7 +6,6 @@ import {
   Package,
   BookOpen,
   ShoppingCart,
-  Truck,
   Building2,
   Users,
   Receipt,
@@ -34,7 +33,6 @@ const entries: NavEntry[] = [
     label: "Order Management",
     items: [
       { label: "Branch Orders", href: "/admin/orders", icon: ShoppingCart },
-      { label: "Dispatch", href: "/admin/dispatch", icon: Truck },
     ],
   },
   {

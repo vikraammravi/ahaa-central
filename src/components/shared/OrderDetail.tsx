@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PackageCheck } from "lucide-react";
+import { PackageCheck, XCircle } from "lucide-react";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -142,6 +143,16 @@ export function OrderDetail({
     setPickingUp(false);
   }
 
+  async function cancelOrder() {
+    if (!order) return;
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: "CANCELLED" })
+      .eq("id", order.id);
+    if (error) setError(error.message);
+    else load();
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -245,6 +256,7 @@ export function OrderDetail({
   const final = Number(order.final_total_amount);
   const adminAdvanceTarget = canEdit ? adminNext(order.status) : null;
   const canPickup = !canEdit && order.status === "READY";
+  const canCancel = !canEdit && order.status === "SUBMITTED";
 
   return (
     <div className="space-y-5">
@@ -373,6 +385,21 @@ export function OrderDetail({
                 <PackageCheck className="size-4" />
                 {pickingUp ? "Confirming…" : "Mark as Picked Up"}
               </Button>
+            )}
+
+            {canCancel && (
+              <ConfirmDialog
+                trigger={
+                  <Button variant="outline" className="w-full mt-4">
+                    <XCircle className="size-4" /> Cancel Order
+                  </Button>
+                }
+                title="Cancel this order?"
+                description="The central kitchen hasn't started preparing yet. Once cancelled, you'll need to place a new order."
+                confirmLabel="Yes, cancel"
+                cancelLabel="Keep order"
+                onConfirm={cancelOrder}
+              />
             )}
           </CardContent>
         </Card>
