@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
 import { FormSelect } from "@/components/shared/FormSelect";
 import { supabase } from "@/lib/supabase/client";
-import { CATERING_STATUSES, CATERING_STATUS_LABEL } from "@/lib/catering";
+import { CATERING_STATUSES, CATERING_STATUS_LABEL, localDateInput, phoneHref } from "@/lib/catering";
 import type { CateringEvent, CateringStatus } from "@/lib/supabase/types";
 
 type Mode = "create" | "edit";
@@ -32,52 +32,33 @@ export function CateringEventDialog({
 }) {
   const mode: Mode = event ? "edit" : "create";
 
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [guestCount, setGuestCount] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [eventTime, setEventTime] = useState("");
-  const [totalAmount, setTotalAmount] = useState("");
-  const [advancePaid, setAdvancePaid] = useState("0");
-  const [status, setStatus] = useState<CateringStatus>("INQUIRY");
-  const [notes, setNotes] = useState("");
-
-  useEffect(() => {
-    if (event) {
-      const dt = new Date(event.event_datetime);
-      setCustomerName(event.customer_name);
-      setCustomerPhone(event.customer_phone);
-      setGuestCount(String(event.guest_count));
-      setEventDate(dt.toISOString().slice(0, 10));
-      setEventTime(dt.toTimeString().slice(0, 5));
-      setTotalAmount(String(event.total_amount));
-      setAdvancePaid(String(event.advance_paid ?? 0));
-      setStatus(event.status);
-      setNotes(event.notes ?? "");
-    } else {
-      setCustomerName("");
-      setCustomerPhone("");
-      setGuestCount("");
-      setEventDate("");
-      setEventTime("18:00");
-      setTotalAmount("");
-      setAdvancePaid("0");
-      setStatus("INQUIRY");
-      setNotes("");
-    }
-  }, [event]);
+  const [customerName, setCustomerName] = useState(event?.customer_name ?? "");
+  const [customerPhone, setCustomerPhone] = useState(event?.customer_phone ?? "");
+  const [guestCount, setGuestCount] = useState(event ? String(event.guest_count) : "");
+  const [eventDate, setEventDate] = useState(event ? localDateInput(new Date(event.event_datetime)) : "");
+  const [eventTime, setEventTime] = useState(event ? new Date(event.event_datetime).toTimeString().slice(0, 5) : "18:00");
+  const [totalAmount, setTotalAmount] = useState(event ? String(event.total_amount) : "");
+  const [advancePaid, setAdvancePaid] = useState(String(event?.advance_paid ?? 0));
+  const [status, setStatus] = useState<CateringStatus>(event?.status ?? "INQUIRY");
+  const [notes, setNotes] = useState(event?.notes ?? "");
 
   async function handleSubmit() {
     if (!locationId && mode === "create") {
       throw new Error("No branch assigned to your account");
     }
-    const total = Number(totalAmount) || 0;
-    const advance = Number(advancePaid) || 0;
+    const total = Number(totalAmount);
+    const advance = Number(advancePaid);
+    const guests = Number(guestCount);
+    const datetime = new Date(`${eventDate}T${eventTime}:00`);
+    if (!customerName.trim() || !phoneHref(customerPhone)) throw new Error("Enter a customer name and valid phone number.");
+    if (!Number.isInteger(guests) || guests < 1) throw new Error("Guest count must be a whole number of at least one.");
+    if (!eventDate || !eventTime || Number.isNaN(datetime.getTime())) throw new Error("Enter a valid event date and time.");
+    if (!Number.isFinite(total) || !Number.isFinite(advance) || total < 0 || advance < 0 || advance > total) throw new Error("Advance paid must be between zero and the total amount.");
     const payload = {
       customer_name: customerName.trim(),
       customer_phone: customerPhone.trim(),
-      guest_count: Math.max(1, Number(guestCount) || 1),
-      event_datetime: new Date(`${eventDate}T${eventTime}:00`).toISOString(),
+      guest_count: guests,
+      event_datetime: datetime.toISOString(),
       total_amount: total,
       advance_paid: advance,
       balance_due: Math.max(0, total - advance),
@@ -94,6 +75,10 @@ export function CateringEventDialog({
             .from("catering_events")
             .insert({ ...payload, location_id: locationId! });
     if (error) throw new Error(error.message);
+    if (mode === "create") {
+      setCustomerName(""); setCustomerPhone(""); setGuestCount(""); setEventDate(""); setEventTime("18:00");
+      setTotalAmount(""); setAdvancePaid("0"); setStatus("INQUIRY"); setNotes("");
+    }
     onSaved?.();
   }
 
@@ -131,6 +116,8 @@ export function CateringEventDialog({
         <FormField label="Customer Phone" htmlFor="cx-phone" required>
           <Input
             id="cx-phone"
+            type="tel"
+            autoComplete="tel"
             value={customerPhone}
             onChange={(e) => setCustomerPhone(e.target.value)}
             placeholder="(416) 555-1234"
@@ -163,6 +150,7 @@ export function CateringEventDialog({
             id="cx-guests"
             type="number"
             min={1}
+            step={1}
             value={guestCount}
             onChange={(e) => setGuestCount(e.target.value)}
             required

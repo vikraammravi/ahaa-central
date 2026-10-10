@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Power, PowerOff } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -12,6 +12,9 @@ import { RowActions } from "@/components/shared/RowActions";
 import { CatalogItemDialog } from "@/components/admin/CatalogItemDialog";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem } from "@/lib/supabase/types";
+import { useAsyncData } from "@/lib/useAsyncData";
+import { fetchCatalog } from "@/lib/admin/data";
+import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD } from "@/lib/format";
 
 type Tab = "all" | "active" | "inactive";
 
@@ -22,27 +25,11 @@ const tabs: FilterTab<Tab>[] = [
 ];
 
 export default function AdminCatalogPage() {
-  const [data, setData] = useState<CatalogItem[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, error: loadError, refresh } = useAsyncData(fetchCatalog);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [tab, setTab] = useState<Tab>("all");
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    const { data, error } = await supabase
-      .from("catalog_items")
-      .select("*")
-      .order("name");
-    if (error) setError(error.message);
-    else setData(data as CatalogItem[]);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   async function toggleActive(row: CatalogItem) {
     setError(null);
@@ -51,7 +38,7 @@ export default function AdminCatalogPage() {
       .update({ is_active: !row.is_active })
       .eq("id", row.id);
     if (error) setError(error.message);
-    else load();
+    else await refresh();
   }
 
   const rows = useMemo(() => {
@@ -86,17 +73,18 @@ export default function AdminCatalogPage() {
     },
     { key: "category", header: "Category", render: (r) => r.category, hideOn: "sm" },
     { key: "unit", header: "Unit", render: (r) => r.unit_type },
+    { key: "threshold", header: "Threshold", align: "right", render: (r) => r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD },
     {
       key: "rate",
       header: "Base Rate",
       align: "right",
-      render: (r) => `CA$${Number(r.default_price).toFixed(2)}`,
+      render: (r) => formatMoney(r.default_price),
     },
     {
       key: "tax",
-      header: "Taxable",
+      header: "Tax",
       align: "right",
-      render: (r) => (r.is_taxable ? "Yes" : "No"),
+      render: (r) => taxLabel(r.is_taxable),
       hideOn: "sm",
     },
     {
@@ -137,9 +125,9 @@ export default function AdminCatalogPage() {
       <PageHeader
         title="Catalog"
         subtitle="Products available to branch orders. Deactivate items you no longer sell — history stays intact."
-        actions={<CatalogItemDialog onSaved={load} />}
+        actions={<CatalogItemDialog onSaved={() => { void refresh(); }} />}
       />
-      {error && <Banner tone="danger">{error}</Banner>}
+      {(error || loadError) && <Banner tone="danger">{error || loadError}</Banner>}
       <FilterTabs tabs={withCounts} value={tab} onChange={setTab} />
       <DataTable
         data={rows}
@@ -152,12 +140,13 @@ export default function AdminCatalogPage() {
 
       {editing && (
         <CatalogItemDialog
+          key={editing.id}
           item={editing}
           open
           onOpenChange={(v) => !v && setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            load();
+            void refresh();
           }}
         />
       )}

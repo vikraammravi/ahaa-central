@@ -43,6 +43,8 @@ export function DataTable<T>({
   onRowClick,
   toolbar,
   footer,
+  tableClassName,
+  rowClassName,
 }: {
   data: T[] | null;
   columns: Column<T>[];
@@ -53,6 +55,8 @@ export function DataTable<T>({
   onRowClick?: (row: T) => void;
   toolbar?: ReactNode;
   footer?: ReactNode;
+  tableClassName?: string;
+  rowClassName?: (row: T) => string | undefined;
 }) {
   if (loading) {
     return (
@@ -81,7 +85,7 @@ export function DataTable<T>({
         </div>
       )}
       <div className="overflow-x-auto">
-        <Table className="min-w-full">
+        <Table className={cn("min-w-full", tableClassName)}>
           <TableHeader className="bg-background/60">
             <TableRow className="border-b border-border">
               {columns.map((c) => (
@@ -106,6 +110,7 @@ export function DataTable<T>({
                   "border-b border-border last:border-0 transition-colors",
                   onRowClick && "cursor-pointer hover:bg-accent/40",
                   !onRowClick && "hover:bg-muted/40",
+                  rowClassName?.(row),
                 )}
               >
                 {columns.map((c) => (

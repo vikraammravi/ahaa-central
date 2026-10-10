@@ -48,13 +48,17 @@ export function FormDialog({
   };
 
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
+    setError(null);
     try {
       await onSubmit();
       setOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -64,7 +68,7 @@ export function FormDialog({
     <Dialog open={actualOpen} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent
-        className={size === "lg" ? "sm:max-w-2xl" : "sm:max-w-md"}
+        className={`max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain ${size === "lg" ? "sm:max-w-2xl" : "sm:max-w-md"}`}
       >
         <form onSubmit={handleSubmit} className="space-y-5">
           <DialogHeader>
@@ -72,6 +76,7 @@ export function FormDialog({
             {description && <DialogDescription>{description}</DialogDescription>}
           </DialogHeader>
           <div className="space-y-4">{children}</div>
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button
               type="button"

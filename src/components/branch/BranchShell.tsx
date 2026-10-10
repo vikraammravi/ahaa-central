@@ -7,7 +7,6 @@ import {
   CalendarDays,
   FileText,
   MoreHorizontal,
-  Bell,
 } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import { BottomNav, type BottomNavItem } from "@/components/shared/BottomNav";
@@ -18,7 +17,6 @@ const entries: NavEntry[] = [
   { label: "New Kitchen Order", href: "/branch/order", icon: ShoppingBag },
   { label: "Kitchen Orders", href: "/branch/invoices", icon: FileText },
   { label: "Catering", href: "/branch/catering", icon: CalendarDays },
-  { label: "Notifications", href: "/branch/notifications", icon: Bell },
   { label: "Profile", href: "/branch/profile", icon: MoreHorizontal },
 ];
 

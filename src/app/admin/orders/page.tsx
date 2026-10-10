@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -11,10 +11,13 @@ import { supabase } from "@/lib/supabase/client";
 import {
   ORDER_STATUS_BADGE,
   ORDER_STATUS_LABEL,
+  nextAdminStatus,
 } from "@/lib/orders";
-import type { Order, OrderStatus, Location } from "@/lib/supabase/types";
-
-type OrderWithLocation = Order & { locations: { name: string } | null };
+import type { OrderStatus } from "@/lib/supabase/types";
+import { fetchOrders, PAGE_SIZE, type OrderWithLocation } from "@/lib/admin/data";
+import { useAsyncData } from "@/lib/useAsyncData";
+import { Pagination } from "@/components/shared/Pagination";
+import { formatMoney, formatDateTime, POLL_INTERVAL } from "@/lib/format";
 
 type Tab = "ALL" | OrderStatus;
 const tabs: FilterTab<Tab>[] = [
@@ -28,50 +31,22 @@ const tabs: FilterTab<Tab>[] = [
 
 export default function AdminOrdersPage() {
   const router = useRouter();
-  const [orders, setOrders] = useState<OrderWithLocation[] | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("ALL");
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*, locations(name)")
-      .order("created_at", { ascending: false });
-    if (error) setError(error.message);
-    else setOrders(data as OrderWithLocation[]);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const rows = useMemo(() => {
-    if (!orders) return null;
-    return tab === "ALL" ? orders : orders.filter((o) => o.status === tab);
-  }, [orders, tab]);
-
-  const withCounts = useMemo<FilterTab<Tab>[]>(() => {
-    if (!orders) return tabs;
-    return tabs.map((t) => ({
-      ...t,
-      count:
-        t.value === "ALL"
-          ? orders.length
-          : orders.filter((o) => o.status === t.value).length,
-    }));
-  }, [orders]);
+  const [page, setPage] = useState(0);
+  const load = useCallback((signal: AbortSignal) => fetchOrders({ page, status: tab }, signal), [page, tab]);
+  const { data, loading, error: loadError, refresh } = useAsyncData(load, { pollInterval: POLL_INTERVAL });
+  const rows = data?.rows ?? null;
+  const withCounts = tabs.map((item) => ({ ...item, count: data?.counts[item.value] ?? 0 }));
 
   async function updateStatus(id: string, status: OrderStatus) {
+    setError(null);
     const { error } = await supabase
       .from("orders")
       .update({ status })
       .eq("id", id);
     if (error) setError(error.message);
-    else load();
+    else await refresh(true);
   }
 
   const columns: Column<OrderWithLocation>[] = [
@@ -85,28 +60,28 @@ export default function AdminOrdersPage() {
       key: "date",
       header: "Submitted",
       hideOn: "sm",
-      render: (r) => new Date(r.created_at).toLocaleString(),
+      render: (r) => formatDateTime(r.created_at),
     },
     {
       key: "requested",
       header: "Requested",
       align: "right",
-      render: (r) => `CA$${Number(r.total_amount).toFixed(2)}`,
+      render: (r) => formatMoney(r.total_amount),
     },
     {
       key: "final",
       header: "Final",
       align: "right",
-      render: (r) => `CA$${Number(r.final_total_amount).toFixed(2)}`,
+      render: (r) => formatMoney(r.final_total_amount),
     },
     {
       key: "status",
       header: "Status",
       render: (r) => (
-        <StatusBadge
+        <div className="space-y-1"><StatusBadge
           status={ORDER_STATUS_BADGE[r.status]}
           label={ORDER_STATUS_LABEL[r.status]}
-        />
+        />{r.pickup_approval_status === "PENDING" && <StatusBadge status="pending" label="Pickup Approval Pending" />}</div>
       ),
     },
     {
@@ -116,11 +91,12 @@ export default function AdminOrdersPage() {
       render: (r) => (
         <select
           value={r.status}
+          disabled={r.status === "READY" || r.status === "COMPLETED" || r.status === "CANCELLED" || r.pickup_approval_status === "PENDING"}
           onClick={(e) => e.stopPropagation()}
           onChange={(e) => updateStatus(r.id, e.target.value as OrderStatus)}
           className="h-8 rounded-md border border-input bg-background px-2 text-xs"
         >
-          {(Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]).map((s) => (
+          {([r.status, nextAdminStatus(r.status), ...(r.status === "SUBMITTED" || r.status === "PREPARING" ? ["CANCELLED"] : [])].filter(Boolean) as OrderStatus[]).map((s) => (
             <option key={s} value={s}>
               {ORDER_STATUS_LABEL[s]}
             </option>
@@ -136,8 +112,8 @@ export default function AdminOrdersPage() {
         title="Branch Orders"
         subtitle="Incoming orders from branches — advance them through the fulfillment flow."
       />
-      {error && <Banner tone="danger">{error}</Banner>}
-      <FilterTabs tabs={withCounts} value={tab} onChange={setTab} />
+      {(error || loadError) && <Banner tone="danger">{error || loadError}</Banner>}
+      <FilterTabs tabs={withCounts} value={tab} onChange={(value) => { setTab(value); setPage(0); }} />
       <DataTable
         data={rows}
         columns={columns}
@@ -146,6 +122,7 @@ export default function AdminOrdersPage() {
         onRowClick={(r) => router.push(`/admin/orders/${r.id}`)}
         emptyTitle="No orders in this state"
       />
+      <Pagination page={data?.page ?? page} pageSize={PAGE_SIZE} count={data?.count ?? 0} busy={loading} onChange={setPage} />
     </div>
   );
 }

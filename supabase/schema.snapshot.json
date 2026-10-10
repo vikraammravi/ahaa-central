@@ -1,0 +1,845 @@
+{
+  "enums": {
+    "user_role": [
+      "CENTRAL_ADMIN",
+      "BRANCH_MANAGER"
+    ],
+    "order_status": [
+      "SUBMITTED",
+      "PREPARING",
+      "READY",
+      "COMPLETED",
+      "CANCELLED"
+    ],
+    "profile_status": [
+      "active",
+      "pending",
+      "disabled"
+    ],
+    "catering_status": [
+      "INQUIRY",
+      "CONFIRMED",
+      "COMPLETED",
+      "CANCELLED"
+    ],
+    "unit_measurement": [
+      "Bucket",
+      "Tray",
+      "Piece",
+      "Can",
+      "Box",
+      "Bottle",
+      "Bag"
+    ]
+  },
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "catalog_items",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "table": "catalog_items",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "category",
+      "type": "text",
+      "table": "catalog_items",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "unit_type",
+      "type": "unit_measurement",
+      "table": "catalog_items",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "default_price",
+      "type": "numeric",
+      "table": "catalog_items",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "is_taxable",
+      "type": "bool",
+      "table": "catalog_items",
+      "default": "false",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "available_stock",
+      "type": "int4",
+      "table": "catalog_items",
+      "default": "0",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "is_active",
+      "type": "bool",
+      "table": "catalog_items",
+      "default": "true",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "table": "catalog_items",
+      "default": "now()",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "low_stock_threshold",
+      "type": "int4",
+      "table": "catalog_items",
+      "default": "20",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "catering_events",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "location_id",
+      "type": "uuid",
+      "table": "catering_events",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "customer_name",
+      "type": "text",
+      "table": "catering_events",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "customer_phone",
+      "type": "text",
+      "table": "catering_events",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "guest_count",
+      "type": "int4",
+      "table": "catering_events",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "event_datetime",
+      "type": "timestamptz",
+      "table": "catering_events",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "total_amount",
+      "type": "numeric",
+      "table": "catering_events",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "advance_paid",
+      "type": "numeric",
+      "table": "catering_events",
+      "default": "0.00",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "balance_due",
+      "type": "numeric",
+      "table": "catering_events",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "status",
+      "type": "catering_status",
+      "table": "catering_events",
+      "default": "'CONFIRMED'::catering_status",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "checklist",
+      "type": "jsonb",
+      "table": "catering_events",
+      "default": "'[]'::jsonb",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "notes",
+      "type": "text",
+      "table": "catering_events",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "table": "catering_events",
+      "default": "now()",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "table": "catering_events",
+      "default": "now()",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "invoice_edits",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "order_id",
+      "type": "uuid",
+      "table": "invoice_edits",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "revision",
+      "type": "int4",
+      "table": "invoice_edits",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "edited_by",
+      "type": "uuid",
+      "table": "invoice_edits",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "edited_at",
+      "type": "timestamptz",
+      "table": "invoice_edits",
+      "default": "now()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "reason",
+      "type": "text",
+      "table": "invoice_edits",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "previous_lines",
+      "type": "jsonb",
+      "table": "invoice_edits",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "updated_lines",
+      "type": "jsonb",
+      "table": "invoice_edits",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "stock_adjustments",
+      "type": "jsonb",
+      "table": "invoice_edits",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "locations",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "table": "locations",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "address",
+      "type": "text",
+      "table": "locations",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "phone",
+      "type": "text",
+      "table": "locations",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "is_central",
+      "type": "bool",
+      "table": "locations",
+      "default": "false",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "table": "locations",
+      "default": "now()",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "city",
+      "type": "text",
+      "table": "locations",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "province",
+      "type": "text",
+      "table": "locations",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "order_lines",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "order_id",
+      "type": "uuid",
+      "table": "order_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "item_id",
+      "type": "uuid",
+      "table": "order_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "quantity",
+      "type": "int4",
+      "table": "order_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "unit_price",
+      "type": "numeric",
+      "table": "order_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "is_taxable",
+      "type": "bool",
+      "table": "order_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "line_total",
+      "type": "numeric",
+      "table": "order_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "fulfilled_quantity",
+      "type": "int4",
+      "table": "order_lines",
+      "default": "0",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "shortage_reason",
+      "type": "text",
+      "table": "order_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "final_line_total",
+      "type": "numeric",
+      "table": "order_lines",
+      "default": null,
+      "nullable": true,
+      "generated": true
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "orders",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "order_number",
+      "type": "int4",
+      "table": "orders",
+      "default": "nextval('stock_orders_order_number_seq'::regclass)",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "location_id",
+      "type": "uuid",
+      "table": "orders",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "status",
+      "type": "order_status",
+      "table": "orders",
+      "default": "'SUBMITTED'::order_status",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "subtotal",
+      "type": "numeric",
+      "table": "orders",
+      "default": "0.00",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "tax_amount",
+      "type": "numeric",
+      "table": "orders",
+      "default": "0.00",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "total_amount",
+      "type": "numeric",
+      "table": "orders",
+      "default": "0.00",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "order_date",
+      "type": "date",
+      "table": "orders",
+      "default": "((now() AT TIME ZONE 'America/Toronto'::text))::date",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "created_by",
+      "type": "uuid",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "table": "orders",
+      "default": "now()",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "table": "orders",
+      "default": "now()",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "final_subtotal",
+      "type": "numeric",
+      "table": "orders",
+      "default": "0.00",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "final_tax_amount",
+      "type": "numeric",
+      "table": "orders",
+      "default": "0.00",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "final_total_amount",
+      "type": "numeric",
+      "table": "orders",
+      "default": "0.00",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "stock_deducted_at",
+      "type": "timestamptz",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "pickup_approval_status",
+      "type": "text",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "invoice_sent_at",
+      "type": "timestamptz",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "invoice_sent_by",
+      "type": "uuid",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "invoice_revision",
+      "type": "int4",
+      "table": "orders",
+      "default": "0",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "invoice_sent_revision",
+      "type": "int4",
+      "table": "orders",
+      "default": "0",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "invoice_published_lines",
+      "type": "jsonb",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "invoice_published_subtotal",
+      "type": "numeric",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "invoice_published_tax",
+      "type": "numeric",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "invoice_published_total",
+      "type": "numeric",
+      "table": "orders",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "pickup_request_lines",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "request_id",
+      "type": "uuid",
+      "table": "pickup_request_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "order_line_id",
+      "type": "uuid",
+      "table": "pickup_request_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "item_id",
+      "type": "uuid",
+      "table": "pickup_request_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "prepared_quantity",
+      "type": "int4",
+      "table": "pickup_request_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "pickup_quantity",
+      "type": "int4",
+      "table": "pickup_request_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "return_to_stock",
+      "type": "bool",
+      "table": "pickup_request_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "stock_adjustment",
+      "type": "int4",
+      "table": "pickup_request_lines",
+      "default": "0",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "pickup_requests",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "order_id",
+      "type": "uuid",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "table": "pickup_requests",
+      "default": "'PENDING'::text",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "reason",
+      "type": "text",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "requested_by",
+      "type": "uuid",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "requested_at",
+      "type": "timestamptz",
+      "table": "pickup_requests",
+      "default": "now()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "reviewed_by",
+      "type": "uuid",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "reviewed_at",
+      "type": "timestamptz",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "review_note",
+      "type": "text",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "profiles",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "table": "profiles",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "full_name",
+      "type": "text",
+      "table": "profiles",
+      "default": "''::text",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "role",
+      "type": "user_role",
+      "table": "profiles",
+      "default": "'BRANCH_MANAGER'::user_role",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "location_id",
+      "type": "uuid",
+      "table": "profiles",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "table": "profiles",
+      "default": "now()",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "table": "profiles",
+      "default": "now()",
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "status",
+      "type": "profile_status",
+      "table": "profiles",
+      "default": "'pending'::profile_status",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "phone",
+      "type": "text",
+      "table": "profiles",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    }
+  ]
+}

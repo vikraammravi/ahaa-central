@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
@@ -8,34 +8,19 @@ import { Banner } from "@/components/shared/Banner";
 import { RowActions } from "@/components/shared/RowActions";
 import { LocationDialog } from "@/components/admin/LocationDialog";
 import { supabase } from "@/lib/supabase/client";
+import { useAsyncData } from "@/lib/useAsyncData";
+import { fetchLocations } from "@/lib/admin/data";
 import type { Location } from "@/lib/supabase/types";
 
 export default function AdminBranchesPage() {
-  const [data, setData] = useState<Location[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error, refresh } = useAsyncData(fetchLocations);
   const [editing, setEditing] = useState<Location | null>(null);
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    const { data, error } = await supabase
-      .from("locations")
-      .select("*")
-      .order("name");
-    if (error) setError(error.message);
-    else setData(data as Location[]);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   async function handleDelete(id: string) {
     const { error } = await supabase.from("locations").delete().eq("id", id);
-    if (error) setError(error.message);
-    else load();
+    if (error) throw new Error(error.message);
+    await refresh();
   }
 
   const columns: Column<Location>[] = [
@@ -87,7 +72,7 @@ export default function AdminBranchesPage() {
       <PageHeader
         title="Branches"
         subtitle="All Aaha locations, including the central kitchen."
-        actions={<LocationDialog onSaved={load} />}
+        actions={<LocationDialog onSaved={() => { void refresh(); }} />}
       />
       {error && <Banner tone="danger">{error}</Banner>}
       <DataTable
@@ -101,12 +86,13 @@ export default function AdminBranchesPage() {
 
       {editing && (
         <LocationDialog
+          key={editing.id}
           location={editing}
           open
           onOpenChange={(v) => !v && setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            load();
+            void refresh();
           }}
         />
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
@@ -8,60 +8,24 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { KpiGrid, type Kpi } from "@/components/shared/KpiCard";
 import { Banner } from "@/components/shared/Banner";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { supabase } from "@/lib/supabase/client";
 import { ORDER_STATUS_BADGE, ORDER_STATUS_LABEL } from "@/lib/orders";
-import type { CatalogItem, Order } from "@/lib/supabase/types";
-
-type OrderWithLocation = Order & { locations: { name: string } | null };
+import { useAsyncData } from "@/lib/useAsyncData";
+import { fetchDashboard } from "@/lib/admin/data";
+import { formatMoney, POLL_INTERVAL, DEFAULT_STOCK_THRESHOLD } from "@/lib/format";
 
 export default function AdminDashboardPage() {
-  const [orders, setOrders] = useState<OrderWithLocation[]>([]);
-  const [items, setItems] = useState<CatalogItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const [{ data: o, error: oe }, { data: c, error: ce }] = await Promise.all([
-        supabase
-          .from("orders")
-          .select("*, locations(name)")
-          .gte("created_at", today.toISOString())
-          .order("created_at", { ascending: false }),
-        supabase.from("catalog_items").select("*").eq("is_active", true),
-      ]);
-      if (oe) setError(oe.message);
-      else if (ce) setError(ce.message);
-      else {
-        setOrders((o as OrderWithLocation[]) ?? []);
-        setItems((c as CatalogItem[]) ?? []);
-      }
-      setLoading(false);
-    })();
-  }, []);
-
-  const pendingOrders = orders.filter(
-    (o) => o.status === "SUBMITTED" || o.status === "PREPARING",
-  ).length;
-  const revenueToday = orders.reduce(
-    (s, o) => s + Number(o.final_total_amount),
-    0,
-  );
-  const lowStock = items.filter((i) => i.available_stock < 20).length;
+  const { data, loading, error } = useAsyncData(fetchDashboard, { pollInterval: POLL_INTERVAL });
+  const orders = data?.recentOrders ?? [];
+  const lowStock = data?.lowStock ?? 0;
 
   const kpis: Kpi[] = [
-    { label: "Orders Today", value: `${orders.length}` },
-    { label: "Pending", value: `${pendingOrders}`, tone: "warn" },
-    { label: "Revenue Today", value: `CA$${revenueToday.toFixed(2)}`, tone: "success" },
+    { label: "Orders Today", value: `${data?.ordersToday ?? 0}` },
+    { label: "Pending", value: `${data?.pendingOrders ?? 0}`, tone: "warn" },
+    { label: "Revenue Today", value: formatMoney(data?.revenueToday), hint: "Completed orders · Toronto time", tone: "success" },
     { label: "Low / Out of Stock", value: `${lowStock}`, tone: lowStock ? "warn" : "default" },
   ];
 
-  const lowItems = items
-    .filter((i) => i.available_stock < 20)
-    .sort((a, b) => a.available_stock - b.available_stock)
-    .slice(0, 6);
+  const lowItems = data?.lowItems ?? [];
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-6">
@@ -81,9 +45,9 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Low Stock</CardTitle>
-            <a href="/admin/stock" className="text-sm text-saffron-hover">
+            <Link href="/admin/stock" className="text-sm text-saffron-hover">
               Manage stock
-            </a>
+            </Link>
           </CardHeader>
           <CardContent className="space-y-3">
             {lowItems.length === 0 && !loading && <EmptyState title="Everything stocked" />}
@@ -94,7 +58,7 @@ export default function AdminDashboardPage() {
                   <span className="text-muted-foreground">{i.available_stock} left</span>
                 </div>
                 <Progress
-                  value={Math.min(100, (i.available_stock / 50) * 100)}
+                  value={Math.min(100, (i.available_stock / Math.max(1, i.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD)) * 100)}
                   className="mt-1.5 h-2"
                 />
               </div>
@@ -105,9 +69,9 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Recent Branch Orders</CardTitle>
-            <a href="/admin/orders" className="text-sm text-saffron-hover">
+            <Link href="/admin/orders" className="text-sm text-saffron-hover">
               View all
-            </a>
+            </Link>
           </CardHeader>
           <CardContent className="divide-y divide-border">
             {orders.length === 0 && !loading && <EmptyState title="No orders today" />}

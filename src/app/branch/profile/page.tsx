@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, HelpCircle, User } from "lucide-react";
+import { HelpCircle, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -7,7 +7,6 @@ import { SignOutButton } from "@/components/shared/SignOutButton";
 
 const links = [
   { icon: User, label: "Profile", href: "/branch/profile" },
-  { icon: Bell, label: "Notification Settings", href: "/branch/notifications" },
   { icon: HelpCircle, label: "Help", href: "/branch/profile" },
 ];
 

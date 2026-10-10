@@ -9,12 +9,11 @@ import {
   Building2,
   Users,
   Receipt,
-  BarChart3,
-  Bell,
-  Settings,
 } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import type { NavEntry } from "@/components/shared/SidebarNav";
+import { useCurrentUser } from "@/lib/useCurrentUser";
+import { userInitials } from "@/lib/auth";
 
 const entries: NavEntry[] = [
   {
@@ -46,19 +45,18 @@ const entries: NavEntry[] = [
     label: "Finance",
     items: [
       { label: "Invoices", href: "/admin/invoices", icon: Receipt },
-      { label: "Reports", href: "/admin/reports", icon: BarChart3 },
     ],
   },
-  { label: "Notifications", href: "/admin/notifications", icon: Bell },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
+  const { profile, loading } = useCurrentUser();
+  const name = profile?.full_name || profile?.email || (loading ? "Loading…" : "Central Admin");
   return (
     <AppShell
       entries={entries}
       brandHref="/admin/dashboard"
-      user={{ name: "Vikram K.", role: "Central Admin", initials: "VK" }}
+      user={{ name, role: "Central Admin", initials: loading ? "…" : userInitials(name) }}
     >
       {children}
     </AppShell>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PackageCheck, XCircle } from "lucide-react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +14,16 @@ import { LoadingState } from "./Spinner";
 import { supabase } from "@/lib/supabase/client";
 import {
   ORDER_STATUS_BADGE,
-  ORDER_STATUS_FLOW,
   ORDER_STATUS_LABEL,
   nextAdminStatus,
 } from "@/lib/orders";
-import type { Order, OrderLine, OrderStatus } from "@/lib/supabase/types";
+import type { Order, OrderLine, OrderStatus, PickupRequest } from "@/lib/supabase/types";
+import { PickupApprovalPanel } from "./PickupApprovalPanel";
+import { pickupHasChanges, pickupQuantitiesValid } from "@/lib/pickup";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
+import { OrderTimeline } from "./OrderTimeline";
+import { TAX_RATE, POLL_INTERVAL } from "@/lib/format";
 
 type OrderWithLocation = Order & { locations: { name: string } | null };
 type LineWithItem = OrderLine & {
@@ -41,11 +46,15 @@ export function OrderDetail({
   >({});
   const [saving, setSaving] = useState(false);
   const [pickingUp, setPickingUp] = useState(false);
+  const [pickupReason, setPickupReason] = useState("");
+  const [requests, setRequests] = useState<PickupRequest[]>([]);
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    const [{ data: o, error: oe }, { data: l, error: le }] = await Promise.all([
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) {
+      setLoading(true);
+      setError(null);
+    }
+    const [{ data: o, error: oe }, { data: l, error: le }, { data: history, error: he }] = await Promise.all([
       supabase
         .from("orders")
         .select("*, locations(name)")
@@ -55,13 +64,18 @@ export function OrderDetail({
         .from("order_lines")
         .select("*, catalog_items(name, unit_type)")
         .eq("order_id", orderId),
+      supabase.from("pickup_requests")
+        .select("*, pickup_request_lines(*), requested_profile:profiles!pickup_requests_requested_by_fkey(full_name), reviewed_profile:profiles!pickup_requests_reviewed_by_fkey(full_name)")
+        .eq("order_id", orderId).order("requested_at", { ascending: false }),
     ]);
     if (oe) setError(oe.message);
     else if (le) setError(le.message);
+    else if (he) setError(he.message);
     else {
       setOrder(o as OrderWithLocation);
       const rows = (l as LineWithItem[]) ?? [];
       setLines(rows);
+      setRequests((history as PickupRequest[]) ?? []);
       const initial: Record<string, { fulfilled: number; reason: string }> = {};
       rows.forEach((r) => {
         initial[r.id] = {
@@ -69,14 +83,21 @@ export function OrderDetail({
           reason: r.shortage_reason ?? "",
         };
       });
-      setEdits(initial);
+      if (!quiet || o.status !== "READY") setEdits(initial);
     }
     setLoading(false);
-  }
+  }, [orderId]);
 
   useEffect(() => {
-    load();
-  }, [orderId]);
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  useEffect(() => {
+    if (order?.status !== "READY") return;
+    const timer = window.setInterval(() => { void load(true); }, POLL_INTERVAL);
+    return () => window.clearInterval(timer);
+  }, [order?.status, load]);
 
   const dirty = lines.some(
     (l) =>
@@ -130,25 +151,14 @@ export function OrderDetail({
     setPickingUp(true);
     setError(null);
     try {
-      // Persist any qty edits the branch made at pickup (values are already
-      // capped in the input to ≤ what admin prepared). The DB trigger
-      // recalculates final_total_amount automatically.
-      for (const line of lines) {
-        const e = edits[line.id];
-        if (!e) continue;
-        if (e.fulfilled === line.fulfilled_quantity) continue;
-        const { error: lineErr } = await supabase
-          .from("order_lines")
-          .update({ fulfilled_quantity: e.fulfilled })
-          .eq("id", line.id);
-        if (lineErr) throw lineErr;
-      }
-      const { error } = await supabase
-        .from("orders")
-        .update({ status: "COMPLETED" })
-        .eq("id", order.id);
+      const { error } = await supabase.rpc("submit_pickup", {
+        p_order_id: order.id,
+        p_quantities: lines.map((line) => ({ line_id: line.id, quantity: edits[line.id]?.fulfilled ?? line.fulfilled_quantity })),
+        p_reason: pickupReason,
+      });
       if (error) throw error;
-      load();
+      setPickupReason("");
+      await load(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to confirm pickup");
     } finally {
@@ -176,7 +186,12 @@ export function OrderDetail({
   const final = Number(order.final_total_amount);
   const adminAdvanceTarget = canEdit ? nextAdminStatus(order.status) : null;
   const canPickup = !canEdit && order.status === "READY";
-  const canPickupEdit = canPickup; // branch may adjust at pickup time
+  const pickupPending = order.pickup_approval_status === "PENDING";
+  const canPickupEdit = canPickup && !pickupPending;
+  const canPrepare = canEdit && (order.status === "SUBMITTED" || order.status === "PREPARING");
+  const pickupQuantities = Object.fromEntries(lines.map((line) => [line.id, edits[line.id]?.fulfilled ?? line.fulfilled_quantity]));
+  const pickupChanged = pickupHasChanges(lines, pickupQuantities);
+  const pickupValid = pickupQuantitiesValid(lines, pickupQuantities);
   const canCancel = !canEdit && order.status === "SUBMITTED";
 
   // Live preview of the total based on current in-flight edits.
@@ -187,7 +202,7 @@ export function OrderDetail({
   }, 0);
   const liveTax = lines.reduce((s, l) => {
     const q = edits[l.id]?.fulfilled ?? l.fulfilled_quantity;
-    return l.is_taxable ? s + q * Number(l.unit_price) * 0.13 : s;
+    return l.is_taxable ? s + q * Number(l.unit_price) * TAX_RATE : s;
   }, 0);
   const liveTotal = liveSubtotal + liveTax;
   const previewChanged =
@@ -214,21 +229,26 @@ export function OrderDetail({
       render: (r) => r.quantity,
     },
     {
+      key: "prepared",
+      header: "Prepared",
+      align: "right",
+      render: (r) => requests.find((request) => request.status === "APPROVED")?.pickup_request_lines.find((line) => line.order_line_id === r.id)?.prepared_quantity ?? r.fulfilled_quantity,
+    },
+    {
       key: "fulfilled",
-      header: canPickupEdit ? "Picked Up" : "Fulfilled",
+      header: order.status === "READY" || order.status === "COMPLETED" ? "Actual Pickup" : "Fulfilled",
       align: "right",
       render: (r) => {
-        // Editable for admin OR for branch at pickup. Both are capped at the
-        // originally requested quantity — branch can pick up more or less
-        // than what admin recorded, up to what they asked for.
-        const editable = canEdit || canPickupEdit;
+        const editable = canPrepare || canPickupEdit;
         const maxValue = r.quantity;
-        if (!editable) return r.fulfilled_quantity;
+        if (!editable) return pickupPending ? requests[0]?.pickup_request_lines.find((line) => line.order_line_id === r.id)?.pickup_quantity ?? r.fulfilled_quantity : r.fulfilled_quantity;
         return (
           <Input
             type="number"
             min={0}
+            step={1}
             max={maxValue}
+            disabled={pickingUp || saving}
             value={edits[r.id]?.fulfilled ?? r.fulfilled_quantity}
             onChange={(e) =>
               setEdits((p) => ({
@@ -237,7 +257,7 @@ export function OrderDetail({
                   ...(p[r.id] ?? { reason: r.shortage_reason ?? "" }),
                   fulfilled: Math.max(
                     0,
-                    Math.min(maxValue, Number(e.target.value) || 0),
+                    Math.min(maxValue, Math.floor(Number(e.target.value) || 0)),
                   ),
                 },
               }))
@@ -248,7 +268,7 @@ export function OrderDetail({
       },
     },
     // Shortage reason column only shown to admin (who enters it)
-    ...(canEdit
+    ...(canPrepare
       ? [
           {
             key: "shortage",
@@ -285,7 +305,7 @@ export function OrderDetail({
       render: (r) => {
         // Live preview: while admin edits or branch is at pickup, reflect
         // the in-flight quantity change. Otherwise show the stored value.
-        const previewing = canEdit || canPickupEdit;
+        const previewing = canPrepare || canPickupEdit;
         const q = previewing
           ? edits[r.id]?.fulfilled ?? r.fulfilled_quantity
           : r.fulfilled_quantity;
@@ -311,13 +331,16 @@ export function OrderDetail({
   return (
     <div className="space-y-5">
       {error && <Banner tone="danger">{error}</Banner>}
+      {!canEdit && order.invoice_sent_at && <Banner tone="success">Your invoice is available. <Link href={`/branch/invoices/${order.id}/invoice`} className="font-medium underline">View Invoice INV-{order.order_number}</Link></Banner>}
 
-      {canPickup && (
+      {canPickupEdit && (
         <Banner tone="success">
-          Your order is ready. Adjust any quantities you're actually taking,
-          then confirm pickup to complete it.
+          Your order is ready. Confirm the prepared quantities, or request admin approval for a different pickup quantity.
         </Banner>
       )}
+      {pickupPending && <Banner tone="info">Pickup Approval Pending — the order remains Ready until admin reviews the request.</Banner>}
+
+      {requests.map((request) => <PickupApprovalPanel key={request.id} request={request} canReview={canEdit && pickupPending} products={Object.fromEntries(lines.map((line) => [line.id, line.catalog_items?.name ?? "Item"]))} onReviewed={() => load(true)} />)}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
@@ -354,7 +377,7 @@ export function OrderDetail({
               </div>
               <div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                  {canPickupEdit ? "You'll be charged" : "Final"}
+                  {canPickupEdit && pickupChanged ? "Estimated after approval" : "Final"}
                 </div>
                 <div
                   className={
@@ -397,47 +420,15 @@ export function OrderDetail({
             <CardTitle className="text-lg">Timeline</CardTitle>
           </CardHeader>
           <CardContent>
-            <ol className="space-y-2">
-              {ORDER_STATUS_FLOW.map((s, i) => {
-                const currentIdx = ORDER_STATUS_FLOW.indexOf(order.status);
-                const reached = i <= currentIdx;
-                const active = s === order.status;
-                return (
-                  <li key={s} className="flex items-center gap-2 text-sm">
-                    <span
-                      className={
-                        "w-2 h-2 rounded-full shrink-0 " +
-                        (active
-                          ? "bg-saffron"
-                          : reached
-                          ? "bg-[#16A34A]"
-                          : "bg-border")
-                      }
-                    />
-                    <span
-                      className={
-                        reached ? "text-foreground" : "text-muted-foreground"
-                      }
-                    >
-                      {ORDER_STATUS_LABEL[s]}
-                    </span>
-                    {active && (
-                      <span className="text-[11px] text-muted-foreground ml-auto">
-                        {new Date(order.updated_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
+            <OrderTimeline status={order.status} updatedAt={order.updated_at} />
 
             {adminAdvanceTarget && (
-              <Button className="w-full mt-4" onClick={advanceAdmin}>
+              <Button className="w-full mt-4" onClick={advanceAdmin} disabled={saving || dirty}>
                 Mark as {ORDER_STATUS_LABEL[adminAdvanceTarget]}
               </Button>
+            )}
+            {adminAdvanceTarget && dirty && (
+              <p className="mt-2 text-xs text-muted-foreground">Save fulfillment quantities before changing the order status.</p>
             )}
 
             {canEdit && order.status === "READY" && (
@@ -446,17 +437,20 @@ export function OrderDetail({
               </div>
             )}
 
-            {canPickup && (
+            {canPickupEdit && (
+              <div className="mt-4 space-y-3">
+              {pickupChanged && <div className="space-y-1.5"><Label htmlFor="pickup-reason">Reason for pickup change</Label><Input id="pickup-reason" value={pickupReason} onChange={(event) => setPickupReason(event.target.value)} placeholder="Explain the extra or reduced pickup" disabled={pickingUp} /></div>}
               <Button
-                className="w-full mt-4"
+                className="w-full"
                 onClick={branchPickup}
-                disabled={pickingUp}
+                disabled={pickingUp || !pickupValid || (pickupChanged && !pickupReason.trim())}
               >
                 <PackageCheck className="size-4" />
                 {pickingUp
-                  ? "Confirming…"
-                  : `Confirm Pickup · CA$${liveTotal.toFixed(2)}`}
+                  ? "Submitting…"
+                  : pickupChanged ? "Request Approval" : `Confirm Pickup · CA$${liveTotal.toFixed(2)}`}
               </Button>
+              </div>
             )}
 
             {canCancel && (
@@ -479,7 +473,7 @@ export function OrderDetail({
 
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold">Line Items</h2>
-        {canEdit && (
+        {canPrepare && (
           <Button size="sm" disabled={!dirty || saving} onClick={saveFulfillment}>
             {saving ? "Saving…" : "Save Fulfillment"}
           </Button>

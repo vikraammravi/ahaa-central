@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
 import { FormSelect } from "@/components/shared/FormSelect";
@@ -26,21 +26,15 @@ export function ProfileEditDialog({
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
 }) {
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<UserRole>("BRANCH_MANAGER");
-  const [status, setStatus] = useState<ProfileStatus>("pending");
-  const [locationId, setLocationId] = useState<string>("");
-
-  useEffect(() => {
-    setFullName(profile.full_name ?? "");
-    setPhone(profile.phone ?? "");
-    setRole(profile.role);
-    setStatus(profile.status);
-    setLocationId(profile.location_id ?? "");
-  }, [profile]);
+  const [fullName, setFullName] = useState(profile.full_name ?? "");
+  const [phone, setPhone] = useState(profile.phone ?? "");
+  const [role, setRole] = useState<UserRole>(profile.role);
+  const [status, setStatus] = useState<ProfileStatus>(profile.status);
+  const [locationId, setLocationId] = useState<string>(profile.location_id ?? "");
 
   async function handleSubmit() {
+    if (!fullName.trim()) throw new Error("Enter the user's full name.");
+    if (role === "BRANCH_MANAGER" && status === "active" && !locationId) throw new Error("Assign a branch before activating this manager.");
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -48,7 +42,7 @@ export function ProfileEditDialog({
         phone: phone.trim() || null,
         role,
         status,
-        location_id: locationId || null,
+        location_id: role === "CENTRAL_ADMIN" ? null : locationId || null,
       })
       .eq("id", profile.id);
     if (error) throw new Error(error.message);

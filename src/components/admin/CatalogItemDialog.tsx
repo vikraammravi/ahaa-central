@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,10 @@ import { FormField } from "@/components/shared/FormField";
 import { FormSelect } from "@/components/shared/FormSelect";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem, UnitMeasurement } from "@/lib/supabase/types";
+import { DEFAULT_STOCK_THRESHOLD, taxLabel } from "@/lib/format";
 
 const CATEGORIES = ["Batter", "Curry", "Chutney", "Sweet", "Pantry"] as const;
-const UNITS: readonly UnitMeasurement[] = ["Bucket", "Tray", "Piece", "Can"];
+const UNITS: readonly UnitMeasurement[] = ["Bucket", "Tray", "Piece", "Can", "Box", "Bottle", "Bag"];
 
 export function CatalogItemDialog({
   item,
@@ -28,37 +29,27 @@ export function CatalogItemDialog({
 }) {
   const mode = item ? "edit" : "create";
 
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState<string>(CATEGORIES[0]);
-  const [unit, setUnit] = useState<UnitMeasurement>(UNITS[0]);
-  const [price, setPrice] = useState("");
-  const [isTaxable, setIsTaxable] = useState(true);
-  const [isActive, setIsActive] = useState(true);
-
-  useEffect(() => {
-    if (item) {
-      setName(item.name);
-      setCategory(item.category);
-      setUnit(item.unit_type);
-      setPrice(String(item.default_price));
-      setIsTaxable(item.is_taxable);
-      setIsActive(item.is_active);
-    } else {
-      setName("");
-      setCategory(CATEGORIES[0]);
-      setUnit(UNITS[0]);
-      setPrice("");
-      setIsTaxable(true);
-      setIsActive(true);
-    }
-  }, [item]);
+  const [name, setName] = useState(item?.name ?? "");
+  const [category, setCategory] = useState<string>(item?.category ?? CATEGORIES[0]);
+  const [unit, setUnit] = useState<UnitMeasurement>(item?.unit_type ?? UNITS[0]);
+  const [price, setPrice] = useState(item ? String(item.default_price) : "");
+  const [threshold, setThreshold] = useState(String(item?.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD));
+  const [isTaxable, setIsTaxable] = useState(item?.is_taxable ?? true);
+  const [isActive, setIsActive] = useState(item?.is_active ?? true);
 
   async function handleSubmit() {
+    if (!name.trim()) throw new Error("Enter an item name.");
+    if (!Number.isFinite(Number(price)) || Number(price) < 0) throw new Error("Enter a valid nonnegative price.");
+    const lowStockThreshold = Number(threshold);
+    if (threshold.trim() === "" || !Number.isInteger(lowStockThreshold) || lowStockThreshold < 0 || lowStockThreshold > 2147483647) {
+      throw new Error("Threshold must be a whole number of zero or more.");
+    }
     const payload = {
       name: name.trim(),
       category,
       unit_type: unit,
       default_price: Number(price) || 0,
+      low_stock_threshold: lowStockThreshold,
       is_taxable: isTaxable,
       is_active: isActive,
     };
@@ -69,6 +60,10 @@ export function CatalogItemDialog({
             .from("catalog_items")
             .insert({ ...payload, available_stock: 0 });
     if (error) throw new Error(error.message);
+    if (!item) {
+      setName(""); setCategory(CATEGORIES[0]); setUnit(UNITS[0]); setPrice("");
+      setThreshold(String(DEFAULT_STOCK_THRESHOLD)); setIsTaxable(true); setIsActive(true);
+    }
     onSaved?.();
   }
 
@@ -133,6 +128,10 @@ export function CatalogItemDialog({
         />
       </FormField>
 
+      <FormField label="Low Stock Threshold" htmlFor="ci-threshold" required hint="Stock below this quantity is marked as low. Use 0 to disable low-stock alerts.">
+        <Input id="ci-threshold" type="number" min="0" step="1" value={threshold} onChange={(e) => setThreshold(e.target.value)} required />
+      </FormField>
+
       <div className="flex items-center gap-6 pt-1">
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -141,7 +140,7 @@ export function CatalogItemDialog({
             onChange={(e) => setIsTaxable(e.target.checked)}
             className="size-4 accent-saffron"
           />
-          Taxable (HST 13%)
+          Tax: {taxLabel(isTaxable)}
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input

@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Banner } from "@/components/shared/Banner";
 import { RowActions } from "@/components/shared/RowActions";
 import { ProfileEditDialog } from "@/components/admin/ProfileEditDialog";
-import { supabase } from "@/lib/supabase/client";
-import type { Location, Profile } from "@/lib/supabase/types";
+import type { Profile } from "@/lib/supabase/types";
+import { useAsyncData } from "@/lib/useAsyncData";
+import { fetchUsers } from "@/lib/admin/data";
 
 const statusKind: Record<Profile["status"], StatusKind> = {
   active: "active",
@@ -17,31 +18,11 @@ const statusKind: Record<Profile["status"], StatusKind> = {
 };
 
 export default function AdminUsersPage() {
-  const [profiles, setProfiles] = useState<Profile[] | null>(null);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error, refresh } = useAsyncData(fetchUsers);
+  const profiles = data?.profiles ?? null;
+  const locations = data?.locations ?? [];
   const [editing, setEditing] = useState<Profile | null>(null);
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    const [{ data: p, error: pe }, { data: l, error: le }] = await Promise.all([
-      supabase.from("profiles").select("*").order("full_name"),
-      supabase.from("locations").select("*").order("name"),
-    ]);
-    if (pe) setError(pe.message);
-    else if (le) setError(le.message);
-    else {
-      setProfiles(p as Profile[]);
-      setLocations(l as Location[]);
-    }
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const branchName = (id?: string | null) =>
     locations.find((l) => l.id === id)?.name ?? "—";
@@ -105,13 +86,14 @@ export default function AdminUsersPage() {
 
       {editing && (
         <ProfileEditDialog
+          key={editing.id}
           profile={editing}
           locations={locations}
           open
           onOpenChange={(v) => !v && setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            load();
+            void refresh();
           }}
         />
       )}

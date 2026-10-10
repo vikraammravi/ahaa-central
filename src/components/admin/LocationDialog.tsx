@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,32 +23,15 @@ export function LocationDialog({
   onOpenChange?: (v: boolean) => void;
 }) {
   const mode = location ? "edit" : "create";
-  const [name, setName] = useState("");
-  const [city, setCity] = useState("");
-  const [province, setProvince] = useState("ON");
-  const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
-  const [isCentral, setIsCentral] = useState(false);
-
-  useEffect(() => {
-    if (location) {
-      setName(location.name);
-      setCity(location.city ?? "");
-      setProvince(location.province ?? "ON");
-      setAddress(location.address ?? "");
-      setPhone(location.phone ?? "");
-      setIsCentral(location.is_central);
-    } else {
-      setName("");
-      setCity("");
-      setProvince("ON");
-      setAddress("");
-      setPhone("");
-      setIsCentral(false);
-    }
-  }, [location]);
+  const [name, setName] = useState(location?.name ?? "");
+  const [city, setCity] = useState(location?.city ?? "");
+  const [province, setProvince] = useState(location?.province ?? "ON");
+  const [address, setAddress] = useState(location?.address ?? "");
+  const [phone, setPhone] = useState(location?.phone ?? "");
+  const [isCentral, setIsCentral] = useState(location?.is_central ?? false);
 
   async function handleSubmit() {
+    if (!name.trim()) throw new Error("Enter a branch name.");
     const payload = {
       name: name.trim(),
       city: city.trim() || null,
@@ -62,6 +45,7 @@ export function LocationDialog({
         ? await supabase.from("locations").update(payload).eq("id", location!.id)
         : await supabase.from("locations").insert(payload);
     if (error) throw new Error(error.message);
+    if (!location) { setName(""); setCity(""); setProvince("ON"); setAddress(""); setPhone(""); setIsCentral(false); }
     onSaved?.();
   }
 

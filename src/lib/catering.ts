@@ -21,3 +21,14 @@ export const CATERING_STATUSES: CateringStatus[] = [
   "COMPLETED",
   "CANCELLED",
 ];
+
+export function phoneHref(phone: string): string | null {
+  const number = phone.trim();
+  const digits = number.replace(/\D/g, "");
+  if (digits.length < 7 || digits.length > 15) return null;
+  return `tel:${number.startsWith("+") ? "+" : ""}${digits}`;
+}
+
+export function localDateInput(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}

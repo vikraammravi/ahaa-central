@@ -1,52 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Banner } from "@/components/shared/Banner";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem } from "@/lib/supabase/types";
-
-function stockBadge(available: number): StatusKind {
-  if (available === 0) return "out-of-stock";
-  if (available < 20) return "low-stock";
-  return "in-stock";
-}
+import { stockBadge } from "@/lib/stock";
+import { useAsyncData } from "@/lib/useAsyncData";
+import { fetchCatalog } from "@/lib/admin/data";
+import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD, POLL_INTERVAL } from "@/lib/format";
 
 export default function AdminStockPage() {
-  const [items, setItems] = useState<CatalogItem[] | null>(null);
   const [edits, setEdits] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const pendingEdits = useRef<Record<string, number>>({});
+  const previousStock = useRef<Record<string, { quantity: number; updatedAt: string }>>({});
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    const { data, error } = await supabase
-      .from("catalog_items")
-      .select("*")
-      .eq("is_active", true)
-      .order("name");
-    if (error) setError(error.message);
-    else {
-      setItems(data as CatalogItem[]);
+  const load = useCallback(async (signal: AbortSignal) => {
+      const data = (await fetchCatalog(signal)).filter((item) => item.is_active);
+      if (signal.aborted) throw new Error("Request cancelled.");
       const initial: Record<string, number> = {};
-      (data as CatalogItem[]).forEach((i) => (initial[i.id] = i.available_stock));
+      data.forEach((i) => {
+        const draft = pendingEdits.current[i.id];
+        const isEdited = draft !== undefined && draft !== previousStock.current[i.id]?.quantity && draft !== i.available_stock;
+        initial[i.id] = isEdited ? draft : i.available_stock;
+        if (!isEdited) previousStock.current[i.id] = { quantity: i.available_stock, updatedAt: i.updated_at };
+      });
+      pendingEdits.current = initial;
       setEdits(initial);
-    }
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    load();
+      return data;
   }, []);
-
-  const dirty = items?.some((i) => edits[i.id] !== i.available_stock);
+  const { data: items, loading, error: loadError, refresh } = useAsyncData(load, { pollInterval: POLL_INTERVAL, enabled: !saving });
+  const dirty = items?.some((i) => edits[i.id] !== undefined && edits[i.id] !== i.available_stock);
 
   async function save() {
     if (!items) return;
@@ -54,17 +45,14 @@ export default function AdminStockPage() {
     setError(null);
     try {
       const updates = items
-        .filter((i) => edits[i.id] !== i.available_stock)
-        .map((i) => ({ id: i.id, available_stock: edits[i.id] }));
-      for (const u of updates) {
-        const { error } = await supabase
-          .from("catalog_items")
-          .update({ available_stock: u.available_stock })
-          .eq("id", u.id);
-        if (error) throw error;
-      }
+        .filter((i) => edits[i.id] !== undefined && edits[i.id] !== i.available_stock)
+        .map((i) => ({ id: i.id, available_stock: edits[i.id], expected_stock: previousStock.current[i.id]?.quantity, expected_updated_at: previousStock.current[i.id]?.updatedAt }));
+      if (updates.some((item) => !Number.isInteger(item.available_stock) || item.available_stock < 0 || item.available_stock > 2147483647)) throw new Error("Stock must be a nonnegative whole number.");
+      const { error } = await supabase.rpc("save_daily_stock", { p_updates: updates });
+      if (error) throw new Error(error.message);
+      pendingEdits.current = {};
+      previousStock.current = {};
       setSavedAt(new Date());
-      load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -93,13 +81,14 @@ export default function AdminStockPage() {
         <Input
           type="number"
           min={0}
+          step={1}
+          disabled={saving}
           value={edits[r.id] ?? r.available_stock}
-          onChange={(e) =>
-            setEdits((prev) => ({
-              ...prev,
-              [r.id]: Math.max(0, Number(e.target.value) || 0),
-            }))
-          }
+          onChange={(e) => {
+            const quantity = Math.max(0, Number(e.target.value) || 0);
+            pendingEdits.current[r.id] = quantity;
+            setEdits((prev) => ({ ...prev, [r.id]: quantity }));
+          }}
           className="w-24 h-9 text-right ml-auto"
         />
       ),
@@ -107,21 +96,22 @@ export default function AdminStockPage() {
     {
       key: "status",
       header: "Status",
-      render: (r) => <StatusBadge status={stockBadge(edits[r.id] ?? r.available_stock)} />,
+      render: (r) => <StatusBadge status={stockBadge(edits[r.id] ?? r.available_stock, r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD)} />,
     },
+    { key: "threshold", header: "Threshold", align: "right", render: (r) => r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD },
     {
       key: "rate",
       header: "Rate",
       align: "right",
       hideOn: "sm",
-      render: (r) => `CA$${Number(r.default_price).toFixed(2)}`,
+      render: (r) => formatMoney(r.default_price),
     },
     {
       key: "tax",
-      header: "Taxable",
+      header: "Tax",
       align: "right",
       hideOn: "md",
-      render: (r) => (r.is_taxable ? "Yes" : "No"),
+      render: (r) => taxLabel(r.is_taxable),
     },
   ];
 
@@ -129,14 +119,15 @@ export default function AdminStockPage() {
     <div className="max-w-[1200px] mx-auto space-y-5">
       <PageHeader
         title="Daily Stock"
-        subtitle="Set today's available quantity for each active product."
+        subtitle="Stock updates every 5 seconds. Fulfilled quantities are deducted when orders become Ready."
         actions={
           <Button size="lg" disabled={!dirty || saving} onClick={save}>
             {saving ? "Saving…" : "Save & Broadcast"}
           </Button>
         }
       />
-      {error && <Banner tone="danger">{error}</Banner>}
+      {(error || loadError) && <Banner tone="danger">{error || loadError}</Banner>}
+      {dirty && <Button variant="outline" disabled={saving} onClick={() => { pendingEdits.current = {}; previousStock.current = {}; setEdits({}); setError(null); void refresh(); }}>Discard Edits & Refresh Stock</Button>}
       {savedAt && !dirty && (
         <Banner tone="success">
           Stock updated at {savedAt.toLocaleTimeString()}. Branches will see

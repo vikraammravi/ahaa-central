@@ -50,7 +50,6 @@ export function NotificationList({ audience }: { audience: "admin" | "branch" })
             .from("catalog_items")
             .select("*")
             .eq("is_active", true)
-            .lt("available_stock", 20)
             .order("available_stock"),
         ]);
 
@@ -62,7 +61,7 @@ export function NotificationList({ audience }: { audience: "admin" | "branch" })
             tone: "info",
           });
         });
-        (lowItems ?? []).forEach((i: CatalogItem) => {
+        (lowItems ?? []).filter((i: CatalogItem) => i.available_stock <= 0 || i.available_stock < (i.low_stock_threshold ?? 20)).forEach((i: CatalogItem) => {
           list.push({
             title: i.available_stock === 0 ? "Out of stock" : "Low stock",
             body: `${i.name} — ${i.available_stock} left`,

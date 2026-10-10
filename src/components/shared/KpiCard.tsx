@@ -48,9 +48,9 @@ export function KpiCard({
   );
 }
 
-export function KpiGrid({ items }: { items: Kpi[] }) {
+export function KpiGrid({ items, className }: { items: Kpi[]; className?: string }) {
   return (
-    <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <section className={cn("grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4", className)}>
       {items.map((k) => (
         <KpiCard key={k.label} {...k} />
       ))}

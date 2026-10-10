@@ -33,12 +33,16 @@ export function ConfirmDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleConfirm() {
     setBusy(true);
+    setError(null);
     try {
       await onConfirm();
       setOpen(false);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to complete this action.");
     } finally {
       setBusy(false);
     }
@@ -52,6 +56,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
           <Button
             type="button"

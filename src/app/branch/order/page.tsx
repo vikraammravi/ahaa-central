@@ -6,7 +6,7 @@ import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Banner } from "@/components/shared/Banner";
@@ -14,14 +14,9 @@ import { LoadingState, Spinner } from "@/components/shared/Spinner";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import type { CatalogItem } from "@/lib/supabase/types";
+import { stockBadge } from "@/lib/stock";
 
 const HST = 0.13;
-
-function stockBadge(available: number): StatusKind {
-  if (available === 0) return "out-of-stock";
-  if (available < 20) return "low-stock";
-  return "in-stock";
-}
 
 export default function BranchOrderPage() {
   const router = useRouter();
@@ -136,7 +131,7 @@ export default function BranchOrderPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <div className="text-sm font-medium">{r.name}</div>
-                      <StatusBadge status={stockBadge(r.available_stock)} />
+                      <StatusBadge status={stockBadge(r.available_stock, r.low_stock_threshold ?? 20)} />
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {r.unit_type} · CA${Number(r.default_price).toFixed(2)} ·{" "}

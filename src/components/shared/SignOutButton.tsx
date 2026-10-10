@@ -3,6 +3,7 @@
 import { LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 type Variant = "row" | "icon" | "compact";
 
@@ -13,10 +14,11 @@ export function SignOutButton({
   variant?: Variant;
   className?: string;
 }) {
+  const router = useRouter();
   async function handleSignOut() {
     await supabase.auth.signOut();
-    // Hard nav so middleware sees the cleared session cookies.
-    window.location.assign("/login");
+    router.replace("/login");
+    router.refresh();
   }
 
   if (variant === "icon") {

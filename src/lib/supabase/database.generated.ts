@@ -1,0 +1,388 @@
+// Generated from supabase/schema.snapshot.json. Run node scripts/generate-database-types.mjs to refresh.
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+export type DatabaseEnums = {
+  "user_role": "CENTRAL_ADMIN" | "BRANCH_MANAGER";
+  "order_status": "SUBMITTED" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
+  "profile_status": "active" | "pending" | "disabled";
+  "catering_status": "INQUIRY" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  "unit_measurement": "Bucket" | "Tray" | "Piece" | "Can" | "Box" | "Bottle" | "Bag";
+};
+
+export type DatabaseTables = {
+  "catalog_items": {
+    Row: {
+      "id": string;
+      "name": string;
+      "category": string;
+      "unit_type": DatabaseEnums["unit_measurement"];
+      "default_price": number;
+      "is_taxable": boolean | null;
+      "available_stock": number | null;
+      "is_active": boolean | null;
+      "updated_at": string | null;
+      "low_stock_threshold": number;
+    };
+    Insert: {
+      "id"?: string;
+      "name": string;
+      "category": string;
+      "unit_type": DatabaseEnums["unit_measurement"];
+      "default_price": number;
+      "is_taxable"?: boolean | null;
+      "available_stock"?: number | null;
+      "is_active"?: boolean | null;
+      "updated_at"?: string | null;
+      "low_stock_threshold"?: number;
+    };
+    Update: {
+      "id"?: string;
+      "name"?: string;
+      "category"?: string;
+      "unit_type"?: DatabaseEnums["unit_measurement"];
+      "default_price"?: number;
+      "is_taxable"?: boolean | null;
+      "available_stock"?: number | null;
+      "is_active"?: boolean | null;
+      "updated_at"?: string | null;
+      "low_stock_threshold"?: number;
+    };
+  };
+  "catering_events": {
+    Row: {
+      "id": string;
+      "location_id": string;
+      "customer_name": string;
+      "customer_phone": string;
+      "guest_count": number;
+      "event_datetime": string;
+      "total_amount": number;
+      "advance_paid": number | null;
+      "balance_due": number;
+      "status": DatabaseEnums["catering_status"] | null;
+      "checklist": Json | null;
+      "notes": string | null;
+      "created_at": string | null;
+      "updated_at": string | null;
+    };
+    Insert: {
+      "id"?: string;
+      "location_id": string;
+      "customer_name": string;
+      "customer_phone": string;
+      "guest_count": number;
+      "event_datetime": string;
+      "total_amount": number;
+      "advance_paid"?: number | null;
+      "balance_due": number;
+      "status"?: DatabaseEnums["catering_status"] | null;
+      "checklist"?: Json | null;
+      "notes"?: string | null;
+      "created_at"?: string | null;
+      "updated_at"?: string | null;
+    };
+    Update: {
+      "id"?: string;
+      "location_id"?: string;
+      "customer_name"?: string;
+      "customer_phone"?: string;
+      "guest_count"?: number;
+      "event_datetime"?: string;
+      "total_amount"?: number;
+      "advance_paid"?: number | null;
+      "balance_due"?: number;
+      "status"?: DatabaseEnums["catering_status"] | null;
+      "checklist"?: Json | null;
+      "notes"?: string | null;
+      "created_at"?: string | null;
+      "updated_at"?: string | null;
+    };
+  };
+  "invoice_edits": {
+    Row: {
+      "id": string;
+      "order_id": string;
+      "revision": number;
+      "edited_by": string;
+      "edited_at": string;
+      "reason": string;
+      "previous_lines": Json;
+      "updated_lines": Json;
+      "stock_adjustments": Json;
+    };
+    Insert: {
+      "id"?: string;
+      "order_id": string;
+      "revision": number;
+      "edited_by": string;
+      "edited_at"?: string;
+      "reason": string;
+      "previous_lines": Json;
+      "updated_lines": Json;
+      "stock_adjustments": Json;
+    };
+    Update: {
+      "id"?: string;
+      "order_id"?: string;
+      "revision"?: number;
+      "edited_by"?: string;
+      "edited_at"?: string;
+      "reason"?: string;
+      "previous_lines"?: Json;
+      "updated_lines"?: Json;
+      "stock_adjustments"?: Json;
+    };
+  };
+  "locations": {
+    Row: {
+      "id": string;
+      "name": string;
+      "address": string | null;
+      "phone": string | null;
+      "is_central": boolean | null;
+      "created_at": string | null;
+      "city": string | null;
+      "province": string | null;
+    };
+    Insert: {
+      "id"?: string;
+      "name": string;
+      "address"?: string | null;
+      "phone"?: string | null;
+      "is_central"?: boolean | null;
+      "created_at"?: string | null;
+      "city"?: string | null;
+      "province"?: string | null;
+    };
+    Update: {
+      "id"?: string;
+      "name"?: string;
+      "address"?: string | null;
+      "phone"?: string | null;
+      "is_central"?: boolean | null;
+      "created_at"?: string | null;
+      "city"?: string | null;
+      "province"?: string | null;
+    };
+  };
+  "order_lines": {
+    Row: {
+      "id": string;
+      "order_id": string;
+      "item_id": string;
+      "quantity": number;
+      "unit_price": number;
+      "is_taxable": boolean;
+      "line_total": number;
+      "fulfilled_quantity": number;
+      "shortage_reason": string | null;
+      "final_line_total": number | null;
+    };
+    Insert: {
+      "id"?: string;
+      "order_id": string;
+      "item_id": string;
+      "quantity": number;
+      "unit_price": number;
+      "is_taxable": boolean;
+      "line_total": number;
+      "fulfilled_quantity"?: number;
+      "shortage_reason"?: string | null;
+      "final_line_total"?: never;
+    };
+    Update: {
+      "id"?: string;
+      "order_id"?: string;
+      "item_id"?: string;
+      "quantity"?: number;
+      "unit_price"?: number;
+      "is_taxable"?: boolean;
+      "line_total"?: number;
+      "fulfilled_quantity"?: number;
+      "shortage_reason"?: string | null;
+      "final_line_total"?: never;
+    };
+  };
+  "orders": {
+    Row: {
+      "id": string;
+      "order_number": number;
+      "location_id": string;
+      "status": DatabaseEnums["order_status"] | null;
+      "subtotal": number;
+      "tax_amount": number;
+      "total_amount": number;
+      "order_date": string | null;
+      "created_by": string | null;
+      "created_at": string | null;
+      "updated_at": string | null;
+      "final_subtotal": number;
+      "final_tax_amount": number;
+      "final_total_amount": number;
+      "stock_deducted_at": string | null;
+      "pickup_approval_status": string | null;
+      "invoice_sent_at": string | null;
+      "invoice_sent_by": string | null;
+      "invoice_revision": number;
+      "invoice_sent_revision": number;
+      "invoice_published_lines": Json | null;
+      "invoice_published_subtotal": number | null;
+      "invoice_published_tax": number | null;
+      "invoice_published_total": number | null;
+    };
+    Insert: {
+      "id"?: string;
+      "order_number"?: number;
+      "location_id": string;
+      "status"?: DatabaseEnums["order_status"] | null;
+      "subtotal"?: number;
+      "tax_amount"?: number;
+      "total_amount"?: number;
+      "order_date"?: string | null;
+      "created_by"?: string | null;
+      "created_at"?: string | null;
+      "updated_at"?: string | null;
+      "final_subtotal"?: number;
+      "final_tax_amount"?: number;
+      "final_total_amount"?: number;
+      "stock_deducted_at"?: string | null;
+      "pickup_approval_status"?: string | null;
+      "invoice_sent_at"?: string | null;
+      "invoice_sent_by"?: string | null;
+      "invoice_revision"?: number;
+      "invoice_sent_revision"?: number;
+      "invoice_published_lines"?: Json | null;
+      "invoice_published_subtotal"?: number | null;
+      "invoice_published_tax"?: number | null;
+      "invoice_published_total"?: number | null;
+    };
+    Update: {
+      "id"?: string;
+      "order_number"?: number;
+      "location_id"?: string;
+      "status"?: DatabaseEnums["order_status"] | null;
+      "subtotal"?: number;
+      "tax_amount"?: number;
+      "total_amount"?: number;
+      "order_date"?: string | null;
+      "created_by"?: string | null;
+      "created_at"?: string | null;
+      "updated_at"?: string | null;
+      "final_subtotal"?: number;
+      "final_tax_amount"?: number;
+      "final_total_amount"?: number;
+      "stock_deducted_at"?: string | null;
+      "pickup_approval_status"?: string | null;
+      "invoice_sent_at"?: string | null;
+      "invoice_sent_by"?: string | null;
+      "invoice_revision"?: number;
+      "invoice_sent_revision"?: number;
+      "invoice_published_lines"?: Json | null;
+      "invoice_published_subtotal"?: number | null;
+      "invoice_published_tax"?: number | null;
+      "invoice_published_total"?: number | null;
+    };
+  };
+  "pickup_request_lines": {
+    Row: {
+      "id": string;
+      "request_id": string;
+      "order_line_id": string;
+      "item_id": string;
+      "prepared_quantity": number;
+      "pickup_quantity": number;
+      "return_to_stock": boolean | null;
+      "stock_adjustment": number;
+    };
+    Insert: {
+      "id"?: string;
+      "request_id": string;
+      "order_line_id": string;
+      "item_id": string;
+      "prepared_quantity": number;
+      "pickup_quantity": number;
+      "return_to_stock"?: boolean | null;
+      "stock_adjustment"?: number;
+    };
+    Update: {
+      "id"?: string;
+      "request_id"?: string;
+      "order_line_id"?: string;
+      "item_id"?: string;
+      "prepared_quantity"?: number;
+      "pickup_quantity"?: number;
+      "return_to_stock"?: boolean | null;
+      "stock_adjustment"?: number;
+    };
+  };
+  "pickup_requests": {
+    Row: {
+      "id": string;
+      "order_id": string;
+      "status": string;
+      "reason": string;
+      "requested_by": string;
+      "requested_at": string;
+      "reviewed_by": string | null;
+      "reviewed_at": string | null;
+      "review_note": string | null;
+    };
+    Insert: {
+      "id"?: string;
+      "order_id": string;
+      "status"?: string;
+      "reason": string;
+      "requested_by": string;
+      "requested_at"?: string;
+      "reviewed_by"?: string | null;
+      "reviewed_at"?: string | null;
+      "review_note"?: string | null;
+    };
+    Update: {
+      "id"?: string;
+      "order_id"?: string;
+      "status"?: string;
+      "reason"?: string;
+      "requested_by"?: string;
+      "requested_at"?: string;
+      "reviewed_by"?: string | null;
+      "reviewed_at"?: string | null;
+      "review_note"?: string | null;
+    };
+  };
+  "profiles": {
+    Row: {
+      "id": string;
+      "email": string;
+      "full_name": string | null;
+      "role": DatabaseEnums["user_role"];
+      "location_id": string | null;
+      "created_at": string | null;
+      "updated_at": string | null;
+      "status": DatabaseEnums["profile_status"];
+      "phone": string | null;
+    };
+    Insert: {
+      "id": string;
+      "email": string;
+      "full_name"?: string | null;
+      "role"?: DatabaseEnums["user_role"];
+      "location_id"?: string | null;
+      "created_at"?: string | null;
+      "updated_at"?: string | null;
+      "status"?: DatabaseEnums["profile_status"];
+      "phone"?: string | null;
+    };
+    Update: {
+      "id"?: string;
+      "email"?: string;
+      "full_name"?: string | null;
+      "role"?: DatabaseEnums["user_role"];
+      "location_id"?: string | null;
+      "created_at"?: string | null;
+      "updated_at"?: string | null;
+      "status"?: DatabaseEnums["profile_status"];
+      "phone"?: string | null;
+    };
+  };
+};

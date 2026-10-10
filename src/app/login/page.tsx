@@ -10,9 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/shared/Spinner";
 import { supabase } from "@/lib/supabase/client";
+import { activeRole, safeNextPath } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 function LoginInner() {
   const params = useSearchParams();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -37,19 +40,13 @@ function LoginInner() {
         .eq("id", data.user.id)
         .single();
 
-      if (profileError) throw profileError;
-      if (profile.status === "disabled") {
-        throw new Error("This account has been disabled. Contact your admin.");
+      const role = activeRole(profileError ? null : profile);
+      if (!role) {
+        await supabase.auth.signOut({ scope: "local" });
+        throw new Error("This account is not active. Contact your admin.");
       }
-
-      const dest =
-        next ??
-        (profile.role === "CENTRAL_ADMIN"
-          ? "/admin/dashboard"
-          : "/branch/home");
-
-      // Hard navigation guarantees the auth cookies are read fresh by middleware.
-      window.location.assign(dest);
+      router.replace(safeNextPath(next, role));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed");
       setSubmitting(false);
@@ -79,6 +76,7 @@ function LoginInner() {
             : "Password reset successfully. Sign in with your new password."}
         </Banner>
       )}
+      {params.get("reason") === "account_inactive" && <Banner tone="danger" className="mb-4">This account is not active. Contact your admin.</Banner>}
 
       {error && (
         <Banner tone="danger" className="mb-4">

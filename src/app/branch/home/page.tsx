@@ -25,10 +25,7 @@ export default function BranchHomePage() {
 
   useEffect(() => {
     if (userLoading) return;
-    if (!profile?.location_id) {
-      setLoading(false);
-      return;
-    }
+    if (!profile?.location_id) return;
     (async () => {
       const [{ data: l }, { data: o, error: oe }, { data: c, error: ce }] =
         await Promise.all([
@@ -70,10 +67,6 @@ export default function BranchHomePage() {
       e.status !== "CANCELLED" &&
       e.status !== "COMPLETED",
   );
-  const cateringBalance = upcomingCatering.reduce(
-    (s, e) => s + Number(e.balance_due),
-    0,
-  );
 
   const kpis: Kpi[] = [
     {
@@ -91,16 +84,10 @@ export default function BranchHomePage() {
       hint: "Events booked",
       tone: upcomingCatering.length ? "success" : "default",
     },
-    {
-      label: "Catering Balance",
-      value: `CA$${cateringBalance.toFixed(2)}`,
-      hint: "Due from customers",
-      tone: cateringBalance > 0 ? "warn" : "default",
-    },
   ];
 
   const pageError = error ?? userError;
-  const showLoading = userLoading || loading;
+  const showLoading = userLoading || (!!profile?.location_id && loading);
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-4 lg:space-y-6">
@@ -134,13 +121,13 @@ export default function BranchHomePage() {
       </Card>
 
       {showLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          {[...Array(3)].map((_, i) => (
             <div key={i} className="h-24 bg-muted animate-pulse rounded-2xl" />
           ))}
         </div>
       ) : (
-        <KpiGrid items={kpis} />
+        <KpiGrid items={kpis} className="lg:grid-cols-3" />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
@@ -234,11 +221,6 @@ export default function BranchHomePage() {
                     <div className="text-sm font-medium">
                       CA${Number(e.total_amount).toFixed(2)}
                     </div>
-                    {Number(e.balance_due) > 0 && (
-                      <div className="text-xs text-[#D97706] mt-0.5">
-                        CA${Number(e.balance_due).toFixed(2)} due
-                      </div>
-                    )}
                   </div>
                 </div>
               );
