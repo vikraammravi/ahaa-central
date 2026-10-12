@@ -44,12 +44,7 @@ export default function AdminUsersPage() {
     {
       key: "name",
       header: "Name",
-      render: (r) => (
-        <div>
-          <div className="font-medium">{r.full_name || "—"}</div>
-          <div className="text-xs text-muted-foreground">{r.email}</div>
-        </div>
-      ),
+      render: (r) => <span className="font-medium">{r.full_name || "—"}</span>,
     },
     {
       key: "role",
@@ -57,6 +52,7 @@ export default function AdminUsersPage() {
       render: (r) =>
         USER_ROLE_LABELS[r.role],
     },
+    { key: "email", header: "Email", render: (r) => r.email || "—" },
     {
       key: "branch",
       header: "Branch",
@@ -73,7 +69,7 @@ export default function AdminUsersPage() {
       key: "actions",
       header: "",
       align: "right",
-      render: (r) => <RowActions onEdit={() => setEditing(r)} />,
+      render: (r) => <RowActions onEdit={() => setEditing(r)} onDelete={async()=>{const response=await fetch(`/api/admin/users/${r.id}`,{method:"DELETE"});const result=await response.json();if(!response.ok)throw new Error(result.error??"Unable to delete user.");await refresh(true);}} deleteTitle={`Delete ${r.full_name||r.email}?`} deleteDescription="Permanently removes their login and profile. Orders, invoices and inventory history will remain." />,
     },
   ];
 

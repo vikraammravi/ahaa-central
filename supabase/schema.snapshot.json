@@ -63,7 +63,7 @@
       "type": "uuid",
       "table": "branch_inventory_counts",
       "default": null,
-      "nullable": false,
+      "nullable": true,
       "generated": false
     },
     {
@@ -415,7 +415,7 @@
       "type": "uuid",
       "table": "invoice_edits",
       "default": null,
-      "nullable": false,
+      "nullable": true,
       "generated": false
     },
     {
@@ -911,7 +911,7 @@
       "type": "uuid",
       "table": "pickup_requests",
       "default": null,
-      "nullable": false,
+      "nullable": true,
       "generated": false
     },
     {
@@ -1095,7 +1095,7 @@
       "type": "uuid",
       "table": "weekly_invoice_publications",
       "default": null,
-      "nullable": false,
+      "nullable": true,
       "generated": false
     },
     {
@@ -1143,7 +1143,7 @@
       "type": "uuid",
       "table": "weekly_invoices",
       "default": null,
-      "nullable": false,
+      "nullable": true,
       "generated": false
     },
     {

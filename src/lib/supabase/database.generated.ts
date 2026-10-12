@@ -15,7 +15,7 @@ export type DatabaseTables = {
       "id": string;
       "location_id": string;
       "count_date": string;
-      "submitted_by": string;
+      "submitted_by": string | null;
       "submitted_name": string;
       "submitted_at": string;
       "notes": string;
@@ -26,7 +26,7 @@ export type DatabaseTables = {
       "id"?: string;
       "location_id": string;
       "count_date": string;
-      "submitted_by": string;
+      "submitted_by"?: string | null;
       "submitted_name": string;
       "submitted_at"?: string;
       "notes"?: string;
@@ -37,7 +37,7 @@ export type DatabaseTables = {
       "id"?: string;
       "location_id"?: string;
       "count_date"?: string;
-      "submitted_by"?: string;
+      "submitted_by"?: string | null;
       "submitted_name"?: string;
       "submitted_at"?: string;
       "notes"?: string;
@@ -179,7 +179,7 @@ export type DatabaseTables = {
       "id": string;
       "order_id": string;
       "revision": number;
-      "edited_by": string;
+      "edited_by": string | null;
       "edited_at": string;
       "reason": string;
       "previous_lines": Json;
@@ -190,7 +190,7 @@ export type DatabaseTables = {
       "id"?: string;
       "order_id": string;
       "revision": number;
-      "edited_by": string;
+      "edited_by"?: string | null;
       "edited_at"?: string;
       "reason": string;
       "previous_lines": Json;
@@ -201,7 +201,7 @@ export type DatabaseTables = {
       "id"?: string;
       "order_id"?: string;
       "revision"?: number;
-      "edited_by"?: string;
+      "edited_by"?: string | null;
       "edited_at"?: string;
       "reason"?: string;
       "previous_lines"?: Json;
@@ -403,7 +403,7 @@ export type DatabaseTables = {
       "order_id": string;
       "status": string;
       "reason": string;
-      "requested_by": string;
+      "requested_by": string | null;
       "requested_at": string;
       "reviewed_by": string | null;
       "reviewed_at": string | null;
@@ -419,7 +419,7 @@ export type DatabaseTables = {
       "order_id": string;
       "status"?: string;
       "reason": string;
-      "requested_by": string;
+      "requested_by"?: string | null;
       "requested_at"?: string;
       "reviewed_by"?: string | null;
       "reviewed_at"?: string | null;
@@ -435,7 +435,7 @@ export type DatabaseTables = {
       "order_id"?: string;
       "status"?: string;
       "reason"?: string;
-      "requested_by"?: string;
+      "requested_by"?: string | null;
       "requested_at"?: string;
       "reviewed_by"?: string | null;
       "reviewed_at"?: string | null;
@@ -488,7 +488,7 @@ export type DatabaseTables = {
       "weekly_invoice_id": string;
       "revision": number;
       "published_at": string;
-      "published_by": string;
+      "published_by": string | null;
       "snapshot": Json;
     };
     Insert: {
@@ -496,7 +496,7 @@ export type DatabaseTables = {
       "weekly_invoice_id": string;
       "revision": number;
       "published_at"?: string;
-      "published_by": string;
+      "published_by"?: string | null;
       "snapshot": Json;
     };
     Update: {
@@ -504,7 +504,7 @@ export type DatabaseTables = {
       "weekly_invoice_id"?: string;
       "revision"?: number;
       "published_at"?: string;
-      "published_by"?: string;
+      "published_by"?: string | null;
       "snapshot"?: Json;
     };
   };
@@ -514,7 +514,7 @@ export type DatabaseTables = {
       "location_id": string;
       "start_date": string;
       "end_date": string;
-      "created_by": string;
+      "created_by": string | null;
       "created_at": string;
       "revision": number;
       "sent_revision": number | null;
@@ -532,7 +532,7 @@ export type DatabaseTables = {
       "location_id": string;
       "start_date": string;
       "end_date": string;
-      "created_by": string;
+      "created_by"?: string | null;
       "created_at"?: string;
       "revision"?: number;
       "sent_revision"?: number | null;
@@ -550,7 +550,7 @@ export type DatabaseTables = {
       "location_id"?: string;
       "start_date"?: string;
       "end_date"?: string;
-      "created_by"?: string;
+      "created_by"?: string | null;
       "created_at"?: string;
       "revision"?: number;
       "sent_revision"?: number | null;

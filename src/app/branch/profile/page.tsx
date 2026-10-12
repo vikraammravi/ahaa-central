@@ -1,2 +1,2 @@
-import { BranchUserProfile } from "@/components/shared/BranchUserProfile";
-export default function Page() { return <BranchUserProfile />; }
+import { UserProfile } from "@/components/shared/UserProfile";
+export default function Page() { return <UserProfile />; }

@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem, UnitMeasurement } from "@/lib/supabase/types";
 import { DEFAULT_STOCK_THRESHOLD, taxLabel } from "@/lib/format";
 
-const CATEGORIES = ["Batter", "Curry", "Chutney", "Sweet", "Pantry"] as const;
+import { CATALOG_CATEGORIES as CATEGORIES, catalogCategory } from "@/lib/catalog";
 const UNITS: readonly UnitMeasurement[] = ["Bucket", "Tray", "Piece", "Can", "Box", "Bottle", "Bag"];
 
 export function CatalogItemDialog({
@@ -30,7 +30,7 @@ export function CatalogItemDialog({
   const mode = item ? "edit" : "create";
 
   const [name, setName] = useState(item?.name ?? "");
-  const [category, setCategory] = useState<string>(item?.category ?? CATEGORIES[0]);
+  const [category, setCategory] = useState<string>(item ? catalogCategory(item.category) : CATEGORIES[0]);
   const [unit, setUnit] = useState<UnitMeasurement>(item?.unit_type ?? UNITS[0]);
   const [price, setPrice] = useState(item ? String(item.default_price) : "");
   const [threshold, setThreshold] = useState(String(item?.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD));

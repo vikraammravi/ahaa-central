@@ -23,7 +23,7 @@ test("return paths stay inside the signed-in role's area", () => {
 test("formatting uses Canadian currency, simple tax labels, and Toronto business dates", () => {
   assert.equal(format.formatMoney(12.5), "CA$12.50");
   assert.equal(format.taxLabel(true), "13%");
-  assert.equal(format.taxLabel(false), "-");
+  assert.equal(format.taxLabel(false), "N/A");
   assert.equal(format.formatDate("2026-10-11T02:00:00Z"), "Oct 10, 2026");
   assert.equal(format.formatDate("2026-10-11"), "Oct 11, 2026");
 });

@@ -27,27 +27,18 @@ export default function AdminBranchesPage() {
     {
       key: "name",
       header: "Branch",
-      render: (r) => (
-        <div>
-          <div className="font-medium">{r.name}</div>
-          {r.is_central && (
-            <div className="text-[11px] text-saffron-hover font-medium mt-0.5">
-              Central Kitchen
-            </div>
-          )}
-        </div>
-      ),
+      render: (r) => <span className="font-medium">{r.name}</span>,
     },
+    { key: "address", header: "Address", render: (r) => r.address ?? "—", hideOn: "md" },
     {
       key: "city",
       header: "City",
       render: (r) => (r.city ? `${r.city}, ${r.province ?? ""}` : "—"),
     },
-    { key: "address", header: "Address", render: (r) => r.address ?? "—", hideOn: "md" },
     { key: "phone", header: "Phone", render: (r) => r.phone ?? "—", hideOn: "sm" },
     {
-      key: "status",
-      header: "",
+      key: "type",
+      header: "Branch Type",
       render: (r) => (
         <StatusBadge status="active" label={r.is_central ? "Central" : "Branch"} />
       ),

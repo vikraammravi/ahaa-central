@@ -57,17 +57,6 @@ function LoginInner() {
     <AuthShell
       title="Welcome back"
       subtitle="Sign in to keep the kitchen moving."
-      footer={
-        <>
-          Got an invitation?{" "}
-          <Link
-            href="/activate-account"
-            className="text-saffron-hover font-medium"
-          >
-            Activate account
-          </Link>
-        </>
-      }
     >
       {(activated || reset) && (
         <Banner tone="success" className="mb-4">

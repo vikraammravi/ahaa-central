@@ -9,6 +9,7 @@ import {
   Building2,
   Users,
   Receipt,
+  UserRound,
 } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import type { NavEntry } from "@/components/shared/SidebarNav";
@@ -16,6 +17,7 @@ import { useCurrentUser } from "@/lib/useCurrentUser";
 import { userInitials } from "@/lib/auth";
 
 const entries: NavEntry[] = [
+  { label: "My Profile", href: "/admin/profile", icon: UserRound },
   {
     label: "Dashboard",
     href: "/admin/dashboard",

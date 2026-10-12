@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, FormEvent } from "react";
+import { Suspense, useEffect, useState, FormEvent } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase/client";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,18 +35,37 @@ function SetPasswordInner() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy,setBusy]=useState(false);
+  const [ready,setReady]=useState(false);
+  useEffect(()=>{
+    let active=true;
+    void supabase.auth.getUser().then(({data,error})=>{
+      if(!active)return;
+      setReady(!!data.user&&!error);
+      if(!data.user||error)setError("This link is invalid or expired. Request a new password reset link.");
+    });
+    return()=>{active=false;};
+  },[]);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (password.length < 12 || password.length > 128) {
+      setError("Password must be 12–128 characters.");
       return;
     }
     if (password !== confirm) {
       setError("Passwords don't match.");
       return;
     }
-    router.push(c.next);
+    setBusy(true);setError(null);
+    try {
+      const result=await supabase.auth.updateUser({password});
+      if(result.error)throw result.error;
+      const signedOut=await supabase.auth.signOut({scope:"global"});
+      if(signedOut.error)throw new Error("Password updated. Please sign out and sign in with your new password.");
+      router.replace(c.next);router.refresh();
+    }catch(error){setError(error instanceof Error?error.message:"Unable to update password.");}
+    finally{setBusy(false);}
   }
 
   return (
@@ -57,7 +78,10 @@ function SetPasswordInner() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
+            placeholder="At least 12 characters"
+            minLength={12}
+            maxLength={128}
+            disabled={!ready||busy}
             required
             autoComplete="new-password"
           />
@@ -69,6 +93,7 @@ function SetPasswordInner() {
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
+            disabled={!ready||busy}
             required
             autoComplete="new-password"
           />
@@ -80,8 +105,9 @@ function SetPasswordInner() {
           </div>
         )}
 
-        <Button type="submit" size="lg" className="w-full">
-          {c.cta}
+        {!ready&&<Link className="text-sm underline" href="/forgot-password">Request a new reset link</Link>}
+        <Button type="submit" size="lg" className="w-full" disabled={!ready||busy}>
+          {busy?"Updating…":c.cta}
         </Button>
       </form>
     </AuthShell>

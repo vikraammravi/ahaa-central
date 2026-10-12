@@ -6,7 +6,7 @@ export const POLL_INTERVAL = 5000;
 export function formatMoney(amount: number | string | null | undefined): string {
   return `CA$${Number(amount ?? 0).toFixed(2)}`;
 }
-export function taxLabel(taxable: boolean): string { return taxable ? "13%" : "-"; }
+export function taxLabel(taxable: boolean): string { return taxable ? "13%" : "N/A"; }
 function dateForDisplay(value: string | Date): Date {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00Z`) : new Date(value);
 }
