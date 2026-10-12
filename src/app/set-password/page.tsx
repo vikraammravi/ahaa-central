@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import { validateNewPassword } from "@/lib/passwords";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,14 +50,8 @@ function SetPasswordInner() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (password.length < 12 || password.length > 128) {
-      setError("Password must be 12–128 characters.");
-      return;
-    }
-    if (password !== confirm) {
-      setError("Passwords don't match.");
-      return;
-    }
+    try { validateNewPassword(password, confirm); }
+    catch(error) { setError(error instanceof Error ? error.message : "Check your password."); return; }
     setBusy(true);setError(null);
     try {
       const result=await supabase.auth.updateUser({password});

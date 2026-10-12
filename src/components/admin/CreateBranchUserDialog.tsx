@@ -2,6 +2,7 @@
 import { FormSelect } from "@/components/shared/FormSelect";
 import { USER_ROLE_LABELS, type BranchUserRole } from "@/lib/users";
 import { useState } from "react";
+import { createBranchUser } from "@/lib/user-data";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import type { Location } from "@/lib/supabase/types";
 export function CreateBranchUserDialog({locations,open,onOpenChange,onCreated}:{locations:Location[];open:boolean;onOpenChange:(open:boolean)=>void;onCreated:()=>void}) {
  const [role,setRole]=useState<BranchUserRole>("BRANCH_EMPLOYEE");
  const [fullName,setFullName]=useState("");const [email,setEmail]=useState("");const [password,setPassword]=useState("");const [locationId,setLocationId]=useState("");
- async function submit(){const response=await fetch("/api/admin/branch-users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fullName,email,password,locationId,role})});const result=await response.json();if(!response.ok)throw new Error(result.error??"Unable to create branch user.");setPassword("");onCreated();}
+ async function submit(){await createBranchUser({fullName,email,password,locationId,role});setPassword("");onCreated();}
  return <FormDialog open={open} onOpenChange={onOpenChange} title="Add Branch User" description={role==="BRANCH_EMPLOYEE"?"Employees can record daily inventory for their assigned branch. They cannot place orders or view invoices.":"Managers can place orders, view invoices and review employee inventory for their branch."} submitLabel="Create User" onSubmit={submit}>
  <FormField label="Role" htmlFor="new-user-role" required><FormSelect<BranchUserRole> id="new-user-role" value={role} onChange={setRole} options={[{value:"BRANCH_MANAGER",label:USER_ROLE_LABELS.BRANCH_MANAGER},{value:"BRANCH_EMPLOYEE",label:USER_ROLE_LABELS.BRANCH_EMPLOYEE}]}/></FormField>
  <FormField label="Full Name" htmlFor="employee-name" required><Input id="employee-name" value={fullName} onChange={e=>setFullName(e.target.value)} maxLength={200} required/></FormField>

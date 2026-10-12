@@ -1,11 +1,9 @@
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem, Location, Order, OrderStatus, Profile } from "@/lib/supabase/types";
-import { PAGE_SIZE, pageRange, lastPage, searchFilter } from "@/lib/pagination";
+import { pageRange, lastPage, searchFilter } from "@/lib/pagination";
 export { PAGE_SIZE } from "@/lib/pagination";
 
 export type OrderWithLocation = Order & { locations: { name: string } | null; pickup_requests: { return_status: string | null; status: string; requested_at: string }[] };
-export type OrderCounts = Record<OrderStatus | "ALL", number>;
-export const EMPTY_ORDER_COUNTS: OrderCounts = { ALL: 0, SUBMITTED: 0, PREPARING: 0, READY: 0, COMPLETED: 0, CANCELLED: 0 };
 
 export async function fetchCatalog(signal: AbortSignal): Promise<CatalogItem[]> {
   const { data, error } = await supabase.from("catalog_items").select("*").order("name").abortSignal(signal);
@@ -37,9 +35,9 @@ export async function fetchOrders(filters: OrderFilters, signal: AbortSignal): P
   if (filters.startDate) query = query.gte("order_date", filters.startDate);
   if (filters.endDate) query = query.lte("order_date", filters.endDate);
   if (filters.branchId) query = query.eq("location_id", filters.branchId);
-  const result = await query.range(filters.page * PAGE_SIZE, (filters.page + 1) * PAGE_SIZE - 1).abortSignal(signal);
+  const result = await query.range(...pageRange(filters.page)).abortSignal(signal);
   if (result.error) throw new Error(result.error.message);
-  if (filters.page > 0 && filters.page * PAGE_SIZE >= (result.count ?? 0)) return fetchOrders({ ...filters, page: Math.max(0, Math.ceil((result.count ?? 0) / PAGE_SIZE) - 1) }, signal);
+  if (filters.page > lastPage(result.count ?? 0)) return fetchOrders({ ...filters, page: lastPage(result.count ?? 0) }, signal);
   return { rows: (result.data ?? []) as OrderWithLocation[], count: result.count ?? 0, page: filters.page };
 }
 

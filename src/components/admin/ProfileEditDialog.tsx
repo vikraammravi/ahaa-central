@@ -6,7 +6,7 @@ import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
 import { FormSelect } from "@/components/shared/FormSelect";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/lib/supabase/client";
+import { updateUserProfile } from "@/lib/user-data";
 import type {
   Location,
   Profile,
@@ -36,17 +36,13 @@ export function ProfileEditDialog({
   async function handleSubmit() {
     if (!fullName.trim()) throw new Error("Enter the user's full name.");
     if (role !== "CENTRAL_ADMIN" && status === "active" && !locationId) throw new Error("Assign a branch before activating this user.");
-    const { error } = await supabase
-      .from("profiles")
-      .update({
+    await updateUserProfile(profile.id, {
         full_name: fullName.trim(),
         phone: phone.trim() || null,
         role,
         status,
         location_id: role === "CENTRAL_ADMIN" ? null : locationId || null,
-      })
-      .eq("id", profile.id);
-    if (error) throw new Error(error.message);
+      });
     onSaved();
   }
 

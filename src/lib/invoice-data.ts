@@ -22,3 +22,15 @@ export async function sendCombinedInvoice(id:string):Promise<void>{
   const {error}=await supabase.rpc("send_weekly_invoice",{p_invoice_id:id});
   if(error)throw new Error(error.message);
 }
+
+export async function createCombinedInvoice(filters: InvoiceFilters, orderIds: string[]): Promise<string> {
+  if (!filters.branchId || !filters.startDate || !filters.endDate || filters.startDate > filters.endDate || !orderIds.length) {
+    throw new Error("Choose a branch, valid date range and at least one invoice.");
+  }
+  const {data,error}=await supabase.rpc("create_weekly_invoice",{
+    p_location_id:filters.branchId,p_start_date:filters.startDate,p_end_date:filters.endDate,p_order_ids:orderIds,
+  });
+  if(error)throw new Error(error.message);
+  if(!data)throw new Error("Unable to create invoice.");
+  return data;
+}

@@ -17,7 +17,7 @@ import { fetchOrders, fetchLocations, PAGE_SIZE, type OrderWithLocation } from "
 import { useAsyncData } from "@/lib/useAsyncData";
 import { Pagination } from "@/components/shared/Pagination";
 import { formatMoney, formatDate } from "@/lib/format";
-import { supabase } from "@/lib/supabase/client";
+import { createCombinedInvoice } from "@/lib/invoice-data";
 import { WeeklyInvoiceList } from "@/components/shared/WeeklyInvoiceList";
 import { collectEligibleInvoiceIds, eligibleForWeekly } from "@/lib/weekly";
 type Section = "orders" | "invoices";
@@ -42,7 +42,7 @@ export default function AdminInvoicesPage() {
   const rows = data?.rows ?? null;
   const selectedIds=Object.keys(selected).filter((id)=>selected[id]);
   async function selectAll(){if(!branchId||!startDate||!endDate||startDate>endDate)return;setSelecting(true);setActionError(null);try{const ids=await collectEligibleInvoiceIds(index=>fetchOrders({page:index,status:"COMPLETED",startDate,endDate,branchId},new AbortController().signal),PAGE_SIZE);setSelected(ids);}catch(error){setActionError(error instanceof Error?error.message:"Unable to select invoices.");}finally{setSelecting(false);}}
-  async function createWeekly(){setCreating(true);setActionError(null);try{const {data:invoiceId,error}=await supabase.rpc("create_weekly_invoice",{p_location_id:branchId,p_start_date:startDate,p_end_date:endDate,p_order_ids:selectedIds});if(error)throw new Error(error.message);setSelected({});if (!invoiceId) throw new Error("Unable to create invoice.");setSection("invoices");}catch(error){setActionError(error instanceof Error?error.message:"Unable to create invoice.");await refresh(true);}finally{setCreating(false);}}
+  async function createWeekly(){setCreating(true);setActionError(null);try{await createCombinedInvoice({branchId,startDate,endDate},selectedIds);setSelected({});setSection("invoices");}catch(error){setActionError(error instanceof Error?error.message:"Unable to create invoice.");await refresh(true);}finally{setCreating(false);}}
   const columns: Column<OrderWithLocation>[] = [
     {key:"select",header:"Select",render:(order)=><input type="checkbox" aria-label={`Select order ${order.order_number}`} checked={!!selected[order.id]} disabled={creating||selecting||!branchId||!eligibleForWeekly(order)} onClick={(event)=>event.stopPropagation()} onChange={(event)=>setSelected((previous)=>({...previous,[order.id]:event.target.checked}))}/>},
     { key: "num", header: "Invoice #", render: (order) => <Link href={`/admin/invoices/${order.id}`} onClick={(event) => event.stopPropagation()} className="font-medium underline-offset-4 hover:underline">INV-{order.order_number}</Link> },
