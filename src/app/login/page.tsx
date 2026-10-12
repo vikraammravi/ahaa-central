@@ -110,8 +110,8 @@ function LoginInner() {
 
         <Button
           type="submit"
-          size="lg"
-          className="w-full"
+          size="sm"
+          className="mx-auto flex h-10 w-full max-w-40 px-4 sm:h-9"
           disabled={submitting}
         >
           {submitting && <Spinner size="xs" className="text-primary-foreground" />}
