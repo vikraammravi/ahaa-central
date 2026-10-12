@@ -52,7 +52,7 @@ export function InvoiceEditor({ order, lines, onSaved, onCancel }: {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1.5"><Label htmlFor={`invoice-qty-${line.id}`}>Billed Quantity</Label><Input id={`invoice-qty-${line.id}`} type="number" min={0} max={2147483647} step={1} value={draft.quantity} disabled={busy} onChange={(event) => patch(line.id, { quantity: event.target.value })} /><p className="text-xs text-muted-foreground">Original request: {line.quantity}</p></div>
           <div className="space-y-1.5"><Label>Unit Price (locked)</Label><p className="h-9 flex items-center text-sm">CA${Number(line.unit_price).toFixed(2)}</p></div>
-          <div className="space-y-1.5"><Label htmlFor={`invoice-tax-${line.id}`}>Tax</Label><select id={`invoice-tax-${line.id}`} value={String(draft.taxable)} disabled={busy} onChange={(event) => patch(line.id, { taxable: event.target.value === "true" })} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="true">13%</option><option value="false">-</option></select></div>
+          <div className="space-y-1.5"><Label htmlFor={`invoice-tax-${line.id}`}>Tax</Label><select id={`invoice-tax-${line.id}`} value={String(draft.taxable)} disabled={busy} onChange={(event) => patch(line.id, { taxable: event.target.value === "true" })} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="true">13%</option><option value="false">N/A</option></select></div>
         </div>
       </div>;
     })}</div>
