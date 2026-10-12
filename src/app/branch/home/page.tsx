@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { BranchInventorySummary } from "@/components/inventory/BranchInventorySummary";
 import { useGreeting } from "@/lib/useGreeting";
 import { CalendarDays, Clock, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,7 @@ export default function BranchHomePage() {
         subtitle="Central kitchen and catering — all in one place."
       />
 
+      <BranchInventorySummary/>
       {pageError && <Banner tone="danger">{pageError}</Banner>}
 
       <Card className="bg-forest text-white border-transparent">

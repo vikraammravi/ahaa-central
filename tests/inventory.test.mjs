@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import fs from "node:fs";
+import vm from "node:vm";
+import ts from "typescript";
+const api={};vm.runInNewContext(ts.transpileModule(fs.readFileSync("src/lib/inventory.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:api,require:()=>({supabase:{}})});
+const item={id:"batter",name:"Batter",unit_type:"Bucket",quantity:6,opening_quantity:10,received_quantity:5,used_quantity:8,wasted_quantity:1,adjustment_quantity:0,opening_editable:false};
+test("daily flow calculates opening plus received minus usage and waste",()=>{const draft=api.inventoryDraft(item);assert.equal(api.calculatedClosing(item,draft),6);assert.equal(api.inventoryDayError([item],{batter:draft},""),null);const changed=api.updateInventoryDraft(item,draft,"used","9");assert.equal(changed.closing,"5");});
+test("manual physical closing needs a note and remains when usage changes",()=>{const draft=api.updateInventoryDraft(item,api.inventoryDraft(item),"closing","4");assert.notEqual(api.inventoryDayError([item],{batter:draft},""),null);assert.equal(api.inventoryDayError([item],{batter:draft},"Count corrected"),null);assert.equal(api.updateInventoryDraft(item,draft,"used","9").closing,"4");});
+test("whole units and carried opening are validated",()=>{for(const value of ["","-1","1.5","NaN","2147483648","1e2"])assert.notEqual(api.inventoryDayError([item],{batter:{...api.inventoryDraft(item),used:value}},"note"),null);assert.notEqual(api.inventoryDayError([item],{batter:{...api.inventoryDraft(item),opening:"11"}},"note"),null);assert.notEqual(api.inventoryDayError([item],{},""),null);});

@@ -2,7 +2,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type DatabaseEnums = {
-  "user_role": "CENTRAL_ADMIN" | "BRANCH_MANAGER";
+  "user_role": "CENTRAL_ADMIN" | "BRANCH_MANAGER" | "BRANCH_EMPLOYEE";
   "order_status": "SUBMITTED" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
   "profile_status": "active" | "pending" | "disabled";
   "catering_status": "INQUIRY" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
@@ -10,6 +10,82 @@ export type DatabaseEnums = {
 };
 
 export type DatabaseTables = {
+  "branch_inventory_counts": {
+    Row: {
+      "id": string;
+      "location_id": string;
+      "count_date": string;
+      "submitted_by": string;
+      "submitted_name": string;
+      "submitted_at": string;
+      "notes": string;
+      "flow_version": number;
+      "received_until": string;
+    };
+    Insert: {
+      "id"?: string;
+      "location_id": string;
+      "count_date": string;
+      "submitted_by": string;
+      "submitted_name": string;
+      "submitted_at"?: string;
+      "notes"?: string;
+      "flow_version"?: number;
+      "received_until"?: string;
+    };
+    Update: {
+      "id"?: string;
+      "location_id"?: string;
+      "count_date"?: string;
+      "submitted_by"?: string;
+      "submitted_name"?: string;
+      "submitted_at"?: string;
+      "notes"?: string;
+      "flow_version"?: number;
+      "received_until"?: string;
+    };
+  };
+  "branch_inventory_lines": {
+    Row: {
+      "id": string;
+      "count_id": string;
+      "item_id": string;
+      "item_name": string;
+      "unit_type": string;
+      "quantity": number;
+      "opening_quantity": number | null;
+      "received_quantity": number | null;
+      "used_quantity": number | null;
+      "wasted_quantity": number | null;
+      "adjustment_quantity": number | null;
+    };
+    Insert: {
+      "id"?: string;
+      "count_id": string;
+      "item_id": string;
+      "item_name": string;
+      "unit_type": string;
+      "quantity": number;
+      "opening_quantity"?: number | null;
+      "received_quantity"?: number | null;
+      "used_quantity"?: number | null;
+      "wasted_quantity"?: number | null;
+      "adjustment_quantity"?: number | null;
+    };
+    Update: {
+      "id"?: string;
+      "count_id"?: string;
+      "item_id"?: string;
+      "item_name"?: string;
+      "unit_type"?: string;
+      "quantity"?: number;
+      "opening_quantity"?: number | null;
+      "received_quantity"?: number | null;
+      "used_quantity"?: number | null;
+      "wasted_quantity"?: number | null;
+      "adjustment_quantity"?: number | null;
+    };
+  };
   "catalog_items": {
     Row: {
       "id": string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceTotals } from "@/components/shared/InvoiceTotals";
@@ -17,6 +17,9 @@ import { LoadingState, Spinner } from "@/components/shared/Spinner";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import type { CatalogItem } from "@/lib/supabase/types";
+import { fetchInventory } from "@/lib/inventory";
+import { useAsyncData } from "@/lib/useAsyncData";
+import { formatDateTime } from "@/lib/format";
 import { stockBadge } from "@/lib/stock";
 
 const HST = 0.13;
@@ -24,6 +27,8 @@ const HST = 0.13;
 export default function BranchOrderPage() {
   const router = useRouter();
   const { userId, profile } = useCurrentUser();
+  const loadInventory=useCallback((signal:AbortSignal)=>fetchInventory(signal),[]);
+  const inventory=useAsyncData(loadInventory,{enabled:!!profile?.location_id});
   const [items, setItems] = useState<CatalogItem[] | null>(null);
   const [qty, setQty] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
@@ -113,6 +118,7 @@ export default function BranchOrderPage() {
       <PageHeader title="Place Order" subtitle="Order before 10:00 AM." />
 
       {error && <Banner tone="danger">{error}</Banner>}
+      {inventory.data?.latest&&<Banner tone="info">Branch inventory last updated: {inventory.data.latest.count_date} · {inventory.data.latest.submitted_name} · {formatDateTime(inventory.data.latest.submitted_at)}. <a href="/branch/inventory" className="underline">View inventory</a></Banner>}
 
       <Input
         placeholder="Search products…"
@@ -139,8 +145,9 @@ export default function BranchOrderPage() {
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {r.unit_type} · CA${Number(r.default_price).toFixed(2)} ·{" "}
-                      {r.available_stock} available
+                      {r.available_stock} available at central kitchen
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">Branch available: {inventory.data?.items.find(item=>item.id===r.id)?.quantity??"Not counted"} {r.unit_type}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Button

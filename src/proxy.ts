@@ -8,7 +8,8 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isBranch = pathname === "/branch" || pathname.startsWith("/branch/");
-  const protectedRoute = isAdmin || isBranch;
+  const isEmployee = pathname === "/employee" || pathname.startsWith("/employee/");
+  const protectedRoute = isAdmin || isBranch || isEmployee;
   if (!SUPABASE_CONFIGURED) {
     return protectedRoute ? new NextResponse("Application authentication is not configured.", { status: 503 }) : response;
   }
@@ -49,7 +50,7 @@ export async function proxy(request: NextRequest) {
       response.cookies.getAll().forEach((cookie) => result.cookies.set(cookie));
       return result;
     }
-    if ((isAdmin && role !== "CENTRAL_ADMIN") || (isBranch && role !== "BRANCH_MANAGER")) return redirect(userHome(role));
+    if ((isAdmin && role !== "CENTRAL_ADMIN") || (isBranch && role !== "BRANCH_MANAGER") || (isEmployee && role !== "BRANCH_EMPLOYEE")) return redirect(userHome(role));
   }
   return response;
 }

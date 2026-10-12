@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { USER_ROLE_LABELS } from "@/lib/users";
+import { Button } from "@/components/ui/button";
+import { CreateBranchUserDialog } from "@/components/admin/CreateBranchUserDialog";
 import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
@@ -21,6 +24,8 @@ export default function AdminUsersPage() {
   const { data, loading, error, refresh } = useAsyncData(fetchUsers);
   const profiles = data?.profiles ?? null;
   const locations = data?.locations ?? [];
+  const [creating,setCreating]=useState(false);
+  const [created,setCreated]=useState(false);
   const [editing, setEditing] = useState<Profile | null>(null);
 
 
@@ -42,7 +47,7 @@ export default function AdminUsersPage() {
       key: "role",
       header: "Role",
       render: (r) =>
-        r.role === "CENTRAL_ADMIN" ? "Central Admin" : "Branch Manager",
+        USER_ROLE_LABELS[r.role],
     },
     {
       key: "branch",
@@ -68,14 +73,12 @@ export default function AdminUsersPage() {
     <div className="max-w-[1200px] mx-auto space-y-5">
       <PageHeader
         title="Users & Access"
-        subtitle="Central admins and branch managers."
+        subtitle="Central admins, branch managers and branch employees."
+        actions={<Button onClick={()=>setCreating(true)}>Add Branch User</Button>}
       />
       {error && <Banner tone="danger">{error}</Banner>}
-      <Banner tone="info">
-        To invite a new user: Supabase → Authentication → Users → Add user.
-        A profile row is auto-created; edit it here to set role, status, and
-        branch.
-      </Banner>
+      {created&&<Banner tone="success">User created. They can sign in with the email and starting password you entered.</Banner>}
+      {creating&&<CreateBranchUserDialog locations={locations} open onOpenChange={setCreating} onCreated={()=>{setCreating(false);setCreated(true);void refresh();}}/>}
       <DataTable
         data={profiles}
         columns={columns}

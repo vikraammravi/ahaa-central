@@ -2,7 +2,8 @@
   "enums": {
     "user_role": [
       "CENTRAL_ADMIN",
-      "BRANCH_MANAGER"
+      "BRANCH_MANAGER",
+      "BRANCH_EMPLOYEE"
     ],
     "order_status": [
       "SUBMITTED",
@@ -33,6 +34,166 @@
     ]
   },
   "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "branch_inventory_counts",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "location_id",
+      "type": "uuid",
+      "table": "branch_inventory_counts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "count_date",
+      "type": "date",
+      "table": "branch_inventory_counts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "submitted_by",
+      "type": "uuid",
+      "table": "branch_inventory_counts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "submitted_name",
+      "type": "text",
+      "table": "branch_inventory_counts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "submitted_at",
+      "type": "timestamptz",
+      "table": "branch_inventory_counts",
+      "default": "clock_timestamp()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "notes",
+      "type": "text",
+      "table": "branch_inventory_counts",
+      "default": "''::text",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "flow_version",
+      "type": "int4",
+      "table": "branch_inventory_counts",
+      "default": "1",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "received_until",
+      "type": "timestamptz",
+      "table": "branch_inventory_counts",
+      "default": "clock_timestamp()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "branch_inventory_lines",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "count_id",
+      "type": "uuid",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "item_id",
+      "type": "uuid",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "item_name",
+      "type": "text",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "unit_type",
+      "type": "text",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "quantity",
+      "type": "int4",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "opening_quantity",
+      "type": "int8",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "received_quantity",
+      "type": "int8",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "used_quantity",
+      "type": "int4",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "wasted_quantity",
+      "type": "int4",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "adjustment_quantity",
+      "type": "int8",
+      "table": "branch_inventory_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
     {
       "name": "id",
       "type": "uuid",

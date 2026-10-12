@@ -2,15 +2,15 @@ import type { UserRole } from "./supabase/types";
 
 export function activeRole(profile: { role?: string | null; status?: string | null } | null): UserRole | null {
   if (profile?.status !== "active") return null;
-  return profile.role === "CENTRAL_ADMIN" || profile.role === "BRANCH_MANAGER" ? profile.role : null;
+  return profile.role === "CENTRAL_ADMIN" || profile.role === "BRANCH_MANAGER" || profile.role === "BRANCH_EMPLOYEE" ? profile.role : null;
 }
 
 export function userHome(role: UserRole): string {
-  return role === "CENTRAL_ADMIN" ? "/admin/dashboard" : "/branch/home";
+  return role === "CENTRAL_ADMIN" ? "/admin/dashboard" : role === "BRANCH_EMPLOYEE" ? "/employee/inventory" : "/branch/home";
 }
 
 export function safeNextPath(next: string | null, role: UserRole): string {
-  const prefix = role === "CENTRAL_ADMIN" ? "/admin" : "/branch";
+  const prefix = role === "CENTRAL_ADMIN" ? "/admin" : role === "BRANCH_EMPLOYEE" ? "/employee" : "/branch";
   if (!next || !next.startsWith("/") || next.startsWith("//") || /[\\\r\n]/.test(next)) return userHome(role);
   try {
     const url = new URL(next, "https://app.invalid");

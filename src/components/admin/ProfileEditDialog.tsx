@@ -1,5 +1,6 @@
 "use client";
 
+import { USER_ROLE_LABELS } from "@/lib/users";
 import { useState } from "react";
 import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
@@ -34,7 +35,7 @@ export function ProfileEditDialog({
 
   async function handleSubmit() {
     if (!fullName.trim()) throw new Error("Enter the user's full name.");
-    if (role === "BRANCH_MANAGER" && status === "active" && !locationId) throw new Error("Assign a branch before activating this manager.");
+    if (role !== "CENTRAL_ADMIN" && status === "active" && !locationId) throw new Error("Assign a branch before activating this user.");
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -89,8 +90,9 @@ export function ProfileEditDialog({
             value={role}
             onChange={setRole}
             options={[
-              { value: "CENTRAL_ADMIN", label: "Central Admin" },
-              { value: "BRANCH_MANAGER", label: "Branch Manager" },
+              { value: "CENTRAL_ADMIN", label: USER_ROLE_LABELS.CENTRAL_ADMIN },
+              { value: "BRANCH_MANAGER", label: USER_ROLE_LABELS.BRANCH_MANAGER },
+              { value: "BRANCH_EMPLOYEE", label: USER_ROLE_LABELS.BRANCH_EMPLOYEE },
             ]}
           />
         </FormField>
@@ -114,7 +116,7 @@ export function ProfileEditDialog({
         hint={
           role === "CENTRAL_ADMIN"
             ? "Central admins don't need a branch."
-            : "Assign the branch this manager will operate."
+            : "Assign the branch this user will work in."
         }
       >
         <FormSelect

@@ -1,0 +1,18 @@
+"use client";
+import { useState } from "react";
+import { FormDialog } from "@/components/shared/FormDialog";
+import { FormField } from "@/components/shared/FormField";
+import { Input } from "@/components/ui/input";
+import { formatDate } from "@/lib/format";
+import { calculatedClosing,inventoryDraft,inventoryDayError,updateInventoryDraft,type InventoryDraft,type InventoryWorkspace } from "@/lib/inventory";
+import { supabase } from "@/lib/supabase/client";
+export function InventoryEntryDialog({workspace,onClose,onSaved}:{workspace:InventoryWorkspace;onClose:()=>void;onSaved:()=>void}) {
+ const [drafts,setDrafts]=useState<Record<string,InventoryDraft>>(()=>Object.fromEntries(workspace.items.map(item=>[item.id,inventoryDraft(item)])));
+ const [notes,setNotes]=useState(workspace.current?.notes??"");
+ async function submit(){const error=inventoryDayError(workspace.items,drafts,notes);if(error)throw new Error(error);const {error:saveError}=await supabase.rpc("save_branch_inventory_day",{p_count_date:workspace.count_date,p_expected_count_id:workspace.expected_count_id,p_expected_previous_count_id:workspace.expected_previous_count_id,p_notes:notes,p_lines:workspace.items.map(item=>({item_id:item.id,opening_quantity:Number(drafts[item.id].opening),used_quantity:Number(drafts[item.id].used),wasted_quantity:Number(drafts[item.id].wasted),quantity:Number(drafts[item.id].closing),expected_opening_quantity:item.opening_quantity,expected_received_quantity:item.received_quantity}))});if(saveError)throw new Error(saveError.message);onSaved();}
+ const hasAdjustment=workspace.items.some(item=>Number(drafts[item.id].closing)!==calculatedClosing(item,drafts[item.id]));
+ return <FormDialog open size="lg" onOpenChange={open=>{if(!open)onClose();}} title={workspace.current?"Update Daily Inventory":"Record Daily Inventory"} description={`${workspace.branch_name} · ${formatDate(workspace.count_date)}. Opening comes from the last closing stock; Received includes completed pickups only. Earlier versions are kept when you save.`} submitLabel="Save Inventory" onSubmit={submit}>
+ <div className="space-y-4">{workspace.items.map(item=>{const draft=drafts[item.id];const expected=calculatedClosing(item,draft);const adjustment=Number(draft.closing)-expected;return <section key={item.id} className="rounded-xl border p-3 space-y-3"><div><p className="font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{item.unit_type} · Received: {item.received_quantity}</p></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{([['opening','Opening'],['used','Used'],['wasted','Wasted'],['closing','Closing']] as const).map(([field,label])=><FormField key={field} label={label} htmlFor={`inventory-${item.id}-${field}`}><Input id={`inventory-${item.id}-${field}`} type="number" inputMode="numeric" min={0} max={2147483647} step={1} required disabled={field==='opening'&&!item.opening_editable} value={draft[field]} onChange={event=>setDrafts(previous=>({...previous,[item.id]:updateInventoryDraft(item,previous[item.id],field,event.target.value)}))}/></FormField>)}</div><p className="text-xs text-muted-foreground">Calculated closing: {expected}{adjustment!==0&&` · Adjustment: ${adjustment>0?'+':''}${adjustment}`}{item.opening_editable&&' · Enter opening stock for this item’s first record.'}</p></section>;})}</div>
+ <FormField label="Notes" htmlFor="inventory-notes" required={hasAdjustment} hint={hasAdjustment?"Explain the difference between calculated and physically counted closing stock.":"Anything the branch team should know."}><Input id="inventory-notes" value={notes} onChange={event=>setNotes(event.target.value)} maxLength={2000} required={hasAdjustment}/></FormField>
+ </FormDialog>;
+}
