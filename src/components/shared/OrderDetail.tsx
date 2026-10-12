@@ -24,7 +24,7 @@ import { pickupHasChanges, pickupQuantitiesValid } from "@/lib/pickup";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { OrderTimeline } from "./OrderTimeline";
-import { TAX_RATE, POLL_INTERVAL } from "@/lib/format";
+import { formatDateTime, TAX_RATE, POLL_INTERVAL } from "@/lib/format";
 
 type OrderWithLocation = Order & { locations: { name: string } | null; weekly_invoices: {sent_at: string | null} | null };
 type LineWithItem = OrderLine & {
@@ -345,6 +345,7 @@ export function OrderDetail({
         </Banner>
       )}
 
+      {!canEdit&&requests[0]&&requests[0].status!=="PENDING"&&<div role="status" aria-live="polite"><Banner tone={requests[0].status==="APPROVED"?"success":"warn"}><p className="font-medium">Central kitchen {requests[0].status==="APPROVED"?"approved":"rejected"} your pickup change.</p>{requests[0].review_note&&<p>Note: {requests[0].review_note}</p>}{requests[0].reviewed_at&&<p className="text-xs">{formatDateTime(requests[0].reviewed_at)}</p>}{requests[0].return_status==="PENDING"&&<p>Extra items must be returned. Open pickup details to see the quantities.</p>}</Banner></div>}
       {requests.map((request) => <PickupApprovalPanel key={request.id} request={request} canReview={canEdit} products={Object.fromEntries(lines.map((line) => [line.id, line.catalog_items?.name ?? "Item"]))} onReviewed={() => load(true)} />)}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -356,7 +357,7 @@ export function OrderDetail({
               </CardTitle>
               <div className="text-sm text-muted-foreground mt-1">
                 {order.locations?.name ?? "—"} ·{" "}
-                {new Date(order.created_at).toLocaleString()}
+                {formatDateTime(order.created_at)}
               </div>
             </div>
             <StatusBadge

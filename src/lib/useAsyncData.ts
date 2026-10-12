@@ -21,13 +21,15 @@ export function useAsyncData<T>(load: (signal: AbortSignal) => Promise<T>, {
     } catch (error) {
       if (!controller.signal.aborted) setState((previous) => ({ ...previous, loading: false, error: error instanceof Error ? error.message : "Unable to load data." }));
       return null;
+    } finally {
+      if (activeRequest.current === controller) activeRequest.current = null;
     }
   }, [load, enabled]);
 
   useEffect(() => {
     if (!enabled) return;
     const initial = window.setTimeout(() => { void refresh(); }, 0);
-    const update = () => { if (!document.hidden) void refresh(true); };
+    const update = () => { if (!document.hidden && !activeRequest.current) void refresh(true); };
     const timer = pollInterval ? window.setInterval(update, pollInterval) : undefined;
     window.addEventListener("focus", update);
     document.addEventListener("visibilitychange", update);

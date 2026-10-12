@@ -1,3 +1,4 @@
+import type { InvoicePaymentRecord } from "../payments";
 import type { DatabaseEnums, DatabaseTables } from "./database.generated";
 
 export type UserRole = DatabaseEnums["user_role"];
@@ -41,7 +42,7 @@ export type PickupRequest = Omit<Row<"pickup_requests">, "status"> & {
   return_received_by: string | null;
 };
 
-export type WeeklyInvoice = Row<"weekly_invoices"> & {
+export type WeeklyInvoice = Omit<Row<"weekly_invoices">,"payment_status"> & InvoicePaymentRecord & {
   locations: { name: string } | null; orders: { id: string }[];
 };
 export type WeeklyInvoiceDetails = {

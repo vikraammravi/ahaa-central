@@ -1,0 +1,2 @@
+export type InvoicePaymentRecord = { payment_status:"UNPAID"|"PAID";payment_updated_at:string|null;payment_updated_by:string|null;payment_updated_name:string|null;payment_revision:number|null };
+export function paymentNeedsReview(payment:Pick<InvoicePaymentRecord,"payment_status"|"payment_revision">,invoiceRevision:number):boolean{return payment.payment_status==="PAID"&&(payment.payment_revision===null||payment.payment_revision<invoiceRevision);}

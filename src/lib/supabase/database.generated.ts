@@ -521,6 +521,11 @@ export type DatabaseTables = {
       "sent_at": string | null;
       "sent_by": string | null;
       "needs_sending": boolean | null;
+      "payment_status": string;
+      "payment_updated_at": string | null;
+      "payment_updated_by": string | null;
+      "payment_updated_name": string | null;
+      "payment_revision": number | null;
     };
     Insert: {
       "id"?: string;
@@ -534,6 +539,11 @@ export type DatabaseTables = {
       "sent_at"?: string | null;
       "sent_by"?: string | null;
       "needs_sending"?: never;
+      "payment_status"?: string;
+      "payment_updated_at"?: string | null;
+      "payment_updated_by"?: string | null;
+      "payment_updated_name"?: string | null;
+      "payment_revision"?: number | null;
     };
     Update: {
       "id"?: string;
@@ -547,6 +557,11 @@ export type DatabaseTables = {
       "sent_at"?: string | null;
       "sent_by"?: string | null;
       "needs_sending"?: never;
+      "payment_status"?: string;
+      "payment_updated_at"?: string | null;
+      "payment_updated_by"?: string | null;
+      "payment_updated_name"?: string | null;
+      "payment_revision"?: number | null;
     };
   };
 };

@@ -32,3 +32,12 @@ export function phoneHref(phone: string): string | null {
 export function localDateInput(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
+
+export function whatsappHref(phone:string):string|null {
+ const value=phone.trim();if(!/^[+\d\s().-]+$/.test(value))return null;let digits=value.replace(/\D/g, "");
+ if(value.startsWith("+")){if(digits.length<8||digits.length>15||digits.startsWith("0"))return null;}
+ else if(value.startsWith("00")){digits=digits.slice(2);if(digits.length<8||digits.length>15||digits.startsWith("0"))return null;}
+ else if(digits.length===10)digits="1"+digits;
+ else if(digits.length!==11||!digits.startsWith("1"))return null;
+ return `https://wa.me/${digits}`;
+}

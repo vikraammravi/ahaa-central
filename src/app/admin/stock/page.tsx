@@ -1,5 +1,6 @@
 "use client";
 
+import { formatTime } from "@/lib/format";
 import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +131,7 @@ export default function AdminStockPage() {
       {dirty && <Button variant="outline" disabled={saving} onClick={() => { pendingEdits.current = {}; previousStock.current = {}; setEdits({}); setError(null); void refresh(); }}>Discard Edits & Refresh Stock</Button>}
       {savedAt && !dirty && (
         <Banner tone="success">
-          Stock updated at {savedAt.toLocaleTimeString()}. Branches will see
+          Stock updated at {formatTime(savedAt)}. Branches will see
           the new numbers on their next order.
         </Banner>
       )}

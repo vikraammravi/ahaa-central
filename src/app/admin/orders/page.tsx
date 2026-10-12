@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { PickupApprovalBadge } from "@/components/shared/PickupApprovalBadge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Banner } from "@/components/shared/Banner";
@@ -65,12 +66,13 @@ export default function AdminOrdersPage() {
       key: "status",
       header: "Status",
       render: (r) => (
-        <div className="space-y-1"><StatusBadge
+        <StatusBadge
           status={ORDER_STATUS_BADGE[r.status]}
           label={ORDER_STATUS_LABEL[r.status]}
-        />{r.pickup_approval_status === "PENDING" && <StatusBadge status="pending" label="Pickup Approval Pending" />}</div>
+        />
       ),
     },
+    { key: "approval", header: "Pickup Approval", render: (r) => <PickupApprovalBadge requests={r.pickup_requests ?? []} /> },
     {
       key: "advance",
       header: "",

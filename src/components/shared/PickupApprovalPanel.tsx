@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Banner } from "./Banner";
+import { formatDateTime } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
 import type { PickupRequest } from "@/lib/supabase/types";
 
@@ -63,7 +64,7 @@ export function PickupApprovalPanel({ request, canReview, products, onReviewed }
         <div className="text-sm">
           {request.reason && <p><span className="font-medium">Note:</span> {request.reason}</p>}
           {request.already_collected && <p className="text-xs text-muted-foreground">Quantities were recorded as already physically collected.</p>}
-          <p className="mt-1 text-xs text-muted-foreground">Requested by {request.requested_profile?.full_name ?? "Branch manager"} · {new Date(request.requested_at).toLocaleString()}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Requested by {request.requested_profile?.full_name ?? "Branch manager"} · {formatDateTime(request.requested_at)}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -89,7 +90,7 @@ export function PickupApprovalPanel({ request, canReview, products, onReviewed }
         {!pending && <div className="text-sm space-y-1">
           <p>{request.status === "REJECTED" ? "This pickup change was rejected. While the order is Ready, revise the quantities and submit again, or confirm the prepared quantities." : "Pickup completed. Stock and invoice reflect the approved quantities."}</p>
           {request.review_note && <p><span className="font-medium">Admin note:</span> {request.review_note}</p>}
-          <p className="text-xs text-muted-foreground">Reviewed by {request.reviewed_profile?.full_name ?? "Central admin"}{request.reviewed_at && ` · ${new Date(request.reviewed_at).toLocaleString()}`}</p>
+          <p className="text-xs text-muted-foreground">Reviewed by {request.reviewed_profile?.full_name ?? "Central admin"}{request.reviewed_at && ` · ${formatDateTime(request.reviewed_at)}`}</p>
           {request.status === "APPROVED" && request.pickup_request_lines.filter((line) => line.pickup_quantity !== line.prepared_quantity).map((line) => (
             <p key={line.id} className="text-xs text-muted-foreground">{products[line.order_line_id]}: {line.stock_adjustment < 0 ? `${-line.stock_adjustment} extra deducted` : line.return_to_stock ? `${line.stock_adjustment} returned to stock` : "Leftovers marked wasted / unavailable"}</p>
           ))}

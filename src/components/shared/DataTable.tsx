@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { Fragment, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -45,6 +45,7 @@ export function DataTable<T>({
   footer,
   tableClassName,
   rowClassName,
+  expandedContent,
 }: {
   data: T[] | null;
   columns: Column<T>[];
@@ -57,6 +58,7 @@ export function DataTable<T>({
   footer?: ReactNode;
   tableClassName?: string;
   rowClassName?: (row: T) => string | undefined;
+  expandedContent?: (row: T) => ReactNode;
 }) {
   if (loading) {
     return (
@@ -103,8 +105,7 @@ export function DataTable<T>({
           </TableHeader>
           <TableBody>
             {data.map((row, i) => (
-              <TableRow
-                key={rowKey(row, i)}
+              <Fragment key={rowKey(row, i)}><TableRow
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={cn(
                   "border-b border-border last:border-0 transition-colors",
@@ -121,7 +122,7 @@ export function DataTable<T>({
                     {c.render(row)}
                   </TableCell>
                 ))}
-              </TableRow>
+              </TableRow>{expandedContent?.(row) && <TableRow><TableCell colSpan={columns.length} className="p-4 bg-muted/30">{expandedContent(row)}</TableCell></TableRow>}</Fragment>
             ))}
           </TableBody>
         </Table>

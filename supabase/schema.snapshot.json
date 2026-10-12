@@ -1193,6 +1193,46 @@
       "default": null,
       "nullable": true,
       "generated": true
+    },
+    {
+      "name": "payment_status",
+      "type": "text",
+      "table": "weekly_invoices",
+      "default": "'UNPAID'::text",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "payment_updated_at",
+      "type": "timestamptz",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "payment_updated_by",
+      "type": "uuid",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "payment_updated_name",
+      "type": "text",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "payment_revision",
+      "type": "int4",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": true,
+      "generated": false
     }
   ]
 }

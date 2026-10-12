@@ -19,7 +19,7 @@ import { useCurrentUser } from "@/lib/useCurrentUser";
 import type { CatalogItem } from "@/lib/supabase/types";
 import { fetchInventory } from "@/lib/inventory";
 import { useAsyncData } from "@/lib/useAsyncData";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { stockBadge } from "@/lib/stock";
 
 const HST = 0.13;
@@ -118,7 +118,7 @@ export default function BranchOrderPage() {
       <PageHeader title="Place Order" subtitle="Order before 10:00 AM." />
 
       {error && <Banner tone="danger">{error}</Banner>}
-      {inventory.data?.latest&&<Banner tone="info">Branch inventory last updated: {inventory.data.latest.count_date} · {inventory.data.latest.submitted_name} · {formatDateTime(inventory.data.latest.submitted_at)}. <a href="/branch/inventory" className="underline">View inventory</a></Banner>}
+      {inventory.data?.latest&&<Banner tone="info">Branch inventory last updated: {formatDate(inventory.data.latest.count_date)} · {inventory.data.latest.submitted_name} · {formatDateTime(inventory.data.latest.submitted_at)}. <a href="/branch/inventory" className="underline">View inventory</a></Banner>}
 
       <Input
         placeholder="Search products…"

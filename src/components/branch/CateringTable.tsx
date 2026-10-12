@@ -1,11 +1,12 @@
 "use client";
 
-import { Phone } from "lucide-react";
+import { Phone, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { RowActions } from "@/components/shared/RowActions";
-import { CATERING_STATUS_BADGE, CATERING_STATUS_LABEL, phoneHref } from "@/lib/catering";
+import { CATERING_STATUS_BADGE, CATERING_STATUS_LABEL, phoneHref, whatsappHref } from "@/lib/catering";
+import { formatDate, formatTime } from "@/lib/format";
 import type { CateringEvent } from "@/lib/supabase/types";
 
 const money = (amount: number) => `CA$${Number(amount).toFixed(2)}`;
@@ -24,10 +25,10 @@ export function CateringTable({ events, loading, onEdit, onDelete }: {
         <div className="text-xs text-muted-foreground break-all">{event.customer_phone}</div>
         {Array.isArray(event.checklist) && event.checklist.length > 0 && <div className="text-xs text-muted-foreground">Prep: {event.checklist.filter((task) => task && typeof task === "object" && !Array.isArray(task) && task.done === true).length} / {event.checklist.length} tasks</div>}
         {event.notes && <div className="text-xs text-muted-foreground line-clamp-2 max-w-64">{event.notes}</div>}
-        <div className="text-xs text-muted-foreground md:hidden">{new Date(event.event_datetime).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}<br />{new Date(event.event_datetime).toLocaleTimeString("en-CA", { hour: "2-digit", minute: "2-digit" })} · {event.guest_count} guests</div>
+        <div className="text-xs text-muted-foreground md:hidden">{formatDate(event.event_datetime)}<br />{formatTime(event.event_datetime)} · {event.guest_count} guests</div>
       </div>,
     },
-    { key: "date", header: "Date / Time", hideOn: "md", render: (event) => <div>{new Date(event.event_datetime).toLocaleDateString("en-CA")}<div className="text-xs text-muted-foreground">{new Date(event.event_datetime).toLocaleTimeString("en-CA", { hour: "2-digit", minute: "2-digit" })}</div></div> },
+    { key: "date", header: "Date / Time", hideOn: "md", render: (event) => <div>{formatDate(event.event_datetime)}<div className="text-xs text-muted-foreground">{formatTime(event.event_datetime)}</div></div> },
     { key: "guests", header: "Guests", align: "right", hideOn: "md", render: (event) => event.guest_count },
     { key: "total", header: "Total", align: "right", hideOn: "md", render: (event) => money(event.total_amount) },
     { key: "advance", header: "Advance", align: "right", hideOn: "md", render: (event) => money(event.advance_paid) },
@@ -42,8 +43,10 @@ export function CateringTable({ events, loading, onEdit, onDelete }: {
       key: "actions", header: "Actions", align: "right", className: "w-[20%] px-2 md:w-auto md:px-4",
       render: (event) => {
         const href = phoneHref(event.customer_phone);
+        const whatsapp = whatsappHref(event.customer_phone);
         return <div className="flex flex-col items-end gap-1 md:flex-row md:justify-end md:gap-2">
           {href ? <Button asChild variant="outline" size="icon" className="size-9"><a href={href} aria-label={`Call ${event.customer_name}`} title={`Call ${event.customer_phone}`}><Phone className="size-4" /></a></Button> : <Button variant="outline" size="icon" disabled aria-label="No valid phone number"><Phone className="size-4" /></Button>}
+          {whatsapp?<Button asChild variant="outline" size="icon" className="size-9 text-green-700"><a href={whatsapp} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${event.customer_name}`} title="Open WhatsApp chat"><MessageCircle className="size-4"/></a></Button>:<Button variant="outline" size="icon" disabled aria-label="WhatsApp needs a valid international or Canadian phone number"><MessageCircle className="size-4"/></Button>}
           <RowActions onEdit={() => onEdit(event)} onDelete={() => onDelete(event.id)} deleteTitle={`Delete ${event.customer_name}'s event?`} deleteDescription="This catering booking will be permanently removed." />
         </div>;
       },

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BranchInventorySummary } from "@/components/inventory/BranchInventorySummary";
+import { formatDate, formatTime } from "@/lib/format";
 import { useGreeting } from "@/lib/useGreeting";
 import { CalendarDays, Clock, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -160,7 +161,7 @@ export default function BranchHomePage() {
                 <div>
                   <div className="text-sm font-medium">#{o.order_number}</div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(o.created_at).toLocaleDateString()} · CA$
+                    {formatDate(o.created_at)} · CA$
                     {Number(o.final_total_amount).toFixed(2)}
                   </div>
                 </div>
@@ -205,15 +206,9 @@ export default function BranchHomePage() {
                     <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                       <span className="inline-flex items-center gap-1">
                         <Clock className="size-3" />
-                        {dt.toLocaleDateString([], {
-                          month: "short",
-                          day: "numeric",
-                        })}{" "}
+                        {formatDate(dt)}{" "}
                         ·{" "}
-                        {dt.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatTime(dt)}
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <Users className="size-3" />

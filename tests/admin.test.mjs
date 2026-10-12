@@ -24,8 +24,8 @@ test("formatting uses Canadian currency, simple tax labels, and Toronto business
   assert.equal(format.formatMoney(12.5), "CA$12.50");
   assert.equal(format.taxLabel(true), "13%");
   assert.equal(format.taxLabel(false), "-");
-  assert.equal(format.formatDate("2026-10-11T02:00:00Z"), "2026-10-10");
-  assert.equal(format.formatDate("2026-10-11"), "2026-10-11");
+  assert.equal(format.formatDate("2026-10-11T02:00:00Z"), "Oct 10, 2026");
+  assert.equal(format.formatDate("2026-10-11"), "Oct 11, 2026");
 });
 
 test("employees land in inventory and cannot use manager or admin return paths", () => {
