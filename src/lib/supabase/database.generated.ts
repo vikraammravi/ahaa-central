@@ -177,6 +177,9 @@ export type DatabaseTables = {
       "fulfilled_quantity": number;
       "shortage_reason": string | null;
       "final_line_total": number | null;
+      "invoice_quantity": number | null;
+      "invoice_is_taxable": boolean | null;
+      "invoice_line_total": number | null;
     };
     Insert: {
       "id"?: string;
@@ -189,6 +192,9 @@ export type DatabaseTables = {
       "fulfilled_quantity"?: number;
       "shortage_reason"?: string | null;
       "final_line_total"?: never;
+      "invoice_quantity"?: number | null;
+      "invoice_is_taxable"?: boolean | null;
+      "invoice_line_total"?: never;
     };
     Update: {
       "id"?: string;
@@ -201,6 +207,9 @@ export type DatabaseTables = {
       "fulfilled_quantity"?: number;
       "shortage_reason"?: string | null;
       "final_line_total"?: never;
+      "invoice_quantity"?: number | null;
+      "invoice_is_taxable"?: boolean | null;
+      "invoice_line_total"?: never;
     };
   };
   "orders": {
@@ -221,14 +230,10 @@ export type DatabaseTables = {
       "final_total_amount": number;
       "stock_deducted_at": string | null;
       "pickup_approval_status": string | null;
-      "invoice_sent_at": string | null;
-      "invoice_sent_by": string | null;
       "invoice_revision": number;
-      "invoice_sent_revision": number;
-      "invoice_published_lines": Json | null;
-      "invoice_published_subtotal": number | null;
-      "invoice_published_tax": number | null;
-      "invoice_published_total": number | null;
+      "pickup_confirmed_by": string | null;
+      "pickup_confirmed_at": string | null;
+      "weekly_invoice_id": string | null;
     };
     Insert: {
       "id"?: string;
@@ -247,14 +252,10 @@ export type DatabaseTables = {
       "final_total_amount"?: number;
       "stock_deducted_at"?: string | null;
       "pickup_approval_status"?: string | null;
-      "invoice_sent_at"?: string | null;
-      "invoice_sent_by"?: string | null;
       "invoice_revision"?: number;
-      "invoice_sent_revision"?: number;
-      "invoice_published_lines"?: Json | null;
-      "invoice_published_subtotal"?: number | null;
-      "invoice_published_tax"?: number | null;
-      "invoice_published_total"?: number | null;
+      "pickup_confirmed_by"?: string | null;
+      "pickup_confirmed_at"?: string | null;
+      "weekly_invoice_id"?: string | null;
     };
     Update: {
       "id"?: string;
@@ -273,14 +274,10 @@ export type DatabaseTables = {
       "final_total_amount"?: number;
       "stock_deducted_at"?: string | null;
       "pickup_approval_status"?: string | null;
-      "invoice_sent_at"?: string | null;
-      "invoice_sent_by"?: string | null;
       "invoice_revision"?: number;
-      "invoice_sent_revision"?: number;
-      "invoice_published_lines"?: Json | null;
-      "invoice_published_subtotal"?: number | null;
-      "invoice_published_tax"?: number | null;
-      "invoice_published_total"?: number | null;
+      "pickup_confirmed_by"?: string | null;
+      "pickup_confirmed_at"?: string | null;
+      "weekly_invoice_id"?: string | null;
     };
   };
   "pickup_request_lines": {
@@ -293,6 +290,9 @@ export type DatabaseTables = {
       "pickup_quantity": number;
       "return_to_stock": boolean | null;
       "stock_adjustment": number;
+      "extra_stock_debited": number;
+      "allocation_shortfall": number;
+      "return_quantity": number;
     };
     Insert: {
       "id"?: string;
@@ -303,6 +303,9 @@ export type DatabaseTables = {
       "pickup_quantity": number;
       "return_to_stock"?: boolean | null;
       "stock_adjustment"?: number;
+      "extra_stock_debited"?: number;
+      "allocation_shortfall"?: number;
+      "return_quantity"?: number;
     };
     Update: {
       "id"?: string;
@@ -313,6 +316,9 @@ export type DatabaseTables = {
       "pickup_quantity"?: number;
       "return_to_stock"?: boolean | null;
       "stock_adjustment"?: number;
+      "extra_stock_debited"?: number;
+      "allocation_shortfall"?: number;
+      "return_quantity"?: number;
     };
   };
   "pickup_requests": {
@@ -326,6 +332,11 @@ export type DatabaseTables = {
       "reviewed_by": string | null;
       "reviewed_at": string | null;
       "review_note": string | null;
+      "already_collected": boolean;
+      "return_status": string | null;
+      "return_received_at": string | null;
+      "return_received_by": string | null;
+      "return_note": string | null;
     };
     Insert: {
       "id"?: string;
@@ -337,6 +348,11 @@ export type DatabaseTables = {
       "reviewed_by"?: string | null;
       "reviewed_at"?: string | null;
       "review_note"?: string | null;
+      "already_collected"?: boolean;
+      "return_status"?: string | null;
+      "return_received_at"?: string | null;
+      "return_received_by"?: string | null;
+      "return_note"?: string | null;
     };
     Update: {
       "id"?: string;
@@ -348,6 +364,11 @@ export type DatabaseTables = {
       "reviewed_by"?: string | null;
       "reviewed_at"?: string | null;
       "review_note"?: string | null;
+      "already_collected"?: boolean;
+      "return_status"?: string | null;
+      "return_received_at"?: string | null;
+      "return_received_by"?: string | null;
+      "return_note"?: string | null;
     };
   };
   "profiles": {
@@ -383,6 +404,73 @@ export type DatabaseTables = {
       "updated_at"?: string | null;
       "status"?: DatabaseEnums["profile_status"];
       "phone"?: string | null;
+    };
+  };
+  "weekly_invoice_publications": {
+    Row: {
+      "id": string;
+      "weekly_invoice_id": string;
+      "revision": number;
+      "published_at": string;
+      "published_by": string;
+      "snapshot": Json;
+    };
+    Insert: {
+      "id"?: string;
+      "weekly_invoice_id": string;
+      "revision": number;
+      "published_at"?: string;
+      "published_by": string;
+      "snapshot": Json;
+    };
+    Update: {
+      "id"?: string;
+      "weekly_invoice_id"?: string;
+      "revision"?: number;
+      "published_at"?: string;
+      "published_by"?: string;
+      "snapshot"?: Json;
+    };
+  };
+  "weekly_invoices": {
+    Row: {
+      "id": string;
+      "location_id": string;
+      "start_date": string;
+      "end_date": string;
+      "created_by": string;
+      "created_at": string;
+      "revision": number;
+      "sent_revision": number | null;
+      "sent_at": string | null;
+      "sent_by": string | null;
+      "needs_sending": boolean | null;
+    };
+    Insert: {
+      "id"?: string;
+      "location_id": string;
+      "start_date": string;
+      "end_date": string;
+      "created_by": string;
+      "created_at"?: string;
+      "revision"?: number;
+      "sent_revision"?: number | null;
+      "sent_at"?: string | null;
+      "sent_by"?: string | null;
+      "needs_sending"?: never;
+    };
+    Update: {
+      "id"?: string;
+      "location_id"?: string;
+      "start_date"?: string;
+      "end_date"?: string;
+      "created_by"?: string;
+      "created_at"?: string;
+      "revision"?: number;
+      "sent_revision"?: number | null;
+      "sent_at"?: string | null;
+      "sent_by"?: string | null;
+      "needs_sending"?: never;
     };
   };
 };

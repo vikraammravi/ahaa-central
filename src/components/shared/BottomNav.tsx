@@ -37,7 +37,7 @@ export function BottomNav({
             key={it.href}
             href={it.href}
             className={cn(
-              "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-[11px] font-medium min-w-[56px]",
+              "flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[11px] font-medium min-w-0 flex-1 text-center",
               active ? "text-saffron" : "text-muted-foreground",
             )}
           >
@@ -47,7 +47,7 @@ export function BottomNav({
                 active ? "text-saffron" : "text-muted-foreground",
               )}
             />
-            {it.label}
+            <span className="max-w-[76px] leading-tight">{it.label}</span>
           </Link>
         );
       })}

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Banner } from "@/components/shared/Banner";
 import { supabase } from "@/lib/supabase/client";
 import { invoiceDraftError, invoiceDraftTotals, type InvoiceEditLine, type InvoiceLineDraft } from "@/lib/invoices";
@@ -25,7 +24,6 @@ export function InvoiceEditor({ order, lines, onSaved, onCancel }: {
   const validation = invoiceDraftError(lines, drafts);
   const totals = invoiceDraftTotals(lines, drafts);
   const dirty = lines.some((line) => Number(drafts[line.id]?.quantity) !== line.fulfilled_quantity || Number(drafts[line.id]?.unitPrice) !== Number(line.unit_price) || drafts[line.id]?.taxable !== line.is_taxable);
-  const returnDecisionsComplete = !order.stock_deducted_at || lines.every((line) => Number(drafts[line.id]?.quantity) >= line.fulfilled_quantity || drafts[line.id]?.returnToStock !== undefined);
   const patch = (id: string, values: Partial<InvoiceLineDraft>) => setDrafts((previous) => ({ ...previous, [id]: { ...previous[id], ...values } }));
   async function save() {
     setBusy(true);
@@ -44,26 +42,24 @@ export function InvoiceEditor({ order, lines, onSaved, onCancel }: {
       setBusy(false);
     }
   }
-  return <Card><CardHeader><CardTitle>Edit Invoice</CardTitle></CardHeader><CardContent className="space-y-4">
-    {order.invoice_sent_at && <Banner tone="info">The branch keeps the last sent invoice until you send this update.</Banner>}
-    {order.stock_deducted_at && <Banner tone="info">Quantity changes also update recorded fulfillment and Daily Stock. Extra quantities need available stock; choose what happens to any reduced quantities.</Banner>}
+  return <div className="space-y-4">
+    {order.weekly_invoice_id && <Banner tone="info">The branch keeps the last sent invoice until you send this update.</Banner>}
+    <Banner tone="info">These changes affect billing only. Unit prices are locked. Use pickup approval and return receipt to adjust physical quantities or stock.</Banner>
     <div className="space-y-3">{lines.map((line) => {
       const draft = drafts[line.id];
-      const reduced = !!order.stock_deducted_at && Number(draft.quantity) < line.fulfilled_quantity;
       return <div key={line.id} className="rounded-xl border p-3 space-y-3">
         <p className="font-medium">{line.catalog_items?.name ?? "Item"}<span className="ml-2 text-xs font-normal text-muted-foreground">{line.catalog_items?.unit_type}</span></p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="space-y-1.5"><Label htmlFor={`invoice-qty-${line.id}`}>Billed Quantity</Label><Input id={`invoice-qty-${line.id}`} type="number" min={0} max={line.quantity} step={1} value={draft.quantity} disabled={busy} onChange={(event) => patch(line.id, { quantity: event.target.value, returnToStock: undefined })} /><p className="text-xs text-muted-foreground">Original request: {line.quantity}</p></div>
-          <div className="space-y-1.5"><Label htmlFor={`invoice-price-${line.id}`}>Unit Price (CA$)</Label><Input id={`invoice-price-${line.id}`} type="number" min={0} step="0.01" value={draft.unitPrice} disabled={busy} onChange={(event) => patch(line.id, { unitPrice: event.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`invoice-qty-${line.id}`}>Billed Quantity</Label><Input id={`invoice-qty-${line.id}`} type="number" min={0} max={2147483647} step={1} value={draft.quantity} disabled={busy} onChange={(event) => patch(line.id, { quantity: event.target.value })} /><p className="text-xs text-muted-foreground">Original request: {line.quantity}</p></div>
+          <div className="space-y-1.5"><Label>Unit Price (locked)</Label><p className="h-9 flex items-center text-sm">CA${Number(line.unit_price).toFixed(2)}</p></div>
           <div className="space-y-1.5"><Label htmlFor={`invoice-tax-${line.id}`}>Tax</Label><select id={`invoice-tax-${line.id}`} value={String(draft.taxable)} disabled={busy} onChange={(event) => patch(line.id, { taxable: event.target.value === "true" })} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="true">13%</option><option value="false">-</option></select></div>
         </div>
-        {reduced && <div className="space-y-1.5"><Label htmlFor={`invoice-return-${line.id}`}>{line.fulfilled_quantity - Number(draft.quantity)} fewer items — stock adjustment</Label><select id={`invoice-return-${line.id}`} value={draft.returnToStock === undefined ? "" : String(draft.returnToStock)} disabled={busy} onChange={(event) => patch(line.id, { returnToStock: event.target.value === "true" })} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="" disabled>Choose what happens to these items</option><option value="true">Return to available stock</option><option value="false">Wasted / unavailable — keep out of stock</option></select></div>}
       </div>;
     })}</div>
-    <div className="space-y-1.5"><Label htmlFor="invoice-edit-reason">Reason for change</Label><Input id="invoice-edit-reason" value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)} placeholder="Explain the invoice correction" /></div>
+    <div className="space-y-1.5"><Label htmlFor="invoice-edit-reason">Note (optional)</Label><Input id="invoice-edit-reason" value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)} placeholder="Invoice correction note" /></div>
     <div className="text-sm space-y-1 rounded-lg bg-muted p-3"><p>Subtotal: CA${Number.isFinite(totals.subtotal) ? totals.subtotal.toFixed(2) : "—"}</p><p>Tax: CA${Number.isFinite(totals.tax) ? totals.tax.toFixed(2) : "—"}</p><p className="font-semibold">Updated total: CA${Number.isFinite(totals.total) ? totals.total.toFixed(2) : "—"}</p></div>
     {validation && <p className="text-sm text-destructive">{validation}</p>}
     {error && <Banner tone="danger">{error}</Banner>}
-    <div className="flex flex-wrap gap-2"><Button onClick={save} disabled={busy || !dirty || !!validation || !returnDecisionsComplete || !reason.trim()}>{busy ? "Saving…" : "Save Invoice Changes"}</Button><Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button></div>
-  </CardContent></Card>;
+    <div className="flex flex-wrap gap-2"><Button onClick={save} disabled={busy || !dirty || !!validation}>{busy ? "Saving…" : "Save Invoice Changes"}</Button><Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button></div>
+  </div>;
 }

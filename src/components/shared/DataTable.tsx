@@ -60,7 +60,7 @@ export function DataTable<T>({
 }) {
   if (loading) {
     return (
-      <div className="border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">
+      <div className="min-w-0 max-w-full border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">
         <LoadingState minHeight="min-h-64" />
       </div>
     );
@@ -78,7 +78,7 @@ export function DataTable<T>({
     );
 
   return (
-    <div className="border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">
+    <div className="min-w-0 max-w-full border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">
       {toolbar && (
         <div className="px-4 py-3 border-b border-border bg-background/40">
           {toolbar}

@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { BackLink } from "@/components/shared/BackLink";
 import { use } from "react";
-import { ChevronLeft } from "lucide-react";
 import { OrderDetail } from "@/components/shared/OrderDetail";
 
 export default function AdminOrderDetailPage({
@@ -13,12 +12,7 @@ export default function AdminOrderDetailPage({
   const { id } = use(params);
   return (
     <div className="max-w-[1200px] mx-auto space-y-4">
-      <Link
-        href="/admin/orders"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="size-4" /> Back to orders
-      </Link>
+      <BackLink href="/admin/orders">Back to Orders</BackLink>
       <OrderDetail orderId={id} canEdit />
     </div>
   );

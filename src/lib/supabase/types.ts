@@ -13,13 +13,15 @@ type WithDefaults<T, Keys extends keyof T> = Omit<T, Keys> & { [Key in Keys]: No
 export type Location = WithDefaults<Row<"locations">, "is_central" | "created_at">;
 export type Profile = WithDefaults<Row<"profiles">, "full_name" | "created_at" | "updated_at">;
 export type CatalogItem = WithDefaults<Row<"catalog_items">, "available_stock" | "is_active" | "is_taxable" | "updated_at">;
-export type Order = Omit<WithDefaults<Row<"orders">, "status" | "order_date" | "created_at" | "updated_at">, "pickup_approval_status" | "invoice_published_lines"> & {
+export type Order = Omit<WithDefaults<Row<"orders">, "status" | "order_date" | "created_at" | "updated_at">, "pickup_approval_status"> & {
   pickup_approval_status: "PENDING" | "APPROVED" | "REJECTED" | null;
-  invoice_published_lines: InvoicePublishedLine[] | null;
+  weekly_invoice_id: string | null;
+  pickup_confirmed_by: string | null;
+  pickup_confirmed_at: string | null;
 };
-export type OrderLine = WithDefaults<Row<"order_lines">, "final_line_total">;
+export type OrderLine = WithDefaults<Row<"order_lines">, "final_line_total"> & { invoice_quantity: number | null; invoice_is_taxable: boolean | null; invoice_line_total: number };
 export type CateringEvent = WithDefaults<Row<"catering_events">, "advance_paid" | "status" | "created_at" | "updated_at">;
-export type PickupRequestLine = Row<"pickup_request_lines">;
+export type PickupRequestLine = Row<"pickup_request_lines"> & { extra_stock_debited: number; allocation_shortfall: number; return_quantity: number };
 export type InvoicePublishedLine = OrderLine & { catalog_items: { name: string; unit_type: string } | null };
 export type InvoiceEdit = Omit<Row<"invoice_edits">, "previous_lines" | "updated_lines" | "stock_adjustments"> & {
   edited_profile: { full_name: string } | null;
@@ -32,4 +34,19 @@ export type PickupRequest = Omit<Row<"pickup_requests">, "status"> & {
   pickup_request_lines: PickupRequestLine[];
   requested_profile: { full_name: string } | null;
   reviewed_profile: { full_name: string } | null;
+  already_collected: boolean;
+  return_status: "PENDING" | "RECEIVED" | null;
+  return_note: string | null;
+  return_received_at: string | null;
+  return_received_by: string | null;
+};
+
+export type WeeklyInvoice = Row<"weekly_invoices"> & {
+  locations: { name: string } | null; orders: { id: string }[];
+};
+export type WeeklyInvoiceDetails = {
+  id: string; branch_name: string; start_date: string; end_date: string; revision: number; sent_at: string | null;
+  subtotal: number; tax: number; total: number;
+  lines: { item_id: string; name: string; unit_type: string; quantity: number; unit_price: number; is_taxable: boolean; subtotal: number; tax: number }[];
+  orders: { id: string; order_number: number; order_date: string; total: number }[];
 };

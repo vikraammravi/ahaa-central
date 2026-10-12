@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
-import { FilterTabs, type FilterTab } from "@/components/shared/FilterTabs";
 import { Banner } from "@/components/shared/Banner";
 import { supabase } from "@/lib/supabase/client";
 import {
@@ -19,25 +18,13 @@ import { useAsyncData } from "@/lib/useAsyncData";
 import { Pagination } from "@/components/shared/Pagination";
 import { formatMoney, formatDateTime, POLL_INTERVAL } from "@/lib/format";
 
-type Tab = "ALL" | OrderStatus;
-const tabs: FilterTab<Tab>[] = [
-  { value: "ALL", label: "All" },
-  { value: "SUBMITTED", label: "Submitted" },
-  { value: "PREPARING", label: "Preparing" },
-  { value: "READY", label: "Ready" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
-
 export default function AdminOrdersPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("ALL");
   const [page, setPage] = useState(0);
-  const load = useCallback((signal: AbortSignal) => fetchOrders({ page, status: tab }, signal), [page, tab]);
+  const load = useCallback((signal: AbortSignal) => fetchOrders({ page, status: "ALL" }, signal), [page]);
   const { data, loading, error: loadError, refresh } = useAsyncData(load, { pollInterval: POLL_INTERVAL });
   const rows = data?.rows ?? null;
-  const withCounts = tabs.map((item) => ({ ...item, count: data?.counts[item.value] ?? 0 }));
 
   async function updateStatus(id: string, status: OrderStatus) {
     setError(null);
@@ -113,14 +100,13 @@ export default function AdminOrdersPage() {
         subtitle="Incoming orders from branches — advance them through the fulfillment flow."
       />
       {(error || loadError) && <Banner tone="danger">{error || loadError}</Banner>}
-      <FilterTabs tabs={withCounts} value={tab} onChange={(value) => { setTab(value); setPage(0); }} />
       <DataTable
         data={rows}
         columns={columns}
         loading={loading}
         rowKey={(r) => r.id}
         onRowClick={(r) => router.push(`/admin/orders/${r.id}`)}
-        emptyTitle="No orders in this state"
+        emptyTitle="No branch orders yet"
       />
       <Pagination page={data?.page ?? page} pageSize={PAGE_SIZE} count={data?.count ?? 0} busy={loading} onChange={setPage} />
     </div>

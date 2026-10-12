@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useGreeting } from "@/lib/useGreeting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
@@ -14,6 +15,7 @@ import { fetchDashboard } from "@/lib/admin/data";
 import { formatMoney, POLL_INTERVAL, DEFAULT_STOCK_THRESHOLD } from "@/lib/format";
 
 export default function AdminDashboardPage() {
+  const greeting = useGreeting();
   const { data, loading, error } = useAsyncData(fetchDashboard, { pollInterval: POLL_INTERVAL });
   const orders = data?.recentOrders ?? [];
   const lowStock = data?.lowStock ?? 0;
@@ -29,7 +31,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-6">
-      <PageHeader eyebrow="Good morning" title="Central Kitchen Operations" />
+      <PageHeader eyebrow={greeting} title="Central Kitchen Operations" />
       {error && <Banner tone="danger">{error}</Banner>}
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

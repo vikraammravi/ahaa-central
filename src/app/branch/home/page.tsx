@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useGreeting } from "@/lib/useGreeting";
 import { CalendarDays, Clock, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import type { CateringEvent, Location, Order } from "@/lib/supabase/types";
 
 export default function BranchHomePage() {
+  const greeting = useGreeting();
   const { profile, loading: userLoading, error: userError } = useCurrentUser();
   const [branch, setBranch] = useState<Location | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -77,7 +79,7 @@ export default function BranchHomePage() {
       hint: todaysOrders.length ? "Submitted" : "Not placed yet",
       tone: todaysOrders.length ? "success" : "default",
     },
-    { label: "In Progress", value: `${pending}`, hint: "Kitchen orders" },
+    { label: "In Progress", value: `${pending}`, hint: "Orders" },
     {
       label: "Upcoming Catering",
       value: `${upcomingCatering.length}`,
@@ -92,7 +94,7 @@ export default function BranchHomePage() {
   return (
     <div className="max-w-[1200px] mx-auto space-y-4 lg:space-y-6">
       <PageHeader
-        eyebrow={`Good morning, ${profile?.full_name || ""}`}
+        eyebrow={`${greeting}${profile?.full_name ? `, ${profile.full_name}` : ""}`}
         title={branch?.name ?? "Your Branch"}
         subtitle="Central kitchen and catering — all in one place."
       />
@@ -103,7 +105,7 @@ export default function BranchHomePage() {
         <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="text-[13px] uppercase tracking-wide text-white/70">
-              Morning Restock
+              Place Order
             </div>
             <div className="mt-1 text-lg sm:text-xl font-semibold">
               Central Kitchen inventory is live.
@@ -133,7 +135,7 @@ export default function BranchHomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Recent Kitchen Orders</CardTitle>
+            <CardTitle className="text-lg">Recent Orders</CardTitle>
             <Link
               href="/branch/invoices"
               className="text-sm text-saffron-hover"

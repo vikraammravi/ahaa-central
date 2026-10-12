@@ -21,8 +21,9 @@ test("pickup accepts zero and the original request limit", () => {
   assert.equal(api.pickupQuantitiesValid(lines, { item: 0 }), true);
   assert.equal(api.pickupQuantitiesValid(lines, { item: 5 }), true);
 });
-test("pickup rejects fractional, negative, excessive, and non-finite values", () => {
-  for (const value of [1.5, -1, 6, NaN, Infinity]) {
+test("pickup allows extras above the original request, but rejects invalid counts", () => {
+  assert.equal(api.pickupQuantitiesValid(lines, { item: 7 }), true);
+  for (const value of [1.5, -1, 2147483648, NaN, Infinity]) {
     assert.equal(api.pickupQuantitiesValid(lines, { item: value }), false);
   }
   assert.equal(api.pickupQuantitiesValid([], {}), false);

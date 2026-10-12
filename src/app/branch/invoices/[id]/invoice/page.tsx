@@ -1,11 +1,10 @@
 "use client";
-
-import { use } from "react";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { InvoiceDetail } from "@/components/shared/InvoiceDetail";
-
-export default function BranchInvoicePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  return <div className="max-w-[1000px] mx-auto space-y-4"><Link href={`/branch/invoices/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground"><ChevronLeft className="size-4" />Back to kitchen order</Link><InvoiceDetail orderId={id} /></div>;
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
+import { Banner } from "@/components/shared/Banner";
+export default function BranchInvoicePage({params}:{params:Promise<{id:string}>}){
+ const {id}=use(params);const router=useRouter();const [error,setError]=useState<string|null>(null);
+ useEffect(()=>{let active=true;void supabase.from("orders").select("weekly_invoice_id, weekly_invoices(sent_at)").eq("id",id).single().then(({data,error})=>{if(!active)return;const invoice=data?.weekly_invoices as unknown as {sent_at:string|null}|null;if(!error&&data?.weekly_invoice_id&&invoice?.sent_at)router.replace(`/branch/invoices/weekly/${data.weekly_invoice_id}`);else setError("The combined invoice has not been sent yet.");});return()=>{active=false;};},[id,router]);
+ return <Banner tone="info">{error??"Opening invoice…"}</Banner>;
 }

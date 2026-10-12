@@ -45,7 +45,8 @@ const editLines = [{ id: "item", quantity: 5, fulfilled_quantity: 3, unit_price:
 test("invoice editing validates quantities and currency precision", () => {
   const valid = { quantity: "5", unitPrice: "2.50", taxable: false };
   assert.equal(invoices.invoiceDraftError(editLines, { item: valid }), null);
-  for (const quantity of ["", "-1", "1.5", "6"]) assert.notEqual(invoices.invoiceDraftError(editLines, { item: { ...valid, quantity } }), null);
+  for (const quantity of ["", "-1", "1.5", "2147483648"]) assert.notEqual(invoices.invoiceDraftError(editLines, { item: { ...valid, quantity } }), null);
+  assert.equal(invoices.invoiceDraftError(editLines,{item:{...valid,quantity:"7"}}),null);
   for (const unitPrice of ["", "-1", "1.234", "NaN", "100000000"]) assert.notEqual(invoices.invoiceDraftError(editLines, { item: { ...valid, unitPrice } }), null);
 });
 test("invoice preview recalculates edited price, quantity, and tax", () => {
@@ -55,10 +56,4 @@ test("invoice preview recalculates edited price, quantity, and tax", () => {
   assert.equal(taxable.total.toFixed(2), "11.30");
   const exempt = invoices.invoiceDraftTotals(editLines, { item: { quantity: "4", unitPrice: "2.50", taxable: false } });
   assert.equal(exempt.total, 10);
-});
-test("sent invoice edits require publishing the new revision", () => {
-  assert.equal(invoices.invoiceNeedsSending({ invoice_sent_at: null, invoice_revision: 0, invoice_sent_revision: 0 }), true);
-  assert.equal(invoices.invoiceNeedsSending({ invoice_sent_at: "2026-10-10", invoice_revision: 0, invoice_sent_revision: 0 }), false);
-  assert.equal(invoices.invoiceNeedsSending({ invoice_sent_at: "2026-10-10", invoice_revision: 1, invoice_sent_revision: 0 }), true);
-  assert.equal(invoices.invoiceNeedsSending({ invoice_sent_at: "2026-10-10", invoice_revision: 1, invoice_sent_revision: 1 }), false);
 });

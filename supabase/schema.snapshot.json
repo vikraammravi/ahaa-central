@@ -442,6 +442,30 @@
       "generated": true
     },
     {
+      "name": "invoice_quantity",
+      "type": "int4",
+      "table": "order_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "invoice_is_taxable",
+      "type": "bool",
+      "table": "order_lines",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "invoice_line_total",
+      "type": "numeric",
+      "table": "order_lines",
+      "default": null,
+      "nullable": true,
+      "generated": true
+    },
+    {
       "name": "id",
       "type": "uuid",
       "table": "orders",
@@ -570,22 +594,6 @@
       "generated": false
     },
     {
-      "name": "invoice_sent_at",
-      "type": "timestamptz",
-      "table": "orders",
-      "default": null,
-      "nullable": true,
-      "generated": false
-    },
-    {
-      "name": "invoice_sent_by",
-      "type": "uuid",
-      "table": "orders",
-      "default": null,
-      "nullable": true,
-      "generated": false
-    },
-    {
       "name": "invoice_revision",
       "type": "int4",
       "table": "orders",
@@ -594,40 +602,24 @@
       "generated": false
     },
     {
-      "name": "invoice_sent_revision",
-      "type": "int4",
-      "table": "orders",
-      "default": "0",
-      "nullable": false,
-      "generated": false
-    },
-    {
-      "name": "invoice_published_lines",
-      "type": "jsonb",
+      "name": "pickup_confirmed_by",
+      "type": "uuid",
       "table": "orders",
       "default": null,
       "nullable": true,
       "generated": false
     },
     {
-      "name": "invoice_published_subtotal",
-      "type": "numeric",
+      "name": "pickup_confirmed_at",
+      "type": "timestamptz",
       "table": "orders",
       "default": null,
       "nullable": true,
       "generated": false
     },
     {
-      "name": "invoice_published_tax",
-      "type": "numeric",
-      "table": "orders",
-      "default": null,
-      "nullable": true,
-      "generated": false
-    },
-    {
-      "name": "invoice_published_total",
-      "type": "numeric",
+      "name": "weekly_invoice_id",
+      "type": "uuid",
       "table": "orders",
       "default": null,
       "nullable": true,
@@ -691,6 +683,30 @@
     },
     {
       "name": "stock_adjustment",
+      "type": "int4",
+      "table": "pickup_request_lines",
+      "default": "0",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "extra_stock_debited",
+      "type": "int4",
+      "table": "pickup_request_lines",
+      "default": "0",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "allocation_shortfall",
+      "type": "int4",
+      "table": "pickup_request_lines",
+      "default": "0",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "return_quantity",
       "type": "int4",
       "table": "pickup_request_lines",
       "default": "0",
@@ -770,6 +786,46 @@
       "generated": false
     },
     {
+      "name": "already_collected",
+      "type": "bool",
+      "table": "pickup_requests",
+      "default": "false",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "return_status",
+      "type": "text",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "return_received_at",
+      "type": "timestamptz",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "return_received_by",
+      "type": "uuid",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "return_note",
+      "type": "text",
+      "table": "pickup_requests",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
       "name": "id",
       "type": "uuid",
       "table": "profiles",
@@ -840,6 +896,142 @@
       "default": null,
       "nullable": true,
       "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "weekly_invoice_publications",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "weekly_invoice_id",
+      "type": "uuid",
+      "table": "weekly_invoice_publications",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "revision",
+      "type": "int4",
+      "table": "weekly_invoice_publications",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "published_at",
+      "type": "timestamptz",
+      "table": "weekly_invoice_publications",
+      "default": "now()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "published_by",
+      "type": "uuid",
+      "table": "weekly_invoice_publications",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "snapshot",
+      "type": "jsonb",
+      "table": "weekly_invoice_publications",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "weekly_invoices",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "location_id",
+      "type": "uuid",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "start_date",
+      "type": "date",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "end_date",
+      "type": "date",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "created_by",
+      "type": "uuid",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "table": "weekly_invoices",
+      "default": "now()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "revision",
+      "type": "int4",
+      "table": "weekly_invoices",
+      "default": "0",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "sent_revision",
+      "type": "int4",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "sent_at",
+      "type": "timestamptz",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "sent_by",
+      "type": "uuid",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "needs_sending",
+      "type": "bool",
+      "table": "weekly_invoices",
+      "default": null,
+      "nullable": true,
+      "generated": true
     }
   ]
 }

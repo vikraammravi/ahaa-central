@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { BackLink } from "@/components/shared/BackLink";
 import { use } from "react";
-import { ChevronLeft } from "lucide-react";
 import { OrderDetail } from "@/components/shared/OrderDetail";
 
 export default function BranchOrderDetailPage({
@@ -13,12 +12,7 @@ export default function BranchOrderDetailPage({
   const { id } = use(params);
   return (
     <div className="max-w-[1000px] mx-auto space-y-4">
-      <Link
-        href="/branch/invoices"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="size-4" /> Back to orders
-      </Link>
+      <BackLink href="/branch/invoices">Back to Orders</BackLink>
       <OrderDetail orderId={id} canEdit={false} />
     </div>
   );

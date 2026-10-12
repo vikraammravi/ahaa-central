@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InvoiceTotals } from "@/components/shared/InvoiceTotals";
+import { formatMoney, taxLabel } from "@/lib/format";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +29,7 @@ export default function BranchOrderPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -106,7 +110,7 @@ export default function BranchOrderPage() {
 
   return (
     <div className="max-w-[900px] mx-auto space-y-4 pb-32 lg:pb-8">
-      <PageHeader title="Daily Restock" subtitle="Order before 10:00 AM." />
+      <PageHeader title="Place Order" subtitle="Order before 10:00 AM." />
 
       {error && <Banner tone="danger">{error}</Banner>}
 
@@ -165,6 +169,7 @@ export default function BranchOrderPage() {
         </div>
       )}
 
+      <Dialog open={confirming} onOpenChange={(open)=>{if(!submitting)setConfirming(open);}}><DialogContent aria-describedby={undefined} className="sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto" showCloseButton={!submitting}><DialogHeader><DialogTitle>Review Order</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Check the items and quantities before submitting to the central kitchen.</p><div className="divide-y">{(items??[]).filter(item=>(qty[item.id]??0)>0).map(item=><div key={item.id} className="flex justify-between gap-3 py-3 text-sm"><div className="min-w-0"><p className="font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{qty[item.id]} {item.unit_type} × {formatMoney(item.default_price)} · Tax {taxLabel(item.is_taxable)}</p></div><span className="shrink-0">{formatMoney(qty[item.id]*Number(item.default_price))}</span></div>)}</div><InvoiceTotals subtotal={subtotal} tax={tax} total={total}/>{error && <Banner tone="danger">{error}</Banner>}<div className="flex justify-end gap-2"><Button variant="outline" disabled={submitting} onClick={()=>setConfirming(false)}>Edit Order</Button><Button disabled={submitting||!totalItems} onClick={placeOrder}>{submitting?"Submitting…":"Submit Order"}</Button></div></DialogContent></Dialog>
       {totalItems > 0 && (
         <div className="fixed bottom-16 lg:bottom-4 left-0 right-0 mx-4 lg:max-w-[900px] lg:mx-auto bg-surface border border-border rounded-2xl shadow-lg p-4 flex items-center justify-between gap-3">
           <div>
@@ -173,7 +178,7 @@ export default function BranchOrderPage() {
               CA${total.toFixed(2)}
             </div>
           </div>
-          <Button size="lg" onClick={placeOrder} disabled={submitting}>
+          <Button size="lg" onClick={()=>setConfirming(true)} disabled={submitting}>
             {submitting && <Spinner size="xs" className="text-primary-foreground" />}
             {submitting ? "Placing…" : "Place Order"}
           </Button>

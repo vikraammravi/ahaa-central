@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PackageCheck, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PackageCheck, XCircle, Plus, Minus } from "lucide-react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,7 @@ import Link from "next/link";
 import { OrderTimeline } from "./OrderTimeline";
 import { TAX_RATE, POLL_INTERVAL } from "@/lib/format";
 
-type OrderWithLocation = Order & { locations: { name: string } | null };
+type OrderWithLocation = Order & { locations: { name: string } | null; weekly_invoices: {sent_at: string | null} | null };
 type LineWithItem = OrderLine & {
   catalog_items: { name: string; unit_type: string } | null;
 };
@@ -45,8 +46,10 @@ export function OrderDetail({
     Record<string, { fulfilled: number; reason: string }>
   >({});
   const [saving, setSaving] = useState(false);
+  const [pickupOpen, setPickupOpen] = useState(false);
   const [pickingUp, setPickingUp] = useState(false);
   const [pickupReason, setPickupReason] = useState("");
+  const [alreadyCollected, setAlreadyCollected] = useState(false);
   const [requests, setRequests] = useState<PickupRequest[]>([]);
 
   const load = useCallback(async (quiet = false) => {
@@ -57,7 +60,7 @@ export function OrderDetail({
     const [{ data: o, error: oe }, { data: l, error: le }, { data: history, error: he }] = await Promise.all([
       supabase
         .from("orders")
-        .select("*, locations(name)")
+        .select("*, locations(name), weekly_invoices(sent_at)")
         .eq("id", orderId)
         .single(),
       supabase
@@ -94,10 +97,10 @@ export function OrderDetail({
   }, [load]);
 
   useEffect(() => {
-    if (order?.status !== "READY") return;
+    if (order?.status !== "READY" || pickupOpen) return;
     const timer = window.setInterval(() => { void load(true); }, POLL_INTERVAL);
     return () => window.clearInterval(timer);
-  }, [order?.status, load]);
+  }, [order?.status, load, pickupOpen]);
 
   const dirty = lines.some(
     (l) =>
@@ -155,9 +158,12 @@ export function OrderDetail({
         p_order_id: order.id,
         p_quantities: lines.map((line) => ({ line_id: line.id, quantity: edits[line.id]?.fulfilled ?? line.fulfilled_quantity })),
         p_reason: pickupReason,
+        p_already_collected: alreadyCollected,
       });
       if (error) throw error;
+      setPickupOpen(false);
       setPickupReason("");
+      setAlreadyCollected(false);
       await load(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to confirm pickup");
@@ -185,7 +191,8 @@ export function OrderDetail({
   const requested = Number(order.total_amount);
   const final = Number(order.final_total_amount);
   const adminAdvanceTarget = canEdit ? nextAdminStatus(order.status) : null;
-  const canPickup = !canEdit && order.status === "READY";
+  const returnPending = requests.some((request) => request.return_status === "PENDING");
+  const canPickup = order.status === "READY" && !returnPending;
   const pickupPending = order.pickup_approval_status === "PENDING";
   const canPickupEdit = canPickup && !pickupPending;
   const canPrepare = canEdit && (order.status === "SUBMITTED" || order.status === "PREPARING");
@@ -239,11 +246,12 @@ export function OrderDetail({
       header: order.status === "READY" || order.status === "COMPLETED" ? "Actual Pickup" : "Fulfilled",
       align: "right",
       render: (r) => {
-        const editable = canPrepare || canPickupEdit;
-        const maxValue = r.quantity;
-        if (!editable) return pickupPending ? requests[0]?.pickup_request_lines.find((line) => line.order_line_id === r.id)?.pickup_quantity ?? r.fulfilled_quantity : r.fulfilled_quantity;
+        const editable = canPrepare || (canPickupEdit && pickupOpen);
+        const maxValue = canPickupEdit ? 2147483647 : r.quantity;
+        if (!editable) return pickupPending || returnPending ? requests[0]?.pickup_request_lines.find((line) => line.order_line_id === r.id)?.pickup_quantity ?? r.fulfilled_quantity : r.fulfilled_quantity;
         return (
-          <Input
+          <div className="flex items-center justify-end gap-1">{canPickupEdit && <Button size="icon-sm" variant="outline" aria-label={`Decrease pickup ${r.catalog_items?.name}`} disabled={pickingUp || (edits[r.id]?.fulfilled ?? r.fulfilled_quantity)===0} onClick={()=>setEdits(p=>({...p,[r.id]:{reason:p[r.id]?.reason??"",fulfilled:Math.max(0,(p[r.id]?.fulfilled??r.fulfilled_quantity)-1)}}))}><Minus className="size-3"/></Button>}<Input
+            aria-label={`Pickup quantity ${r.catalog_items?.name ?? "Item"}`}
             type="number"
             min={0}
             step={1}
@@ -262,22 +270,20 @@ export function OrderDetail({
                 },
               }))
             }
-            className="w-20 h-9 text-right ml-auto"
-          />
+            className="w-20 h-9 text-right"
+          />{canPickupEdit && <Button size="icon-sm" aria-label={`Increase pickup ${r.catalog_items?.name}`} disabled={pickingUp || (edits[r.id]?.fulfilled ?? r.fulfilled_quantity)>=2147483647} onClick={()=>setEdits(p=>({...p,[r.id]:{reason:p[r.id]?.reason??"",fulfilled:(p[r.id]?.fulfilled??r.fulfilled_quantity)+1}}))}><Plus className="size-3"/></Button>}</div>
         );
       },
     },
-    // Shortage reason column only shown to admin (who enters it)
+    ...(order.status === "COMPLETED" ? [{ key: "invoice-quantity", header: "Invoice Qty", align: "right" as const, render: (row: LineWithItem) => row.invoice_quantity ?? row.fulfilled_quantity }] : []),
+    // Optional fulfillment note entered by admin.
     ...(canPrepare
       ? [
           {
             key: "shortage",
-            header: "Shortage Reason",
+            header: "Note",
             hideOn: "sm" as const,
             render: (r: LineWithItem) => {
-              const req = r.quantity;
-              const ful = edits[r.id]?.fulfilled ?? r.fulfilled_quantity;
-              if (req === ful) return <span className="text-muted-foreground">—</span>;
               return (
                 <Input
                   value={edits[r.id]?.reason ?? r.shortage_reason ?? ""}
@@ -290,7 +296,7 @@ export function OrderDetail({
                       },
                     }))
                   }
-                  placeholder="e.g. Out of stock"
+                  placeholder="Note (optional)"
                   className="h-9"
                 />
               );
@@ -300,7 +306,7 @@ export function OrderDetail({
       : []),
     {
       key: "line_total",
-      header: "Final",
+      header: canPickupEdit ? "Pickup Estimate" : "Invoice Subtotal",
       align: "right",
       render: (r) => {
         // Live preview: while admin edits or branch is at pickup, reflect
@@ -308,7 +314,7 @@ export function OrderDetail({
         const previewing = canPrepare || canPickupEdit;
         const q = previewing
           ? edits[r.id]?.fulfilled ?? r.fulfilled_quantity
-          : r.fulfilled_quantity;
+          : r.invoice_quantity ?? r.fulfilled_quantity;
         const live = q * Number(r.unit_price);
         const stored = Number(r.final_line_total ?? 0);
         const changed = previewing && Math.abs(live - stored) > 0.005;
@@ -329,18 +335,17 @@ export function OrderDetail({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       {error && <Banner tone="danger">{error}</Banner>}
-      {!canEdit && order.invoice_sent_at && <Banner tone="success">Your invoice is available. <Link href={`/branch/invoices/${order.id}/invoice`} className="font-medium underline">View Invoice INV-{order.order_number}</Link></Banner>}
+      {!canEdit && order.weekly_invoices?.sent_at && <Banner tone="success">Your invoice is available. <Button asChild variant="outline" size="sm"><Link href={`/branch/invoices/weekly/${order.weekly_invoice_id}`}>View Invoice</Link></Button></Banner>}
 
       {canPickupEdit && (
         <Banner tone="success">
           Your order is ready. Confirm the prepared quantities, or request admin approval for a different pickup quantity.
         </Banner>
       )}
-      {pickupPending && <Banner tone="info">Pickup Approval Pending — the order remains Ready until admin reviews the request.</Banner>}
 
-      {requests.map((request) => <PickupApprovalPanel key={request.id} request={request} canReview={canEdit && pickupPending} products={Object.fromEntries(lines.map((line) => [line.id, line.catalog_items?.name ?? "Item"]))} onReviewed={() => load(true)} />)}
+      {requests.map((request) => <PickupApprovalPanel key={request.id} request={request} canReview={canEdit} products={Object.fromEntries(lines.map((line) => [line.id, line.catalog_items?.name ?? "Item"]))} onReviewed={() => load(true)} />)}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
@@ -377,7 +382,7 @@ export function OrderDetail({
               </div>
               <div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                  {canPickupEdit && pickupChanged ? "Estimated after approval" : "Final"}
+                  {canPickupEdit ? "Pickup estimate" : "Billing total"}
                 </div>
                 <div
                   className={
@@ -437,21 +442,7 @@ export function OrderDetail({
               </div>
             )}
 
-            {canPickupEdit && (
-              <div className="mt-4 space-y-3">
-              {pickupChanged && <div className="space-y-1.5"><Label htmlFor="pickup-reason">Reason for pickup change</Label><Input id="pickup-reason" value={pickupReason} onChange={(event) => setPickupReason(event.target.value)} placeholder="Explain the extra or reduced pickup" disabled={pickingUp} /></div>}
-              <Button
-                className="w-full"
-                onClick={branchPickup}
-                disabled={pickingUp || !pickupValid || (pickupChanged && !pickupReason.trim())}
-              >
-                <PackageCheck className="size-4" />
-                {pickingUp
-                  ? "Submitting…"
-                  : pickupChanged ? "Request Approval" : `Confirm Pickup · CA$${liveTotal.toFixed(2)}`}
-              </Button>
-              </div>
-            )}
+            {canPickupEdit && <Button className="w-full mt-4" onClick={()=>setPickupOpen(true)}><PackageCheck className="size-4"/>Review Pickup</Button>}
 
             {canCancel && (
               <ConfirmDialog
@@ -480,6 +471,7 @@ export function OrderDetail({
         )}
       </div>
 
+      <Dialog open={pickupOpen && canPickupEdit} onOpenChange={(open)=>{if(!pickingUp)setPickupOpen(open);}}><DialogContent aria-describedby={undefined} className="sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto" showCloseButton={!pickingUp}><DialogHeader><DialogTitle>Confirm Pickup — Order #{order.order_number}</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Enter the total quantity you are picking up. Extra or reduced quantities go to admin for approval.</p><div className="space-y-3">{lines.map(line=><div key={line.id} className="rounded-xl border p-3 space-y-3"><div><p className="font-medium">{line.catalog_items?.name??"Item"}</p><p className="text-xs text-muted-foreground">Ordered: {line.quantity} · Prepared: {line.fulfilled_quantity} {line.catalog_items?.unit_type}</p></div><div className="flex flex-wrap justify-between items-center gap-2"><span className="text-sm">Pickup quantity</span>{columns.find(column=>column.key==="fulfilled")?.render(line)}</div></div>)}</div><div className="space-y-2"><Label htmlFor="pickup-notes">Notes</Label><Input id="pickup-notes" value={pickupReason} onChange={(event)=>setPickupReason(event.target.value)} disabled={pickingUp}/></div>{pickupChanged && <label className="flex gap-2 items-start text-sm"><input type="checkbox" checked={alreadyCollected} onChange={(event)=>setAlreadyCollected(event.target.checked)} disabled={pickingUp}/>These quantities have already been physically collected</label>}{error && <Banner tone="danger">{error}</Banner>}<div className="flex justify-end gap-2"><Button variant="outline" disabled={pickingUp} onClick={()=>setPickupOpen(false)}>Back</Button><Button onClick={branchPickup} disabled={pickingUp||!pickupValid}>{pickingUp?"Submitting…":pickupChanged?"Request Approval":"Confirm Pickup"}</Button></div></DialogContent></Dialog>
       <DataTable
         data={lines}
         columns={columns}

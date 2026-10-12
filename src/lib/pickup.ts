@@ -13,6 +13,6 @@ export function pickupQuantitiesValid(
 ) {
   return lines.length > 0 && lines.every((line) => {
     const quantity = quantities[line.id] ?? line.fulfilled_quantity;
-    return Number.isInteger(quantity) && quantity >= 0 && quantity <= line.quantity;
+    return Number.isInteger(quantity) && quantity >= 0 && quantity <= 2147483647;
   });
 }
