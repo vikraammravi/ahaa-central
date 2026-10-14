@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { useAsyncData } from "@/lib/useAsyncData";
-import { PAGE_SIZE } from "@/lib/admin/data";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { FormSelect } from "@/components/shared/FormSelect";
+import { PAGE_SIZE, pageRange } from "@/lib/pagination";
 import { formatMoney, formatDate, POLL_INTERVAL } from "@/lib/format";
 import { ORDER_STATUS_BADGE, ORDER_STATUS_LABEL } from "@/lib/orders";
-import type { Order } from "@/lib/supabase/types";
+import type { Order, OrderStatus } from "@/lib/supabase/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -21,6 +23,10 @@ import { Pagination } from "@/components/shared/Pagination";
 import { WeeklyInvoiceList } from "@/components/shared/WeeklyInvoiceList";
 
 type BranchOrder = Order & { weekly_invoices: { sent_at: string | null } | null; pickup_requests: { status: "PENDING"|"APPROVED"|"REJECTED"; requested_at:string }[] };
+const STATUS_OPTIONS: {value:OrderStatus|"ALL";label:string}[] = [
+  {value:"ALL",label:"All statuses"},
+  ...Object.entries(ORDER_STATUS_LABEL).map(([value,label])=>({value:value as OrderStatus,label:value==="SUBMITTED"?"Pending":label})),
+];
 export default function BranchInvoicesPage() {
   const router = useRouter();
   const [section, setSection] = useState<"orders" | "invoices">("orders");
@@ -28,14 +34,20 @@ export default function BranchInvoicesPage() {
   const [startDate,setStartDate]=useState("");
   const [endDate,setEndDate]=useState("");
   const [page, setPage] = useState(0);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<OrderStatus | "ALL">("ALL");
+  const orderSearch = useDebouncedValue(search.trim().replace(/^#/, ""));
   const load = useCallback(async (signal: AbortSignal) => {
-    const { data, error, count } = await supabase.from("orders")
+    if (orderSearch && (!/^\d+$/.test(orderSearch) || !Number.isSafeInteger(Number(orderSearch)))) return { rows: [], count: 0 };
+    let query = supabase.from("orders")
       .select("*, weekly_invoices(sent_at), pickup_requests(status,requested_at)", { count: "exact" })
-      .order("created_at", { ascending: false }).order("id")
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1).abortSignal(signal);
+      .order("created_at", { ascending: false }).order("id");
+    if (status !== "ALL") query = query.eq("status", status);
+    if (orderSearch) query = query.eq("order_number", Number(orderSearch));
+    const { data, error, count } = await query.range(...pageRange(page)).abortSignal(signal);
     if (error) throw new Error(error.message);
     return { rows: (data ?? []) as BranchOrder[], count: count ?? 0 };
-  }, [page]);
+  }, [page, status, orderSearch]);
   const { data, loading, error } = useAsyncData(load, { enabled: section === "orders", pollInterval: POLL_INTERVAL });
   const columns: Column<BranchOrder>[] = [
     { key: "number", header: "Order #", render: order => <span className="font-medium">#{order.order_number}</span> },
@@ -48,6 +60,6 @@ export default function BranchInvoicesPage() {
   return <div className="max-w-[1100px] mx-auto space-y-5">
     <PageHeader title="Orders" subtitle="Track your orders and view combined invoices." actions={<Button asChild><Link href="/branch/order">Place Order</Link></Button>} />
     <FilterTabs tabs={[{value:"orders",label:"Orders"},{value:"invoices",label:"Invoices"}]} value={section} onChange={setSection} />
-    {section === "orders" ? <>{error && <Banner tone="danger">{error}</Banner>}<DataTable data={data?.rows ?? null} columns={columns} loading={loading} rowKey={order => order.id} onRowClick={order => router.push(`/branch/invoices/${order.id}`)} emptyTitle="No orders yet" emptyBody="Choose Place Order to place your first order." /><Pagination page={page} pageSize={PAGE_SIZE} count={data?.count ?? 0} busy={loading} onChange={setPage} /></> : <div className="space-y-3"><p className="text-sm text-muted-foreground">Combined invoices sent by central admin. Open an invoice to see its items, totals and included orders.</p><div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end"><div className="space-y-1.5"><Label htmlFor="branch-invoice-from">From Date</Label><Input id="branch-invoice-from" type="date" value={startDate} max={endDate||undefined} onChange={event=>setStartDate(event.target.value)}/></div><div className="space-y-1.5"><Label htmlFor="branch-invoice-to">To Date</Label><Input id="branch-invoice-to" type="date" value={endDate} min={startDate||undefined} onChange={event=>setEndDate(event.target.value)}/></div><Button variant="outline" onClick={()=>{setStartDate("");setEndDate("");}}>Clear Dates</Button></div>{startDate&&endDate&&startDate>endDate?<Banner tone="danger">From date must be on or before to date.</Banner>:<WeeklyInvoiceList key={`${startDate}-${endDate}`} filters={{branchId:"",startDate,endDate}} mode="sent" isAdmin={false}/>}</div>}
+    {section === "orders" ? <><div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_240px] gap-3"><div className="space-y-1.5"><Label htmlFor="branch-order-search">Search Order Number</Label><Input id="branch-order-search" type="search" className="h-10 cursor-text" placeholder="e.g. #15" value={search} onChange={event=>{setSearch(event.target.value);setPage(0);}}/></div><div className="space-y-1.5"><Label htmlFor="branch-order-status">Status</Label><FormSelect id="branch-order-status" value={status} onChange={value=>{setStatus(value);setPage(0);}} options={STATUS_OPTIONS}/></div></div>{error && <Banner tone="danger">{error}</Banner>}<DataTable data={data?.rows ?? null} columns={columns} loading={loading} rowKey={order => order.id} onRowClick={order => router.push(`/branch/invoices/${order.id}`)} emptyTitle={search.trim()||status!=="ALL"?"No matching orders":"No orders yet"} emptyBody={search.trim()||status!=="ALL"?"Try another order number or status.":"Choose Place Order to place your first order."} /><Pagination page={page} pageSize={PAGE_SIZE} count={data?.count ?? 0} busy={loading} onChange={setPage} /></> : <div className="space-y-3"><p className="text-sm text-muted-foreground">Combined invoices sent by central admin. Open an invoice to see its items, totals and included orders.</p><div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end"><div className="space-y-1.5"><Label htmlFor="branch-invoice-from">From Date</Label><Input id="branch-invoice-from" type="date" value={startDate} max={endDate||undefined} onChange={event=>setStartDate(event.target.value)}/></div><div className="space-y-1.5"><Label htmlFor="branch-invoice-to">To Date</Label><Input id="branch-invoice-to" type="date" value={endDate} min={startDate||undefined} onChange={event=>setEndDate(event.target.value)}/></div><Button variant="outline" onClick={()=>{setStartDate("");setEndDate("");}}>Clear Dates</Button></div>{startDate&&endDate&&startDate>endDate?<Banner tone="danger">From date must be on or before to date.</Banner>:<WeeklyInvoiceList key={`${startDate}-${endDate}`} filters={{branchId:"",startDate,endDate}} mode="sent" isAdmin={false}/>}</div>}
   </div>;
 }

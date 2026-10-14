@@ -14,6 +14,9 @@ import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem } from "@/lib/supabase/types";
 import { useAsyncData } from "@/lib/useAsyncData";
 import { fetchCatalog } from "@/lib/admin/data";
+import { useCatalogFilters } from "@/lib/useCatalogFilters";
+import { catalogCategory } from "@/lib/catalog";
+import { CatalogFilters } from "@/components/shared/CatalogFilters";
 import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD } from "@/lib/format";
 
 type Tab = "all" | "active" | "inactive";
@@ -29,6 +32,7 @@ export default function AdminCatalogPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [tab, setTab] = useState<Tab>("all");
+  const filters = useCatalogFilters(data);
 
 
   async function toggleActive(row: CatalogItem) {
@@ -42,24 +46,25 @@ export default function AdminCatalogPage() {
   }
 
   const rows = useMemo(() => {
-    if (!data) return null;
-    if (tab === "active") return data.filter((r) => r.is_active);
-    if (tab === "inactive") return data.filter((r) => !r.is_active);
-    return data;
-  }, [data, tab]);
+    if (!filters.filtered) return null;
+    if (tab === "active") return filters.filtered.filter((r) => r.is_active);
+    if (tab === "inactive") return filters.filtered.filter((r) => !r.is_active);
+    return filters.filtered;
+  }, [filters.filtered, tab]);
 
   const withCounts = useMemo<FilterTab<Tab>[]>(() => {
-    if (!data) return tabs;
+    const filtered = filters.filtered;
+    if (!filtered) return tabs;
     return tabs.map((t) => ({
       ...t,
       count:
         t.value === "all"
-          ? data.length
+          ? filtered.length
           : t.value === "active"
-          ? data.filter((r) => r.is_active).length
-          : data.filter((r) => !r.is_active).length,
+          ? filtered.filter((r) => r.is_active).length
+          : filtered.filter((r) => !r.is_active).length,
     }));
-  }, [data]);
+  }, [filters.filtered]);
 
   const columns: Column<CatalogItem>[] = [
     {
@@ -71,7 +76,7 @@ export default function AdminCatalogPage() {
         </span>
       ),
     },
-    { key: "category", header: "Category", render: (r) => r.category, hideOn: "sm" },
+    { key: "category", header: "Category", render: (r) => catalogCategory(r.category) },
     { key: "unit", header: "Unit", render: (r) => r.unit_type },
     { key: "threshold", header: "Threshold", align: "right", render: (r) => r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD },
     {
@@ -129,6 +134,7 @@ export default function AdminCatalogPage() {
       />
       {(error || loadError) && <Banner tone="danger">{error || loadError}</Banner>}
       <FilterTabs tabs={withCounts} value={tab} onChange={setTab} />
+      <CatalogFilters id="catalog" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/>
       <DataTable
         data={rows}
         columns={columns}

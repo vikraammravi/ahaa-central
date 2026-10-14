@@ -13,6 +13,9 @@ import type { CatalogItem } from "@/lib/supabase/types";
 import { stockBadge } from "@/lib/stock";
 import { useAsyncData } from "@/lib/useAsyncData";
 import { fetchCatalog } from "@/lib/admin/data";
+import { useCatalogFilters } from "@/lib/useCatalogFilters";
+import { catalogCategory } from "@/lib/catalog";
+import { CatalogFilters } from "@/components/shared/CatalogFilters";
 import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD, POLL_INTERVAL } from "@/lib/format";
 
 export default function AdminStockPage() {
@@ -38,6 +41,7 @@ export default function AdminStockPage() {
       return data;
   }, []);
   const { data: items, loading, error: loadError, refresh } = useAsyncData(load, { pollInterval: POLL_INTERVAL, enabled: !saving });
+  const filters = useCatalogFilters(items);
   const dirty = items?.some((i) => edits[i.id] !== undefined && edits[i.id] !== i.available_stock);
 
   async function save() {
@@ -65,15 +69,10 @@ export default function AdminStockPage() {
     {
       key: "product",
       header: "Product",
-      render: (r) => (
-        <div>
-          <div className="font-medium">{r.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {r.category} · {r.unit_type}
-          </div>
-        </div>
-      ),
+      render: (r) => <span className="font-medium">{r.name}</span>,
     },
+    {key:"category",header:"Category",render:r=>catalogCategory(r.category)},
+    {key:"unit",header:"Unit",render:r=>r.unit_type},
     {
       key: "available",
       header: "Available",
@@ -135,12 +134,13 @@ export default function AdminStockPage() {
           the new numbers on their next order.
         </Banner>
       )}
+      <CatalogFilters id="stock" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/>
       <DataTable
-        data={items}
+        data={filters.filtered}
         columns={columns}
         loading={loading}
         rowKey={(r) => r.id}
-        emptyTitle="No active catalog items"
+        emptyTitle="No products match these filters"
       />
     </div>
   );
