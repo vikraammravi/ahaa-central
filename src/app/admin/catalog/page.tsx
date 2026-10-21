@@ -6,7 +6,8 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
-import { FilterTabs, type FilterTab } from "@/components/shared/FilterTabs";
+import { FormSelect } from "@/components/shared/FormSelect";
+import { Label } from "@/components/ui/label";
 import { Banner } from "@/components/shared/Banner";
 import { RowActions } from "@/components/shared/RowActions";
 import { CatalogItemDialog } from "@/components/admin/CatalogItemDialog";
@@ -19,19 +20,13 @@ import { catalogCategory } from "@/lib/catalog";
 import { CatalogFilters } from "@/components/shared/CatalogFilters";
 import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD } from "@/lib/format";
 
-type Tab = "all" | "active" | "inactive";
-
-const tabs: FilterTab<Tab>[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-];
+type CatalogStatus = "all" | "active" | "inactive";
 
 export default function AdminCatalogPage() {
   const { data, loading, error: loadError, refresh } = useAsyncData(fetchCatalog);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
-  const [tab, setTab] = useState<Tab>("all");
+  const [status, setStatus] = useState<CatalogStatus>("all");
   const filters = useCatalogFilters(data);
 
 
@@ -47,24 +42,10 @@ export default function AdminCatalogPage() {
 
   const rows = useMemo(() => {
     if (!filters.filtered) return null;
-    if (tab === "active") return filters.filtered.filter((r) => r.is_active);
-    if (tab === "inactive") return filters.filtered.filter((r) => !r.is_active);
+    if (status === "active") return filters.filtered.filter((r) => r.is_active);
+    if (status === "inactive") return filters.filtered.filter((r) => !r.is_active);
     return filters.filtered;
-  }, [filters.filtered, tab]);
-
-  const withCounts = useMemo<FilterTab<Tab>[]>(() => {
-    const filtered = filters.filtered;
-    if (!filtered) return tabs;
-    return tabs.map((t) => ({
-      ...t,
-      count:
-        t.value === "all"
-          ? filtered.length
-          : t.value === "active"
-          ? filtered.filter((r) => r.is_active).length
-          : filtered.filter((r) => !r.is_active).length,
-    }));
-  }, [filters.filtered]);
+  }, [filters.filtered, status]);
 
   const columns: Column<CatalogItem>[] = [
     {
@@ -133,15 +114,18 @@ export default function AdminCatalogPage() {
         actions={<CatalogItemDialog onSaved={() => { void refresh(); }} />}
       />
       {(error || loadError) && <Banner tone="danger">{error || loadError}</Banner>}
-      <FilterTabs tabs={withCounts} value={tab} onChange={setTab} />
-      <CatalogFilters id="catalog" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_200px] items-end gap-3">
+        <CatalogFilters id="catalog" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/>
+        <div className="space-y-1.5"><Label htmlFor="catalog-status">Status</Label><FormSelect id="catalog-status" value={status} onChange={setStatus} options={[{value:"all",label:"All statuses"},{value:"active",label:"Active"},{value:"inactive",label:"Inactive"}]}/></div>
+      </div>
       <DataTable
         data={rows}
         columns={columns}
         loading={loading}
         rowKey={(r) => r.id}
         emptyTitle="No items in this view"
-        emptyBody="Add your first product or switch to another tab."
+        emptyBody="Add a product or adjust your search and filters."
       />
 
       {editing && (

@@ -1,14 +1,16 @@
 "use client";
 
 import { formatTime } from "@/lib/format";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useStockEditor } from "@/lib/useStockEditor";
+import { StockStatusFilter } from "@/components/shared/StockStatusFilter";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Banner } from "@/components/shared/Banner";
-import { supabase } from "@/lib/supabase/client";
+
 import type { CatalogItem } from "@/lib/supabase/types";
 import { stockBadge } from "@/lib/stock";
 import { useAsyncData } from "@/lib/useAsyncData";
@@ -19,52 +21,13 @@ import { CatalogFilters } from "@/components/shared/CatalogFilters";
 import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD, POLL_INTERVAL } from "@/lib/format";
 
 export default function AdminStockPage() {
-  const [edits, setEdits] = useState<Record<string, number>>({});
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-  const pendingEdits = useRef<Record<string, number>>({});
-  const previousStock = useRef<Record<string, { quantity: number; updatedAt: string }>>({});
-
-  const load = useCallback(async (signal: AbortSignal) => {
-      const data = (await fetchCatalog(signal)).filter((item) => item.is_active);
-      if (signal.aborted) throw new Error("Request cancelled.");
-      const initial: Record<string, number> = {};
-      data.forEach((i) => {
-        const draft = pendingEdits.current[i.id];
-        const isEdited = draft !== undefined && draft !== previousStock.current[i.id]?.quantity && draft !== i.available_stock;
-        initial[i.id] = isEdited ? draft : i.available_stock;
-        if (!isEdited) previousStock.current[i.id] = { quantity: i.available_stock, updatedAt: i.updated_at };
-      });
-      pendingEdits.current = initial;
-      setEdits(initial);
-      return data;
-  }, []);
-  const { data: items, loading, error: loadError, refresh } = useAsyncData(load, { pollInterval: POLL_INTERVAL, enabled: !saving });
-  const filters = useCatalogFilters(items);
-  const dirty = items?.some((i) => edits[i.id] !== undefined && edits[i.id] !== i.available_stock);
-
-  async function save() {
-    if (!items) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const updates = items
-        .filter((i) => edits[i.id] !== undefined && edits[i.id] !== i.available_stock)
-        .map((i) => ({ id: i.id, available_stock: edits[i.id], expected_stock: previousStock.current[i.id]?.quantity, expected_updated_at: previousStock.current[i.id]?.updatedAt }));
-      if (updates.some((item) => !Number.isInteger(item.available_stock) || item.available_stock < 0 || item.available_stock > 2147483647)) throw new Error("Stock must be a nonnegative whole number.");
-      const { error } = await supabase.rpc("save_daily_stock", { p_updates: updates });
-      if (error) throw new Error(error.message);
-      pendingEdits.current = {};
-      previousStock.current = {};
-      setSavedAt(new Date());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }
-
+  const [status, setStatus] = useState("ALL");
+  const load = useCallback(async (signal: AbortSignal) => (await fetchCatalog(signal)).filter(item=>item.is_active), []);
+  const {data:items,loading,error:loadError,refresh}=useAsyncData(load,{pollInterval:POLL_INTERVAL});
+  const editor=useStockEditor(items,()=>{setSavedAt(new Date());void refresh(true);});
+  const filters=useCatalogFilters(editor.items);
+  const rows=filters.filtered?.filter(item=>status==="ALL"||stockBadge(editor.quantity(item),item.low_stock_threshold??DEFAULT_STOCK_THRESHOLD)===status)??null;
   const columns: Column<CatalogItem>[] = [
     {
       key: "product",
@@ -77,26 +40,12 @@ export default function AdminStockPage() {
       key: "available",
       header: "Available",
       align: "right",
-      render: (r) => (
-        <Input
-          type="number"
-          min={0}
-          step={1}
-          disabled={saving}
-          value={edits[r.id] ?? r.available_stock}
-          onChange={(e) => {
-            const quantity = Math.max(0, Number(e.target.value) || 0);
-            pendingEdits.current[r.id] = quantity;
-            setEdits((prev) => ({ ...prev, [r.id]: quantity }));
-          }}
-          className="w-24 h-9 text-right ml-auto"
-        />
-      ),
+      render: (r) => editor.editing?<Input aria-label={`Available stock for ${r.name}`} type="number" inputMode="numeric" min={0} step={1} value={editor.values[r.id]??String(r.available_stock)} onChange={event=>editor.setValue(r.id,event.target.value)} className="w-24 h-10 text-base sm:text-sm text-right ml-auto"/>:<span>{editor.quantity(r)}{editor.pending.some(update=>update.id===r.id)&&<span className="block text-xs text-muted-foreground">Pending broadcast</span>}</span>,
     },
     {
       key: "status",
       header: "Status",
-      render: (r) => <StatusBadge status={stockBadge(edits[r.id] ?? r.available_stock, r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD)} />,
+      render: (r) => <StatusBadge status={stockBadge(editor.quantity(r), r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD)} />,
     },
     { key: "threshold", header: "Threshold", align: "right", render: (r) => r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD },
     {
@@ -121,22 +70,25 @@ export default function AdminStockPage() {
         title="Daily Stock"
         subtitle="Stock updates every 5 seconds. Fulfilled quantities are deducted when orders become Ready."
         actions={
-          <Button size="lg" disabled={!dirty || saving} onClick={save}>
-            {saving ? "Saving…" : "Save & Broadcast"}
-          </Button>
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 max-w-full">
+            {editor.editing?<><Button variant="outline" onClick={editor.cancel}>Cancel</Button><Button onClick={editor.save}>Save Changes</Button></>:<Button variant="outline" disabled={!items?.length||loading||editor.saving} onClick={editor.edit}>Edit</Button>}
+            <Button className={editor.editing?"col-span-2 sm:col-auto":undefined} disabled={editor.editing||!editor.pending.length||editor.saving} onClick={editor.broadcast}>{editor.saving?"Broadcasting…":"Broadcast Changes"}</Button>
+          </div>
         }
       />
-      {(error || loadError) && <Banner tone="danger">{error || loadError}</Banner>}
-      {dirty && <Button variant="outline" disabled={saving} onClick={() => { pendingEdits.current = {}; previousStock.current = {}; setEdits({}); setError(null); void refresh(); }}>Discard Edits & Refresh Stock</Button>}
-      {savedAt && !dirty && (
+      {loadError && <Banner tone="danger">{loadError}</Banner>}
+      {editor.error&&<Banner tone="danger">{editor.error} Review your edits, or discard and reload if stock changed elsewhere.</Banner>}
+      {(editor.editing||editor.pending.length>0)&&<Banner tone="info">{editor.editing?"Edit quantities, then save your changes.":`${editor.pending.length} saved stock change(s) pending broadcast.`} Changes are kept on this page until Broadcast Changes is selected. <Button variant="outline" size="sm" disabled={editor.saving} onClick={editor.discard}>Discard Changes</Button></Banner>}
+      {savedAt && (
         <Banner tone="success">
           Stock updated at {formatTime(savedAt)}. Branches will see
           the new numbers on their next order.
         </Banner>
       )}
-      <CatalogFilters id="stock" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_200px] items-end gap-3">
+        <CatalogFilters id="stock" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/><StockStatusFilter id="stock-status" value={status} onChange={setStatus}/></div>
       <DataTable
-        data={filters.filtered}
+        data={rows}
         columns={columns}
         loading={loading}
         rowKey={(r) => r.id}

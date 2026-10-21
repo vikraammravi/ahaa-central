@@ -6,7 +6,7 @@ import { db, queryResult } from "@tests/mocks/supabase";
 import { item, catalogFilterItems } from "@tests/mocks/fixtures";
 
 it("catalog active filter excludes inactive products",async()=>{
-  db.from.mockReturnValue(queryResult([item,{...item,id:"inactive",name:"Disabled Item",is_active:false}]));render(<Catalog/>);await screen.findByText("Disabled Item");await userEvent.click(screen.getByRole("button",{name:/^Active/}));expect(screen.queryByText("Disabled Item")).not.toBeInTheDocument();expect(screen.getByText(item.name)).toBeVisible();
+  db.from.mockReturnValue(queryResult([item,{...item,id:"inactive",name:"Disabled Item",is_active:false}]));render(<Catalog/>);await screen.findByText("Disabled Item");await userEvent.selectOptions(screen.getByLabelText("Status"),"active");expect(screen.queryByText("Disabled Item")).not.toBeInTheDocument();expect(screen.getByText(item.name)).toBeVisible();await userEvent.selectOptions(screen.getByLabelText("Status"),"inactive");expect(screen.getByText("Disabled Item")).toBeVisible();expect(screen.queryByText(item.name)).not.toBeInTheDocument();await userEvent.selectOptions(screen.getByLabelText("Status"),"all");expect(screen.getByText(item.name)).toBeVisible();expect(screen.queryByRole("button",{name:/^Active/})).not.toBeInTheDocument();
 });
 
 it("catalog combines category and product-name filters",async()=>{
