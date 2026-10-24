@@ -1,6 +1,7 @@
 import { supabase } from "./supabase/client";
+import { compareCatalogItems } from "./catalog";
 export type InventoryCount = { id:string;count_date:string;submitted_at:string;submitted_name:string;notes:string;flow_version:number };
-export type InventoryItem = { id:string;name:string;unit_type:string;quantity:number|null;opening_quantity:number;received_quantity:number;used_quantity:number|null;wasted_quantity:number|null;adjustment_quantity:number;opening_editable:boolean;recorded_quantity:number|null;needs_review:boolean };
+export type InventoryItem = { id:string;name:string;category?:string;unit_type:string;quantity:number|null;opening_quantity:number;received_quantity:number;used_quantity:number|null;wasted_quantity:number|null;adjustment_quantity:number;opening_editable:boolean;recorded_quantity:number|null;needs_review:boolean };
 export type InventoryWorkspace = { location_id:string;branch_name:string;today:string;count_date:string;expected_count_id:string|null;expected_previous_count_id:string|null;previous_date:string|null;latest:InventoryCount|null;current:InventoryCount|null;items:InventoryItem[];history:InventoryCount[];history_total:number };
 export type InventoryDraft = { opening:string;used:string;wasted:string;closing:string };
 export function calculatedUsed(item:InventoryItem,draft:InventoryDraft):number {return Number(draft.opening)+item.received_quantity-Number(draft.wasted)-Number(draft.closing);}
@@ -23,4 +24,4 @@ export function inventoryDayError(items:InventoryItem[],drafts:Record<string,Inv
  }
  return null;
 }
-export async function fetchInventory(signal:AbortSignal,date?:string,locationId?:string,page=0):Promise<InventoryWorkspace>{const {data,error}=await supabase.rpc("branch_inventory_workspace",{...(date?{p_count_date:date}:{}),...(locationId?{p_location_id:locationId}:{}),p_history_page:page}).abortSignal(signal);if(error)throw new Error(error.message);return data as InventoryWorkspace;}
+export async function fetchInventory(signal:AbortSignal,date?:string,locationId?:string,page=0):Promise<InventoryWorkspace>{const {data,error}=await supabase.rpc("branch_inventory_workspace",{...(date?{p_count_date:date}:{}),...(locationId?{p_location_id:locationId}:{}),p_history_page:page}).abortSignal(signal);if(error)throw new Error(error.message);const workspace=data as InventoryWorkspace;return {...workspace,items:[...workspace.items].sort(compareCatalogItems)};}

@@ -14,7 +14,7 @@ export function FilterBar({columns=2,className,children,...props}:ComponentProps
     "grid min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 [&>div]:min-w-0 [&_input]:h-11 [&_input]:max-w-full [&_input]:text-base [&_select]:h-11 [&_select]:text-base [&>button]:h-11 lg:[&_input]:h-10 lg:[&_input]:text-sm lg:[&_select]:h-10 lg:[&_select]:text-sm lg:[&>button]:h-10",
     columns===3&&"xl:grid-cols-[minmax(0,1fr)_minmax(0,220px)_minmax(0,200px)]",
     columns===4&&"xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]",
-    className,
+    !compact&&className,
   )}>{children}</div>;
   if(!compact)return <div {...props}>{fields}</div>;
   return <div {...props} className="sticky top-14 z-20 min-w-0 max-w-full bg-background/95 py-2 backdrop-blur-sm">

@@ -31,7 +31,7 @@ export function WeeklyInvoiceDetail({invoiceId,isAdmin=false}:{invoiceId:string;
   if(!data)return <Banner tone="danger">{loadError??"Invoice unavailable."}</Banner>;
   const invoice=data.invoice;const sent=data.record?.sent_revision===data.record?.revision;
   const columns:Column<WeeklyInvoiceDetails["lines"][number]>[]=[
-    {key:"item",header:"Item",className:"whitespace-normal",render:(line)=><div>{line.name}<div className="text-xs text-muted-foreground">{line.unit_type}</div></div>},
+    {key:"item", cardSpan:2,header:"Item",className:"whitespace-normal",render:(line)=><div>{line.name}<div className="text-xs text-muted-foreground">{line.unit_type}</div></div>},
     {key:"qty",header:"Quantity",align:"right",render:(line)=>line.quantity},
     {key:"price",header:"Unit Price",align:"right",render:(line)=>formatMoney(line.unit_price)},
     {key:"tax",header:"Tax",render:(line)=>taxLabel(line.is_taxable)},

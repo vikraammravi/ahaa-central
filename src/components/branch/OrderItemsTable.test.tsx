@@ -40,3 +40,10 @@ it("distinguishes missing branch counts from zero stock",()=>{
   const headers=screen.getAllByRole("columnheader").map(header=>header.textContent);
   expect(screen.getAllByRole("row")[1].querySelectorAll("td")[headers.indexOf("Branch Stock")]).toHaveTextContent(/^0$/);
 });
+
+it("uses the branch threshold of three independently of the catalog threshold",()=>{
+  const {rerender}=render(<OrderItemsTable items={[{...item,available_stock:2,low_stock_threshold:99}]} inventory={[]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
+  expect(screen.getByText("Low Stock")).toBeVisible();
+  rerender(<OrderItemsTable items={[{...item,available_stock:3,low_stock_threshold:99}]} inventory={[]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
+  expect(screen.getByText("In Stock")).toBeVisible();
+});

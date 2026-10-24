@@ -3,6 +3,19 @@ import { lastPage, pageRange, searchFilter } from "./pagination";
 import type { CateringEvent, CateringStatus } from "./supabase/types";
 import { businessDateKey, businessDayStart } from "./date-range";
 export type CateringFilters = {page:number;search:string;status:CateringStatus|"ALL";locationId?:string;startDate?:string;endDate?:string};
+const maintenance=new Map<string,{day:string;request:Promise<string>}>();
+export function completePastCatering(locationId:string,day=businessDateKey(new Date())):Promise<string>{
+  const previous=maintenance.get(locationId);
+  if(previous?.day===day)return previous.request;
+  const request=(async()=>{
+    const {error}=await supabase.rpc("complete_past_catering_events",{p_location_id:locationId});
+    if(error)throw new Error(error.message);
+    return locationId;
+  })();
+  maintenance.set(locationId,{day,request});
+  void request.catch(()=>{if(maintenance.get(locationId)?.request===request)maintenance.delete(locationId);});
+  return request;
+}
 export async function fetchCentralCateringLocation(signal:AbortSignal):Promise<string> {
   const {data,error}=await supabase.from("locations").select("id").eq("is_central",true).limit(2).abortSignal(signal);
   if(error)throw new Error(error.message);
@@ -11,10 +24,6 @@ export async function fetchCentralCateringLocation(signal:AbortSignal):Promise<s
 }
 export async function fetchCatering(filters:CateringFilters,signal:AbortSignal,asOf=new Date().toISOString()):Promise<{rows:CateringEvent[];count:number;page:number}> {
   if(filters.startDate&&filters.endDate&&filters.startDate>filters.endDate)return {rows:[],count:0,page:0};
-  if(filters.locationId){
-    const {error}=await supabase.from("catering_events").update({status:"COMPLETED",updated_at:asOf}).eq("location_id",filters.locationId).eq("status","CONFIRMED").lt("event_datetime",businessDayStart(businessDateKey(asOf))).abortSignal(signal);
-    if(error)throw new Error(error.message);
-  }
   let query = supabase.from("catering_events").select("*",{count:"exact"}).order("event_datetime",{ascending:filters.status!=="COMPLETED"}).order("id");
   if(filters.locationId)query=query.eq("location_id",filters.locationId);
   if(filters.status!=="ALL") query=query.eq("status",filters.status);

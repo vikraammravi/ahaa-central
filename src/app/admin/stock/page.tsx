@@ -2,7 +2,7 @@
 import { FilterBar } from "@/components/shared/FilterBar";
 
 import { formatTime } from "@/lib/format";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStockEditor } from "@/lib/useStockEditor";
@@ -14,9 +14,11 @@ import { Banner } from "@/components/shared/Banner";
 
 import type { CatalogItem } from "@/lib/supabase/types";
 import { stockBadge } from "@/lib/stock";
-import { useAsyncData } from "@/lib/useAsyncData";
-import { fetchCatalog } from "@/lib/admin/data";
-import { useCatalogFilters } from "@/lib/useCatalogFilters";
+import { useCatalogPage } from "@/lib/useCatalogPage";
+import { Pagination } from "@/components/shared/Pagination";
+import { PAGE_SIZE } from "@/lib/pagination";
+
+
 import { catalogCategory } from "@/lib/catalog";
 import { CatalogFilters } from "@/components/shared/CatalogFilters";
 import { DEFAULT_STOCK_THRESHOLD, POLL_INTERVAL } from "@/lib/format";
@@ -26,12 +28,13 @@ import { useCompactLayout } from "@/lib/useCompactLayout";
 export default function AdminStockPage() {
   const compact=useCompactLayout();
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-  const [status, setStatus] = useState("ALL");
-  const load = useCallback(async (signal: AbortSignal) => (await fetchCatalog(signal)).filter(item=>item.is_active), []);
-  const {data:items,loading,error:loadError,refresh}=useAsyncData(load,{pollInterval:POLL_INTERVAL});
-  const editor=useStockEditor(items,()=>{setSavedAt(new Date());void refresh(true);});
-  const filters=useCatalogFilters(editor.items);
-  const rows=filters.filtered?.filter(item=>status==="ALL"||stockBadge(editor.quantity(item),item.low_stock_threshold??DEFAULT_STOCK_THRESHOLD)===status)??null;
+  const [overrides,setOverrides]=useState<Record<string,number>>({});
+  const filters=useCatalogPage({activeOnly:true,pollInterval:POLL_INTERVAL,overrides});
+  const {loading,error:loadError,refresh}=filters;
+  const items=filters.data?.rows??null;
+  const editor=useStockEditor(items,()=>{setSavedAt(new Date());void refresh(true);},updates=>setOverrides(Object.fromEntries(updates.map(update=>[update.id,update.available_stock]))));
+  const rows=editor.items;
+  const status=filters.stockStatus;
   const availableStock=(item:CatalogItem)=>editor.editing?<Input aria-label={`Available stock for ${item.name}`} type="number" inputMode="numeric" min={0} step={1} value={editor.values[item.id]??String(item.available_stock)} onChange={event=>editor.setValue(item.id,event.target.value)} className="w-24 h-11 lg:h-10 text-base lg:text-sm text-right"/>:<span>{editor.quantity(item)}{editor.pending.some(update=>update.id===item.id)&&<span className="block text-xs text-muted-foreground">Pending broadcast</span>}</span>;
   const columns: Column<CatalogItem>[] = [
     {
@@ -68,7 +71,7 @@ export default function AdminStockPage() {
       />
       {loadError && <Banner tone="danger">{loadError}</Banner>}
       {editor.error&&<Banner tone="danger">{editor.error} Review your edits, or discard and reload if stock changed elsewhere.</Banner>}
-      {(editor.editing||editor.pending.length>0)&&<Banner tone="info">{editor.editing?"Edit quantities, then save your changes.":`${editor.pending.length} saved stock change(s) pending broadcast.`} Changes are kept on this page until Broadcast Changes is selected. <Button variant="outline" size="sm" disabled={editor.saving} onClick={editor.discard}>Discard Changes</Button></Banner>}
+      {(editor.editing||editor.pending.length>0)&&<Banner tone="info">{editor.editing?"Edit quantities on this page, then save before changing filters or pages.":`${editor.pending.length} saved stock change(s) pending broadcast.`} Changes are kept on this page until Broadcast Changes is selected. <Button variant="outline" size="sm" disabled={editor.saving} onClick={editor.discard}>Discard Changes</Button></Banner>}
       {savedAt && (
         <Banner tone="success">
           Stock updated at {formatTime(savedAt)}. Branches will see
@@ -76,7 +79,7 @@ export default function AdminStockPage() {
         </Banner>
       )}
       <FilterBar columns={3}>
-        <CatalogFilters inline id="stock" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/><StockStatusFilter id="stock-status" value={status} onChange={setStatus}/></FilterBar>
+        <CatalogFilters disabled={editor.editing} inline id="stock" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/><StockStatusFilter disabled={editor.editing} id="stock-status" value={status} onChange={filters.setStockStatus}/></FilterBar>
       {compact?<RecordCards data={rows} loading={loading} rowKey={item=>item.id} emptyTitle="No products match these filters">{item=><>
         <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="font-medium break-words">{item.name}</h3><p className="text-xs text-muted-foreground">{catalogCategory(item.category)} · Unit: {item.unit_type}</p></div><StatusBadge status={stockBadge(editor.quantity(item),item.low_stock_threshold??DEFAULT_STOCK_THRESHOLD)}/></div>
         <div className="flex items-center justify-between gap-3 border-t pt-3"><span className="text-sm">Available</span>{availableStock(item)}</div>
@@ -87,6 +90,7 @@ export default function AdminStockPage() {
         rowKey={(r) => r.id}
         emptyTitle="No products match these filters"
       />}
+      <Pagination page={filters.page} pageSize={PAGE_SIZE} count={filters.data?.count??0} busy={loading||editor.editing||editor.saving} onChange={filters.setPage}/>
     </div>
   );
 }

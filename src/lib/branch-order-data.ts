@@ -1,6 +1,15 @@
 import { supabase } from "./supabase/client";
 import type { CatalogItem } from "./supabase/types";
 
+export async function createBranchOrder(orderId:string,quantities:Record<string,number>):Promise<string>{
+  const lines=Object.entries(quantities).filter(([,quantity])=>quantity!==0).map(([item_id,quantity])=>({item_id,quantity}));
+  if(!lines.length||lines.some(line=>!Number.isInteger(line.quantity)||line.quantity<1||line.quantity>2147483647))throw new Error("Select at least one item using positive whole units.");
+  const {data,error}=await supabase.rpc("create_branch_order",{p_order_id:orderId,p_quantities:lines});
+  if(error)throw new Error(error.message);
+  if(!data)throw new Error("The order could not be submitted.");
+  return data as string;
+}
+
 export type SubmittedOrderEdit={id:string;order_number:number;updated_at:string|null;items:CatalogItem[];quantities:Record<string,number>};
 export async function loadSubmittedOrder(id:string,signal:AbortSignal):Promise<SubmittedOrderEdit>{
   const {data,error}=await supabase.from("orders").select("id,order_number,status,updated_at,order_lines(item_id,quantity,unit_price,is_taxable,catalog_items(*))").eq("id",id).abortSignal(signal).single();

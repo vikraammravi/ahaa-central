@@ -22,6 +22,7 @@ export function RowActions({
   deleteDescription = "This action cannot be undone.",
   extra,
   compactExtra,
+  iconsOnly=false,
 }: {
   onEdit?: () => void;
   onDelete?: () => Promise<void> | void;
@@ -29,8 +30,13 @@ export function RowActions({
   deleteDescription?: string;
   extra?: React.ReactNode;
   compactExtra?:React.ReactNode;
+  iconsOnly?:boolean;
 }) {
   const compact=useCompactLayout();
+  if(iconsOnly)return <div className="inline-flex items-center gap-1">
+    {onEdit&&<Button variant="outline" size="icon" className="size-11 lg:size-9" aria-label="Edit" onClick={onEdit}><Pencil className="size-4"/></Button>}
+    {onDelete&&<ConfirmDialog trigger={<Button variant="outline" size="icon" className="size-11 lg:size-9 text-destructive" aria-label="Delete"><Trash2 className="size-4"/></Button>} title={deleteTitle} description={deleteDescription} confirmLabel="Delete" onConfirm={onDelete}/>}
+  </div>;
   if(compact)return <CardActions>
     {onEdit&&<Button variant="outline" className="h-11" onClick={onEdit}><Pencil className="size-4"/>Edit</Button>}
     {compactExtra}

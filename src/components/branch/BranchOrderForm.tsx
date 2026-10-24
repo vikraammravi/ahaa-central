@@ -5,12 +5,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceTotals } from "@/components/shared/InvoiceTotals";
-import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD, formatDate, formatDateTime } from "@/lib/format";
+import { formatMoney, taxLabel, formatDate, formatDateTime } from "@/lib/format";
 import { OrderItemsTable } from "@/components/branch/OrderItemsTable";
 import { CatalogFilters } from "@/components/shared/CatalogFilters";
 import { useCatalogFilters } from "@/lib/useCatalogFilters";
 import { StockStatusFilter } from "@/components/shared/StockStatusFilter";
-import { stockBadge } from "@/lib/stock";
+import { compareCatalogItems } from "@/lib/catalog";
+import { BRANCH_STOCK_THRESHOLD, stockBadge } from "@/lib/stock";
 
 import { Button } from "@/components/ui/button";
 
@@ -24,11 +25,12 @@ import type { CatalogItem } from "@/lib/supabase/types";
 import { fetchInventory } from "@/lib/inventory";
 import { useAsyncData } from "@/lib/useAsyncData";
 
-import { loadSubmittedOrder, updateSubmittedOrder, type SubmittedOrderEdit } from "@/lib/branch-order-data";
+import { createBranchOrder, loadSubmittedOrder, updateSubmittedOrder, type SubmittedOrderEdit } from "@/lib/branch-order-data";
 const HST = 0.13;
 
 export function BranchOrderForm({editOrderId=null}:{editOrderId?:string|null}) {
   const router = useRouter();
+  const [submissionId]=useState(()=>crypto.randomUUID());
   const { userId, profile } = useCurrentUser();
   const loadInventory=useCallback((signal:AbortSignal)=>fetchInventory(signal),[]);
   const inventory=useAsyncData(loadInventory,{enabled:!!profile?.location_id});
@@ -37,7 +39,7 @@ export function BranchOrderForm({editOrderId=null}:{editOrderId?:string|null}) {
   const [qty, setQty] = useState<Record<string, number>>({});
   const filters = useCatalogFilters(items);
   const [stockStatus,setStockStatus]=useState("ALL");
-  const rows=filters.filtered?.filter(item=>stockStatus==="ALL"||stockBadge(item.available_stock,item.low_stock_threshold??DEFAULT_STOCK_THRESHOLD)===stockStatus)??null;
+  const rows=filters.filtered?.filter(item=>stockStatus==="ALL"||stockBadge(item.available_stock,BRANCH_STOCK_THRESHOLD)===stockStatus)??null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -55,7 +57,7 @@ export function BranchOrderForm({editOrderId=null}:{editOrderId?:string|null}) {
         if(controller.signal.aborted)return;
         const products=new Map((catalog.data as CatalogItem[]??[]).map(item=>[item.id,item]));
         if(original){for(const item of original.items)products.set(item.id,item);setQty(original.quantities);setExisting(original);}
-        setItems([...products.values()].sort((a,b)=>a.name.localeCompare(b.name)));
+        setItems([...products.values()].sort(compareCatalogItems));
       }catch(error){if(!controller.signal.aborted)setError(error instanceof Error?error.message:"Unable to load order items.");}
       finally{if(!controller.signal.aborted)setLoading(false);}
     })();
@@ -93,33 +95,7 @@ export function BranchOrderForm({editOrderId=null}:{editOrderId?:string|null}) {
         await updateSubmittedOrder(existing,qty);
         router.push(`/branch/invoices/${existing.id}`);return;
       }
-      const { data: order, error: orderErr } = await supabase
-        .from("orders")
-        .insert({
-          location_id: profile.location_id,
-          status: "SUBMITTED",
-          subtotal,
-          tax_amount: tax,
-          total_amount: total,
-          created_by: userId,
-        })
-        .select("id")
-        .single();
-      if (orderErr) throw orderErr;
-
-      const lines = items
-        .filter((i) => (qty[i.id] ?? 0) > 0)
-        .map((i) => ({
-          order_id: order.id,
-          item_id: i.id,
-          quantity: qty[i.id],
-          unit_price: Number(i.default_price),
-          is_taxable: i.is_taxable,
-          line_total: qty[i.id] * Number(i.default_price),
-        }));
-      const { error: linesErr } = await supabase.from("order_lines").insert(lines);
-      if (linesErr) throw linesErr;
-
+      await createBranchOrder(submissionId,qty);
       router.push(`/branch/invoices`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to place order");

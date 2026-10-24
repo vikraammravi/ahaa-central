@@ -25,7 +25,7 @@ export default function AdminBranchesPage() {
 
   const columns: Column<Location>[] = [
     {
-      key: "name",
+      key: "name", cardSpan:2,
       header: "Branch",
       render: (r) => <span className="font-medium">{r.name}</span>,
     },
@@ -44,7 +44,7 @@ export default function AdminBranchesPage() {
       ),
     },
     {
-      key: "actions",
+      key: "actions", cardSpan:2,
       header: "",
       align: "right",
       render: (r) => (

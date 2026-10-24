@@ -5,11 +5,6 @@ export { PAGE_SIZE } from "@/lib/pagination";
 
 export type OrderWithLocation = Order & { locations: { name: string } | null; pickup_requests: { return_status: string | null; status: string; requested_at: string }[] };
 
-export async function fetchCatalog(signal: AbortSignal): Promise<CatalogItem[]> {
-  const { data, error } = await supabase.from("catalog_items").select("*").order("name").abortSignal(signal);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as CatalogItem[];
-}
 export async function fetchLocations(signal: AbortSignal): Promise<Location[]> {
   const { data, error } = await supabase.from("locations").select("*").order("name").abortSignal(signal);
   if (error) throw new Error(error.message);

@@ -11,7 +11,7 @@ it("employees use the same catering screen and are scoped to their assigned bran
   db.from.mockImplementation(table=>table==="profiles"?queryResult({...profile,role:"BRANCH_EMPLOYEE"}):query);
   render(<EmployeeCateringPage/>);
   await waitFor(()=>expect(screen.getByRole("button",{name:"Add Event"})).toBeEnabled());
-  expect(query.eq).toHaveBeenCalledWith("location_id",profile.location_id);
+  await waitFor(()=>expect(query.eq).toHaveBeenCalledWith("location_id",profile.location_id));
   expect(screen.getByLabelText("Status")).toHaveValue("CONFIRMED");
   expect(screen.getByLabelText("Event Date")).toBeVisible();
 });

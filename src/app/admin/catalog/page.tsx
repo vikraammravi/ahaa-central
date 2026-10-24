@@ -1,10 +1,7 @@
 "use client";
 import { FilterBar } from "@/components/shared/FilterBar";
 
-
-import { useMemo, useState } from "react";
-
-
+import { useState } from "react";
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
@@ -16,9 +13,10 @@ import { CatalogItemActions, CatalogItemStatus } from "@/components/admin/Catalo
 import { CatalogItemDialog } from "@/components/admin/CatalogItemDialog";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem } from "@/lib/supabase/types";
-import { useAsyncData } from "@/lib/useAsyncData";
-import { fetchCatalog } from "@/lib/admin/data";
-import { useCatalogFilters } from "@/lib/useCatalogFilters";
+import { useCatalogPage } from "@/lib/useCatalogPage";
+import { PAGE_SIZE } from "@/lib/pagination";
+import { Pagination } from "@/components/shared/Pagination";
+
 import { catalogCategory } from "@/lib/catalog";
 import { CatalogFilters } from "@/components/shared/CatalogFilters";
 import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD } from "@/lib/format";
@@ -26,12 +24,12 @@ import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD } from "@/lib/format";
 type CatalogStatus = "all" | "active" | "inactive";
 
 export default function AdminCatalogPage() {
-  const { data, loading, error: loadError, refresh } = useAsyncData(fetchCatalog);
+  const filters=useCatalogPage();
+  const {data,loading,error:loadError,refresh}=filters;
+  const rows=data?.rows??null;
+  const status=filters.status as CatalogStatus;
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
-  const [status, setStatus] = useState<CatalogStatus>("all");
-  const filters = useCatalogFilters(data);
-
 
   async function toggleActive(row: CatalogItem) {
     setError(null);
@@ -42,13 +40,6 @@ export default function AdminCatalogPage() {
     if (error) setError(error.message);
     else await refresh();
   }
-
-  const rows = useMemo(() => {
-    if (!filters.filtered) return null;
-    if (status === "active") return filters.filtered.filter((r) => r.is_active);
-    if (status === "inactive") return filters.filtered.filter((r) => !r.is_active);
-    return filters.filtered;
-  }, [filters.filtered, status]);
 
   const columns: Column<CatalogItem>[] = [
     {
@@ -100,7 +91,7 @@ export default function AdminCatalogPage() {
 
       <FilterBar columns={3}>
         <CatalogFilters inline id="catalog" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/>
-        <div className="space-y-1.5"><Label htmlFor="catalog-status">Status</Label><FormSelect id="catalog-status" value={status} onChange={setStatus} options={[{value:"all",label:"All statuses"},{value:"active",label:"Active"},{value:"inactive",label:"Inactive"}]}/></div>
+        <div className="space-y-1.5"><Label htmlFor="catalog-status">Status</Label><FormSelect id="catalog-status" value={status} onChange={filters.setStatus} options={[{value:"all",label:"All statuses"},{value:"active",label:"Active"},{value:"inactive",label:"Inactive"}]}/></div>
       </FilterBar>
       <DataTable
         renderCard={item=><>
@@ -117,6 +108,7 @@ export default function AdminCatalogPage() {
         emptyBody="Add a product or adjust your search and filters."
       />
 
+      <Pagination page={filters.page} pageSize={PAGE_SIZE} count={data?.count??0} busy={loading} onChange={filters.setPage}/>
       {editing && (
         <CatalogItemDialog
           key={editing.id}

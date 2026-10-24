@@ -57,7 +57,7 @@ export function InvoiceDetail({ orderId, isAdmin = false }: { orderId: string; i
   const tax = order.final_tax_amount;
   const total = order.final_total_amount;
   const columns: Column<InvoiceLine>[] = [
-    { key: "item", header: "Item", className: "whitespace-normal min-w-32", render: (line) => <div className="font-medium">{line.catalog_items?.name ?? "Item"}<div className="text-xs font-normal text-muted-foreground">{line.catalog_items?.unit_type}</div></div> },
+    { key: "item", cardSpan:2, header: "Item", className: "whitespace-normal min-w-32", render: (line) => <div className="font-medium">{line.catalog_items?.name ?? "Item"}<div className="text-xs font-normal text-muted-foreground">{line.catalog_items?.unit_type}</div></div> },
     { key: "qty", header: "Billed Qty", align: "right", render: (line) => line.fulfilled_quantity },
     { key: "price", header: "Unit Price", align: "right", render: (line) => money(line.unit_price) },
     { key: "tax", header: "Tax", hideOn: "sm", render: (line) => taxLabel(line.is_taxable) },

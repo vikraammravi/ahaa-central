@@ -1,4 +1,5 @@
 import type { StatusKind } from "@/components/ui/status-badge";
+export const BRANCH_STOCK_THRESHOLD=3;
 
 export function stockBadge(available: number, threshold: number): StatusKind {
   if (available <= 0) return "out-of-stock";

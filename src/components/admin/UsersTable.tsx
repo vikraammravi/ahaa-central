@@ -11,7 +11,7 @@ export function UsersTable({profiles,locations,loading,onEdit,onDelete}:{profile
 
   const columns: Column<Profile>[] = [
     {
-      key: "name",
+      key: "name", cardSpan:2,
       header: "Name",
       render: (r) => <span className="font-medium">{r.full_name || "—"}</span>,
     },
@@ -35,7 +35,7 @@ export function UsersTable({profiles,locations,loading,onEdit,onDelete}:{profile
       render: (r) => <StatusBadge status={statusKind[r.status]} />,
     },
     {
-      key: "actions",
+      key: "actions", cardSpan:2,
       header: "",
       align: "right",
       render: (r) => <RowActions onEdit={() => onEdit(r)} onDelete={()=>onDelete(r.id)} deleteTitle={`Delete ${r.full_name||r.email}?`} deleteDescription="Permanently removes their login and profile. Orders, invoices and inventory history will remain." />,
