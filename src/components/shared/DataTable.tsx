@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "./EmptyState";
 import { LoadingState } from "./Spinner";
+import { useCompactLayout } from "@/lib/useCompactLayout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RECORD_CARD_GRID } from "./RecordCards";
 
 export type Column<T> = {
   key: string;
@@ -46,6 +50,7 @@ export function DataTable<T>({
   tableClassName,
   rowClassName,
   expandedContent,
+  renderCard,
 }: {
   data: T[] | null;
   columns: Column<T>[];
@@ -59,7 +64,9 @@ export function DataTable<T>({
   tableClassName?: string;
   rowClassName?: (row: T) => string | undefined;
   expandedContent?: (row: T) => ReactNode;
+  renderCard?: (row:T)=>ReactNode;
 }) {
+  const compact=useCompactLayout();
   if (loading) {
     return (
       <div className="min-w-0 max-w-full border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">
@@ -78,6 +85,18 @@ export function DataTable<T>({
       c.hideOn && hideMap[c.hideOn],
       c.className,
     );
+
+  if(compact)return <div className="min-w-0 space-y-3">
+    {toolbar&&<div className="min-w-0">{toolbar}</div>}
+    <div className={RECORD_CARD_GRID}>{data.map((row,index)=><Card key={rowKey(row,index)} size="sm" className={cn("min-w-0",rowClassName?.(row))}><CardContent className="min-w-0 space-y-3">
+      {renderCard?renderCard(row):<dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2">{columns.map(column=><div key={column.key} className={cn("min-w-0 break-words [&_input]:max-w-full [&_button]:min-h-10",(!column.header||column.key==="actions"||column.key==="name"||column.key==="product"||column.key==="number")&&"col-span-2")}>
+        {column.header&&<dt className="mb-1 text-xs text-muted-foreground">{column.header}</dt>}<dd className="min-w-0 text-sm [&>*]:max-w-full">{column.render(row)}</dd>
+      </div>)}</dl>}
+      {onRowClick&&!columns.some(column=>column.key==="expand")&&<Button variant="outline" className="min-h-11" onClick={()=>onRowClick(row)}>View details</Button>}
+      {expandedContent?.(row)&&<div className="min-w-0 border-t pt-3">{expandedContent(row)}</div>}
+    </CardContent></Card>)}</div>
+    {footer&&<div className="text-xs text-muted-foreground">{footer}</div>}
+  </div>;
 
   return (
     <div className="min-w-0 max-w-full border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">

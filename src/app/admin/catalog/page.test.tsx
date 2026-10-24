@@ -4,6 +4,20 @@ import userEvent from "@testing-library/user-event";
 import Catalog from "@/app/admin/catalog/page";
 import { db, queryResult } from "@tests/mocks/supabase";
 import { item, catalogFilterItems } from "@tests/mocks/fixtures";
+import { mockViewport } from "@tests/mocks/viewport";
+
+it.each([390,820])("compact catalog cards keep direct actions and filter state at %spx",async width=>{
+  mockViewport(width);db.from.mockReturnValue(queryResult(catalogFilterItems));render(<Catalog/>);await screen.findByText(item.name);
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("button",{name:"Edit"})).toHaveLength(3);
+  expect(screen.getAllByRole("button",{name:"Deactivate"})).toHaveLength(3);
+  await userEvent.click(screen.getByRole("button",{name:"Search & filters"}));
+  await userEvent.type(screen.getByLabelText("Search products"),"batter");
+  await userEvent.click(screen.getByRole("button",{name:"Show results"}));
+  expect(screen.queryByText("Paper Bag")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button",{name:"Search & filters"}));
+  expect(screen.getByLabelText("Search products")).toHaveValue("batter");
+});
 
 it("catalog active filter excludes inactive products",async()=>{
   db.from.mockReturnValue(queryResult([item,{...item,id:"inactive",name:"Disabled Item",is_active:false}]));render(<Catalog/>);await screen.findByText("Disabled Item");await userEvent.selectOptions(screen.getByLabelText("Status"),"active");expect(screen.queryByText("Disabled Item")).not.toBeInTheDocument();expect(screen.getByText(item.name)).toBeVisible();await userEvent.selectOptions(screen.getByLabelText("Status"),"inactive");expect(screen.getByText("Disabled Item")).toBeVisible();expect(screen.queryByText(item.name)).not.toBeInTheDocument();await userEvent.selectOptions(screen.getByLabelText("Status"),"all");expect(screen.getByText(item.name)).toBeVisible();expect(screen.queryByRole("button",{name:/^Active/})).not.toBeInTheDocument();

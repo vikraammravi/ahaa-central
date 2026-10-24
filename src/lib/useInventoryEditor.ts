@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { calculatedClosing,inventoryDraft,inventoryDayError,updateInventoryDraft,type InventoryDraft,type InventoryWorkspace } from "./inventory";
+import { inventoryDraft,inventoryDayError,updateInventoryDraft,type InventoryDraft,type InventoryWorkspace } from "./inventory";
 import { supabase } from "./supabase/client";
 import { useUnsavedChanges } from "./useUnsavedChanges";
 
@@ -13,17 +13,16 @@ export function useInventoryEditor(data:InventoryWorkspace|null,onSaved:()=>void
     const original=inventoryDraft(item),draft=drafts[item.id];
     return (["opening","used","wasted","closing"] as const).some(field=>draft[field]!==original[field]);
   });
-  const mayLeave=useUnsavedChanges(dirty,"Inventory editing is open. Leave and discard any unsaved changes?",saving,!!workspace);
+  const mayLeave=useUnsavedChanges(dirty,"Your inventory changes have not been saved. Leaving this page will discard them.",saving,!!workspace);
   function edit(){
     if(!data||saving)return;
     setWorkspace(data);setDrafts(Object.fromEntries(data.items.map(item=>[item.id,inventoryDraft(item)])));setError(null);
   }
-  function cancel(){if(!mayLeave())return false;setWorkspace(null);setError(null);return true;}
+  async function cancel(){if(!await mayLeave())return false;setWorkspace(null);setError(null);return true;}
   async function save(){
     if(!workspace||saving)return;
-    const differences=workspace.items.filter(item=>Number(drafts[item.id].closing)!==calculatedClosing(item,drafts[item.id]));
-    const notes=workspace.current?.notes|| (differences.length?`System record: physical closing differs from calculated stock for ${differences.length} item(s). Counted quantities and stock flow are stored in this inventory record.`:"");
-    const validation=inventoryDayError(workspace.items,drafts,notes);
+    const notes=workspace.current?.notes??"";
+    const validation=inventoryDayError(workspace.items,drafts);
     if(validation){setError(validation);return;}
     setSaving(true);setError(null);
     try{
@@ -37,7 +36,7 @@ export function useInventoryEditor(data:InventoryWorkspace|null,onSaved:()=>void
     finally{setSaving(false);}
   }
   return {workspace,drafts,saving,error,edit,cancel,save,
-    update:(id:string,field:"opening"|"used"|"wasted"|"closing",value:string)=>{
+    update:(id:string,field:"wasted"|"closing",value:string)=>{
       const item=workspace?.items.find(item=>item.id===id);if(!item)return;
       setDrafts(previous=>({...previous,[id]:updateInventoryDraft(item,previous[id],field,value)}));
     }};

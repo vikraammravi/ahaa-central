@@ -1,4 +1,5 @@
 "use client";
+import { FilterBar } from "@/components/shared/FilterBar";
 
 import { useCallback, useState } from "react";
 
@@ -47,11 +48,11 @@ export default function AdminUsersPage() {
       {(error||branchLocations.error) && <Banner tone="danger">{error||branchLocations.error}</Banner>}
       {created&&<Banner tone="success">User created. They can sign in with the email and starting password you entered.</Banner>}
       {creating&&<CreateBranchUserDialog locations={locations} open onOpenChange={setCreating} onCreated={()=>{setCreating(false);setCreated(true);void refresh();}}/>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_240px_200px] items-end gap-3">
-        <div className="space-y-1.5 sm:col-span-2 lg:col-span-1"><Label htmlFor="users-search">Search users</Label><Input id="users-search" aria-label="Search users by name or email" type="search" className="h-10 cursor-text" placeholder="Search name or email" value={search} onChange={event=>{setSearch(event.target.value);setPage(0);}} /></div>
+      <FilterBar columns={3}>
+        <div className="space-y-1.5 sm:col-span-2 xl:col-span-1"><Label htmlFor="users-search">Search users</Label><Input id="users-search" aria-label="Search users by name or email" type="search" className="h-10 cursor-text" placeholder="Search name or email" value={search} onChange={event=>{setSearch(event.target.value);setPage(0);}} /></div>
         <div className="space-y-1.5"><Label htmlFor="users-branch">Branch</Label><FormSelect id="users-branch" value={branchId} onChange={value=>{setBranchId(value);setPage(0);}} options={[{value:"",label:"All branches"},...locations.map(location=>({value:location.id,label:location.name}))]}/></div>
         <div className="space-y-1.5"><Label htmlFor="users-status">Status</Label><FormSelect<ProfileStatus|""> id="users-status" value={status} onChange={value=>{setStatus(value);setPage(0);}} options={[{value:"",label:"All statuses"},{value:"active",label:"Active"},{value:"pending",label:"Pending"},{value:"disabled",label:"Disabled"}]}/></div>
-      </div>
+      </FilterBar>
       <UsersTable profiles={profiles} locations={locations} loading={loading} onEdit={setEditing} onDelete={async id=>{await deleteUserAccount(id);await refresh(true);}} />
       <Pagination page={data?.page??page} pageSize={PAGE_SIZE} count={data?.count??0} busy={loading} onChange={setPage}/>
       {editing && (

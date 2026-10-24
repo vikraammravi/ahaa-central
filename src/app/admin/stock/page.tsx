@@ -1,4 +1,5 @@
 "use client";
+import { FilterBar } from "@/components/shared/FilterBar";
 
 import { formatTime } from "@/lib/format";
 import { useCallback, useState } from "react";
@@ -18,9 +19,12 @@ import { fetchCatalog } from "@/lib/admin/data";
 import { useCatalogFilters } from "@/lib/useCatalogFilters";
 import { catalogCategory } from "@/lib/catalog";
 import { CatalogFilters } from "@/components/shared/CatalogFilters";
-import { formatMoney, taxLabel, DEFAULT_STOCK_THRESHOLD, POLL_INTERVAL } from "@/lib/format";
+import { DEFAULT_STOCK_THRESHOLD, POLL_INTERVAL } from "@/lib/format";
+import { RecordCards } from "@/components/shared/RecordCards";
+import { useCompactLayout } from "@/lib/useCompactLayout";
 
 export default function AdminStockPage() {
+  const compact=useCompactLayout();
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [status, setStatus] = useState("ALL");
   const load = useCallback(async (signal: AbortSignal) => (await fetchCatalog(signal)).filter(item=>item.is_active), []);
@@ -28,6 +32,7 @@ export default function AdminStockPage() {
   const editor=useStockEditor(items,()=>{setSavedAt(new Date());void refresh(true);});
   const filters=useCatalogFilters(editor.items);
   const rows=filters.filtered?.filter(item=>status==="ALL"||stockBadge(editor.quantity(item),item.low_stock_threshold??DEFAULT_STOCK_THRESHOLD)===status)??null;
+  const availableStock=(item:CatalogItem)=>editor.editing?<Input aria-label={`Available stock for ${item.name}`} type="number" inputMode="numeric" min={0} step={1} value={editor.values[item.id]??String(item.available_stock)} onChange={event=>editor.setValue(item.id,event.target.value)} className="w-24 h-11 lg:h-10 text-base lg:text-sm text-right"/>:<span>{editor.quantity(item)}{editor.pending.some(update=>update.id===item.id)&&<span className="block text-xs text-muted-foreground">Pending broadcast</span>}</span>;
   const columns: Column<CatalogItem>[] = [
     {
       key: "product",
@@ -40,27 +45,12 @@ export default function AdminStockPage() {
       key: "available",
       header: "Available",
       align: "right",
-      render: (r) => editor.editing?<Input aria-label={`Available stock for ${r.name}`} type="number" inputMode="numeric" min={0} step={1} value={editor.values[r.id]??String(r.available_stock)} onChange={event=>editor.setValue(r.id,event.target.value)} className="w-24 h-10 text-base sm:text-sm text-right ml-auto"/>:<span>{editor.quantity(r)}{editor.pending.some(update=>update.id===r.id)&&<span className="block text-xs text-muted-foreground">Pending broadcast</span>}</span>,
+      render:availableStock,
     },
     {
       key: "status",
       header: "Status",
       render: (r) => <StatusBadge status={stockBadge(editor.quantity(r), r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD)} />,
-    },
-    { key: "threshold", header: "Threshold", align: "right", render: (r) => r.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD },
-    {
-      key: "rate",
-      header: "Rate",
-      align: "right",
-      hideOn: "sm",
-      render: (r) => formatMoney(r.default_price),
-    },
-    {
-      key: "tax",
-      header: "Tax",
-      align: "right",
-      hideOn: "md",
-      render: (r) => taxLabel(r.is_taxable),
     },
   ];
 
@@ -85,15 +75,18 @@ export default function AdminStockPage() {
           the new numbers on their next order.
         </Banner>
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_200px] items-end gap-3">
-        <CatalogFilters id="stock" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/><StockStatusFilter id="stock-status" value={status} onChange={setStatus}/></div>
-      <DataTable
+      <FilterBar columns={3}>
+        <CatalogFilters inline id="stock" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/><StockStatusFilter id="stock-status" value={status} onChange={setStatus}/></FilterBar>
+      {compact?<RecordCards data={rows} loading={loading} rowKey={item=>item.id} emptyTitle="No products match these filters">{item=><>
+        <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="font-medium break-words">{item.name}</h3><p className="text-xs text-muted-foreground">{catalogCategory(item.category)} · Unit: {item.unit_type}</p></div><StatusBadge status={stockBadge(editor.quantity(item),item.low_stock_threshold??DEFAULT_STOCK_THRESHOLD)}/></div>
+        <div className="flex items-center justify-between gap-3 border-t pt-3"><span className="text-sm">Available</span>{availableStock(item)}</div>
+      </>}</RecordCards>:<DataTable
         data={rows}
         columns={columns}
         loading={loading}
         rowKey={(r) => r.id}
         emptyTitle="No products match these filters"
-      />
+      />}
     </div>
   );
 }

@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useUnsavedChanges } from "./useUnsavedChanges";
+import { confirmAction } from "./confirmation";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem } from "@/lib/supabase/types";
 
 type StockUpdate={id:string;available_stock:number;expected_stock:number;expected_updated_at:string};
-const warning="You have stock changes that have not been broadcast. Leave and discard them?";
+const warning="Your stock changes have not been broadcast. Leaving this page will discard them.";
 
 export function useStockEditor(items:CatalogItem[]|null,onBroadcast:()=>void) {
   const [snapshot,setSnapshot]=useState<CatalogItem[]|null>(null);
@@ -38,12 +39,14 @@ export function useStockEditor(items:CatalogItem[]|null,onBroadcast:()=>void) {
     }
     setPending(updates);setSnapshot(null);setValues({});setError(null);
   }
-  function cancel(){
-    if(changed&&!window.confirm("Discard your unsaved edits? Previously saved changes will remain pending broadcast."))return;
+  async function cancel(){
+    if(saving)return;
+    if(changed&&!await confirmAction({title:"Discard unsaved edits?",description:"Saved stock changes will remain pending broadcast. Only your current edits will be discarded."}))return;
     setSnapshot(null);setValues({});setError(null);
   }
-  function discard(){
-    if(dirty&&!window.confirm(warning))return;
+  async function discard(){
+    if(saving)return;
+    if(dirty&&!await confirmAction({title:"Discard stock changes?",description:warning}))return;
     setSnapshot(null);setValues({});setPending([]);setError(null);
   }
   async function broadcast(){

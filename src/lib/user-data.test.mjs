@@ -18,11 +18,13 @@ test("account data helpers retain server errors and send only the requested oper
 });
 test("combining validates input before mutation and forwards selected orders",async()=>{
   const calls=[];
-  const api=load("src/lib/invoice-data.ts",{require:path=>path.includes("pagination")?{}:{supabase:{rpc:async(name,args)=>{calls.push({name,args});return {data:"combined-id",error:null};}}}});
+  const api=load("src/lib/invoice-data.ts",{require:path=>path.includes("pagination")?{}:{supabase:{from:()=>({select(){return this;},in(){return this;},eq:async()=>({data:[{id:"order-one",order_date:"2026-10-02"},{id:"order-two",order_date:"2026-10-10"}],error:null})}),rpc:async(name,args)=>{calls.push({name,args});return {data:"combined-id",error:null};}}}});
   await assert.rejects(api.createCombinedInvoice({branchId:"",startDate:"",endDate:""},[]));
   assert.equal(calls.length,0);
   const id=await api.createCombinedInvoice({branchId:"branch",startDate:"2026-10-01",endDate:"2026-10-12"},["order-one","order-two"]);
   assert.equal(id,"combined-id");
   assert.equal(calls[0].name,"create_weekly_invoice");
   assert.equal(calls[0].args.p_order_ids.join(","),"order-one,order-two");
+  assert.equal(calls[0].args.p_start_date,"2026-10-02");
+  assert.equal(calls[0].args.p_end_date,"2026-10-10");
 });

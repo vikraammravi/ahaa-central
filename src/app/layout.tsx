@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
+import { ConfirmationHost } from "@/components/shared/ConfirmationHost";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
         {children}
+        <ConfirmationHost/>
       </body>
     </html>
   );

@@ -4,6 +4,19 @@ import userEvent from "@testing-library/user-event";
 import BranchInvoices from "@/app/branch/invoices/page";
 import { order } from "@tests/mocks/fixtures";
 import { db, queryResult } from "@tests/mocks/supabase";
+import { mockViewport } from "@tests/mocks/viewport";
+
+it("tablet order cards keep approval status and permit editing only submitted orders",async()=>{
+  mockViewport(820);
+  db.from.mockReturnValue(queryResult([{...order,status:"SUBMITTED",weekly_invoices:null,pickup_requests:[{status:"APPROVED",requested_at:"2026-10-12"}]},{...order,id:"ready",order_number:99,status:"READY",weekly_invoices:null,pickup_requests:[]}],null,2));
+  render(<BranchInvoices/>);
+  expect(await screen.findByText(`Order #${order.order_number}`)).toBeVisible();
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(screen.getByText("Approved")).toBeVisible();
+  expect(screen.getAllByRole("link",{name:"View Order"})).toHaveLength(2);
+  expect(screen.getAllByRole("link",{name:"Edit Order"})).toHaveLength(1);
+  expect(screen.getByRole("link",{name:"Edit Order"})).toHaveAttribute("href",`/branch/order?edit=${order.id}`);
+});
 
 it("branch orders keep pickup decision in its own column",async()=>{
   db.from.mockReturnValue(queryResult([{...order,weekly_invoices:null,pickup_requests:[{status:"REJECTED",requested_at:"2026-10-12"}]}],null,1));render(<BranchInvoices/>);expect(await screen.findByText("Rejected")).toBeVisible();expect(screen.getByRole("columnheader",{name:"Pickup Approval"})).toBeVisible();

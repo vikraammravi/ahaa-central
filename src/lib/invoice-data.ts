@@ -24,11 +24,26 @@ export async function sendCombinedInvoice(id:string):Promise<void>{
 }
 
 export async function createCombinedInvoice(filters: InvoiceFilters, orderIds: string[]): Promise<string> {
-  if (!filters.branchId || !filters.startDate || !filters.endDate || filters.startDate > filters.endDate || !orderIds.length) {
-    throw new Error("Choose a branch, valid date range and at least one invoice.");
+  if (!filters.branchId || (filters.startDate && filters.endDate && filters.startDate > filters.endDate) || !orderIds.length || new Set(orderIds).size!==orderIds.length) {
+    throw new Error("Choose a branch and at least one invoice. Any date filters must be valid.");
+  }
+  let startDate="",endDate="";
+  // Read selected IDs in bounded batches, including selections from other pages.
+  for(let offset=0;offset<orderIds.length;offset+=100){
+    const ids=orderIds.slice(offset,offset+100);
+    const {data,error}=await supabase.from("orders").select("id,order_date").in("id",ids).eq("location_id",filters.branchId);
+    if(error)throw new Error(error.message);
+    if(data?.length!==ids.length)throw new Error("Some selected invoices are unavailable or belong to another branch. Refresh and select them again.");
+    for(const order of data){
+      const date=order.order_date as string|null;
+      if(!date||!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error("A selected invoice has no valid order date. Refresh and review it.");
+      if((filters.startDate&&date<filters.startDate)||(filters.endDate&&date>filters.endDate))throw new Error("A selected invoice is outside your date filters. Refresh and select it again.");
+      if(!startDate||date<startDate)startDate=date;
+      if(!endDate||date>endDate)endDate=date;
+    }
   }
   const {data,error}=await supabase.rpc("create_weekly_invoice",{
-    p_location_id:filters.branchId,p_start_date:filters.startDate,p_end_date:filters.endDate,p_order_ids:orderIds,
+    p_location_id:filters.branchId,p_start_date:startDate,p_end_date:endDate,p_order_ids:orderIds,
   });
   if(error)throw new Error(error.message);
   if(!data)throw new Error("Unable to create invoice.");

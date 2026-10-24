@@ -1,0 +1,45 @@
+-- Integration checks use temporary records; no test changes are committed.
+begin;
+do $$
+declare actor uuid; branch uuid; other uuid; product uuid; added uuid; original uuid; foreign_order uuid; original_line uuid; stamp timestamptz; old_stamp timestamptz; denied boolean;
+begin
+ select id into actor from public.profiles where role::text='BRANCH_MANAGER' and status::text='active' limit 1;
+ if actor is null then raise exception 'An active branch manager is needed for this rollback-only test.';end if;
+ insert into public.locations(name,is_central) values('Submitted edit test (rolled back)',false) returning id into branch;
+ insert into public.locations(name,is_central) values('Other submitted edit test (rolled back)',false) returning id into other;
+ update public.profiles set location_id=branch where id=actor;
+ insert into public.catalog_items(name,category,unit_type,default_price,available_stock,is_active,is_taxable) values('Edit test product (rolled back)','Grocery','Bucket',99,50,true,false) returning id into product;
+ insert into public.catalog_items(name,category,unit_type,default_price,available_stock,is_active,is_taxable) values('Added edit product (rolled back)','Grocery','Bucket',2,50,true,false) returning id into added;
+ insert into public.orders(location_id,order_number,status,created_by) values(branch,-2147483001,'SUBMITTED',actor) returning id into original;
+ insert into public.orders(location_id,order_number,status) values(other,-2147483002,'SUBMITTED') returning id into foreign_order;
+ insert into public.order_lines(order_id,item_id,quantity,fulfilled_quantity,unit_price,is_taxable,line_total) values(original,product,5,5,10,false,50) returning id into original_line;
+ select updated_at into stamp from public.orders where id=original;old_stamp:=stamp;
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ execute 'set local role authenticated';
+ perform public.edit_submitted_branch_order(original,jsonb_build_array(jsonb_build_object('item_id',product,'quantity',7)),stamp);
+ if not exists(select 1 from public.order_lines where id=original_line and quantity=7 and fulfilled_quantity=7 and unit_price=10) then raise exception 'Existing order line, price or quantity was not preserved';end if;
+ if not exists(select 1 from public.orders where id=original and subtotal=70 and total_amount=70 and status::text='SUBMITTED') then raise exception 'Original order totals were not recalculated';end if;
+ denied:=false;begin perform public.edit_submitted_branch_order(original,jsonb_build_array(jsonb_build_object('item_id',product,'quantity',6)),old_stamp);exception when others then denied:=sqlerrm like '%changed%';end;if not denied then raise exception 'Stale edits were accepted';end if;
+ select updated_at into stamp from public.orders where id=original;
+ denied:=false;begin perform public.edit_submitted_branch_order(foreign_order,jsonb_build_array(jsonb_build_object('item_id',product,'quantity',1)),stamp);exception when others then denied:=sqlerrm like '%not found%';end;if not denied then raise exception 'Cross-branch edit accepted';end if;
+ denied:=false;begin perform public.edit_submitted_branch_order(original,jsonb_build_array(jsonb_build_object('item_id',product,'quantity',51)),stamp);exception when others then denied:=sqlerrm like '%exceeds central stock%';end;if not denied then raise exception 'Unavailable stock accepted';end if;
+ if (select quantity from public.order_lines where id=original_line)<>7 then raise exception 'Failed edit modified the original quantity';end if;
+ perform public.edit_submitted_branch_order(original,jsonb_build_array(jsonb_build_object('item_id',product,'quantity',3),jsonb_build_object('item_id',added,'quantity',2)),stamp);
+ if (select subtotal from public.orders where id=original)<>34 then raise exception 'Adding an item did not recalculate totals';end if;
+ select updated_at into stamp from public.orders where id=original;
+ perform public.edit_submitted_branch_order(original,jsonb_build_array(jsonb_build_object('item_id',added,'quantity',4)),stamp);
+ if (select count(*) from public.order_lines where order_id=original)<>1 or (select subtotal from public.orders where id=original)<>8 then raise exception 'Removing an item failed';end if;
+ execute 'set local role postgres';
+ if (select available_stock from public.catalog_items where id=product)<>50 then raise exception 'Submitted edit deducted central stock';end if;
+ update public.orders set status='PREPARING' where id=original;
+ select updated_at into stamp from public.orders where id=original;
+ execute 'set local role authenticated';
+ denied:=false;begin perform public.edit_submitted_branch_order(original,jsonb_build_array(jsonb_build_object('item_id',added,'quantity',3)),stamp);exception when others then denied:=sqlerrm like '%Only Submitted%';end;if not denied then raise exception 'Preparing order edit accepted';end if;
+ execute 'set local role postgres';
+ update public.profiles set status='disabled' where id=actor;
+ execute 'set local role authenticated';
+ denied:=false;begin perform public.edit_submitted_branch_order(original,jsonb_build_array(jsonb_build_object('item_id',added,'quantity',3)),stamp);exception when others then denied:=sqlerrm like '%active branch manager%';end;if not denied then raise exception 'Disabled manager edited an order';end if;
+ execute 'set local role postgres';
+end; $$;
+rollback;
+select 'Submitted order edit checks passed; all test records rolled back' as result;

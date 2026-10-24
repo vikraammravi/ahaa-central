@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useId, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,16 +22,23 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   tone = "danger",
   onConfirm,
+  open:controlledOpen,
+  onOpenChange,
 }: {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   title: string;
   description?: string;
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: "danger" | "default";
   onConfirm: () => Promise<void> | void;
+  open?:boolean;
+  onOpenChange?:(open:boolean)=>void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen,setInternalOpen]=useState(false);
+  const descriptionId=useId();
+  const open=controlledOpen??internalOpen;
+  function setOpen(value:boolean){if(controlledOpen===undefined)setInternalOpen(value);onOpenChange?.(value);}
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,12 +56,12 @@ export function ConfirmDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+    <Dialog open={open} onOpenChange={value=>{if(!busy)setOpen(value);}}>
+      {trigger&&<DialogTrigger asChild>{trigger}</DialogTrigger>}
+      <DialogContent aria-describedby={description?descriptionId:undefined} showCloseButton={!busy} className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {description && <DialogDescription id={descriptionId}>{description}</DialogDescription>}
         </DialogHeader>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <DialogFooter>

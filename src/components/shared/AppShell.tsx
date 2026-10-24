@@ -2,10 +2,11 @@
 
 import { useState, ReactNode } from "react";
 import { Menu } from "lucide-react";
+import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { SidebarNav, type NavEntry } from "./SidebarNav";
+import { SidebarNav, type NavEntry, type NavItem } from "./SidebarNav";
 import { Logo } from "./Logo";
 import { SignOutButton } from "./SignOutButton";
 
@@ -17,11 +18,13 @@ export type ShellUser = {
 
 function Sidebar({
   entries,
+  footerEntries,
   user,
   brandHref,
   onNavigate,
 }: {
   entries: NavEntry[];
+  footerEntries?: NavEntry[];
   user: ShellUser;
   brandHref: string;
   onNavigate?: () => void;
@@ -35,6 +38,7 @@ function Sidebar({
         <SidebarNav entries={entries} onNavigate={onNavigate} />
       </div>
       <div className="border-t border-sidebar-border p-3">
+        {footerEntries&&<SidebarNav entries={footerEntries} onNavigate={onNavigate} className="p-0 pb-2"/>}
         <div className="flex items-center gap-3 px-2 py-2">
           <Avatar className="w-9 h-9">
             <AvatarFallback className="bg-accent text-accent-foreground text-xs font-semibold">
@@ -56,28 +60,31 @@ function Sidebar({
 
 export function AppShell({
   entries,
+  footerEntries,
   user,
   brandHref,
   mobileNav,
   children,
 }: {
   entries: NavEntry[];
+  footerEntries?: NavEntry[];
   user: ShellUser;
   brandHref: string;
   mobileNav?: ReactNode; // optional bottom nav for mobile
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const profileEntry=footerEntries?.find((entry):entry is NavItem=>"href" in entry&&entry.href.endsWith("/profile"));
 
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="hidden lg:block w-64 shrink-0 h-screen sticky top-0 border-r border-sidebar-border">
-        <Sidebar entries={entries} user={user} brandHref={brandHref} />
+        <Sidebar entries={entries} footerEntries={footerEntries} user={user} brandHref={brandHref} />
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="lg:hidden sticky top-0 z-30 flex items-center gap-2 bg-surface border-b border-border px-3 h-14">
-          <Sheet open={open} onOpenChange={setOpen}>
+          {!mobileNav&&<Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Open menu">
                 <Menu className="size-5" />
@@ -87,13 +94,15 @@ export function AppShell({
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               <Sidebar
                 entries={entries}
+                footerEntries={footerEntries}
                 user={user}
                 brandHref={brandHref}
                 onNavigate={() => setOpen(false)}
               />
             </SheetContent>
-          </Sheet>
+          </Sheet>}
           <Logo variant="full" size="sm" href={brandHref} priority />
+          {mobileNav&&<div className="ml-auto flex items-center gap-2">{profileEntry&&<Button variant="ghost" size="icon" asChild><Link href={profileEntry.href} aria-label="My Profile"><Avatar className="size-8"><AvatarFallback className="text-xs">{user.initials}</AvatarFallback></Avatar></Link></Button>}<SignOutButton variant="icon"/></div>}
         </header>
 
         <main

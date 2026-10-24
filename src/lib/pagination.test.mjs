@@ -24,8 +24,9 @@ test("search quotes filter punctuation and escapes wildcard input",()=>{
 });
 test("catering applies search and status before paging and recovers an empty last page",async()=>{
   const calls=[];let request=0;
-  const client={from(table){calls.push(["from",table]);const query={};for(const method of ["select","order","eq","or","range"])query[method]=(...args)=>{calls.push([method,...args]);return query;};query.abortSignal=async()=>++request===1?{data:[],count:25,error:null}:{data:[{id:"remaining"}],count:25,error:null};return query;}};
-  const api=moduleApi("src/lib/catering-data.ts",path=>path.includes("pagination")?pagination:{supabase:client});
+  const client={from(table){calls.push(["from",table]);const query={};for(const method of ["select","order","eq","or","range","gte","neq","lt"])query[method]=(...args)=>{calls.push([method,...args]);return query;};query.abortSignal=async()=>++request===1?{data:[],count:25,error:null}:{data:[{id:"remaining"}],count:25,error:null};return query;}};
+  const dateRange=moduleApi("src/lib/date-range.ts",()=>({BUSINESS_TIME_ZONE:"America/Toronto"}));
+  const api=moduleApi("src/lib/catering-data.ts",path=>path.includes("pagination")?pagination:path.includes("date-range")?dateRange:{supabase:client});
   const result=await api.fetchCatering({page:1,search:"Jane",status:"CONFIRMED"},new AbortController().signal);
   assert.equal(result.page,0);
   assert.equal(result.rows[0].id,"remaining");

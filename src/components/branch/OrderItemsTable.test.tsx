@@ -2,6 +2,24 @@ import { expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { OrderItemsTable } from "./OrderItemsTable";
 import { item, workspace } from "@tests/mocks/fixtures";
+import userEvent from "@testing-library/user-event";
+import { mockViewport } from "@tests/mocks/viewport";
+
+it("tablet cards show stock and quantities with the same limits as desktop",async()=>{
+  mockViewport(900);const onQuantity=vi.fn();
+  const {rerender}=render(<OrderItemsTable items={[item]} inventory={workspace.items} quantities={{[item.id]:1}} onQuantity={onQuantity} loading={false} disabled={false}/>);
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  expect(screen.getByText("Central Stock")).toBeVisible();expect(screen.getByText("Branch Stock")).toBeVisible();
+  await userEvent.click(screen.getByRole("button",{name:`Increase ${item.name}`}));
+  expect(onQuantity).toHaveBeenCalledWith(item,2);
+  rerender(<OrderItemsTable items={[item]} inventory={[]} quantities={{[item.id]:item.available_stock}} onQuantity={onQuantity} loading={false} disabled={false}/>);
+  expect(screen.getByRole("button",{name:`Increase ${item.name}`})).toBeDisabled();
+});
+
+it("desktop at 1024px retains the order table",()=>{
+  mockViewport(1024);render(<OrderItemsTable items={[item]} inventory={[]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
+  expect(screen.getByRole("table")).toBeVisible();
+});
 
 it("separates central stock, branch stock and units from the item name",()=>{
   render(<OrderItemsTable items={[item]} inventory={workspace.items} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);

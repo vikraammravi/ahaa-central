@@ -1,15 +1,18 @@
 "use client";
+import { FilterBar } from "@/components/shared/FilterBar";
+
 
 import { useMemo, useState } from "react";
-import { Power, PowerOff } from "lucide-react";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { StatusBadge } from "@/components/ui/status-badge";
+
+
+
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { FormSelect } from "@/components/shared/FormSelect";
 import { Label } from "@/components/ui/label";
 import { Banner } from "@/components/shared/Banner";
-import { RowActions } from "@/components/shared/RowActions";
+
+import { CatalogItemActions, CatalogItemStatus } from "@/components/admin/CatalogItemActions";
 import { CatalogItemDialog } from "@/components/admin/CatalogItemDialog";
 import { supabase } from "@/lib/supabase/client";
 import type { CatalogItem } from "@/lib/supabase/types";
@@ -76,33 +79,13 @@ export default function AdminCatalogPage() {
     {
       key: "status",
       header: "Status",
-      render: (r) => <StatusBadge status={r.is_active ? "active" : "inactive"} />,
+      render: (r) => <CatalogItemStatus active={r.is_active}/>,
     },
     {
       key: "actions",
       header: "",
       align: "right",
-      render: (r) => (
-        <RowActions
-          onEdit={() => setEditing(r)}
-          extra={
-            <DropdownMenuItem
-              onSelect={() => toggleActive(r)}
-              variant={r.is_active ? "destructive" : "default"}
-            >
-              {r.is_active ? (
-                <>
-                  <PowerOff className="size-3.5" /> Deactivate
-                </>
-              ) : (
-                <>
-                  <Power className="size-3.5" /> Reactivate
-                </>
-              )}
-            </DropdownMenuItem>
-          }
-        />
-      ),
+      render: item=><CatalogItemActions item={item} onEdit={setEditing} onToggle={toggleActive}/>,
     },
   ];
 
@@ -115,11 +98,17 @@ export default function AdminCatalogPage() {
       />
       {(error || loadError) && <Banner tone="danger">{error || loadError}</Banner>}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_200px] items-end gap-3">
-        <CatalogFilters id="catalog" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/>
+      <FilterBar columns={3}>
+        <CatalogFilters inline id="catalog" search={filters.search} category={filters.category} categories={filters.categories} onSearch={filters.setSearch} onCategory={filters.setCategory}/>
         <div className="space-y-1.5"><Label htmlFor="catalog-status">Status</Label><FormSelect id="catalog-status" value={status} onChange={setStatus} options={[{value:"all",label:"All statuses"},{value:"active",label:"Active"},{value:"inactive",label:"Inactive"}]}/></div>
-      </div>
+      </FilterBar>
       <DataTable
+        renderCard={item=><>
+          <div className="flex items-start justify-between gap-2"><h3 className="min-w-0 break-words font-medium">{item.name}</h3><CatalogItemStatus active={item.is_active}/></div>
+          <p className="text-xs text-muted-foreground">{catalogCategory(item.category)} · {item.unit_type}</p>
+          <dl className="grid grid-cols-3 gap-2 text-sm"><div><dt className="text-xs text-muted-foreground">Rate</dt><dd>{formatMoney(item.default_price)}</dd></div><div><dt className="text-xs text-muted-foreground">Tax</dt><dd>{taxLabel(item.is_taxable)}</dd></div><div><dt className="text-xs text-muted-foreground">Threshold</dt><dd>{item.low_stock_threshold??DEFAULT_STOCK_THRESHOLD}</dd></div></dl>
+          <div className="border-t pt-2"><CatalogItemActions item={item} onEdit={setEditing} onToggle={toggleActive}/></div>
+        </>}
         data={rows}
         columns={columns}
         loading={loading}

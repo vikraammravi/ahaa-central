@@ -6,7 +6,7 @@ export const db = {
 };
 export function queryResult(data: unknown, error: {message:string}|null = null, count = 0) {
   const promise = Promise.resolve({data,error,count});
-  const methods = ["select","eq","is","not","in","order","range","abortSignal","single","update","insert","delete","gte","lte","or","limit"] as const;
+  const methods = ["select","eq","neq","is","not","in","order","range","abortSignal","single","update","insert","delete","gte","lte","lt","or","limit"] as const;
   const query = Object.fromEntries(methods.map(method=>[method,vi.fn()])) as unknown as Record<typeof methods[number],ReturnType<typeof vi.fn>> & {then:typeof promise.then};
   query.then=promise.then.bind(promise);
   for(const method of methods)query[method].mockReturnValue(query);

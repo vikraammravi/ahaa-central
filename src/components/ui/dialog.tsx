@@ -4,6 +4,7 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { MODAL_OVERLAY_CLASS } from "./modal-styles"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
@@ -39,7 +40,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        MODAL_OVERLAY_CLASS,
         className
       )}
       {...props}
@@ -107,7 +108,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 grid grid-cols-2 gap-2 rounded-b-xl border-t bg-muted/50 p-4 lg:flex lg:justify-end [&>button]:min-w-0 [&>button]:min-h-11 [&>button]:whitespace-normal",
         className
       )}
       {...props}

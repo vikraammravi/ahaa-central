@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { useCompactLayout } from "@/lib/useCompactLayout";
+import { CardActions } from "./CardActions";
 
 // Reusable row-actions menu for table rows: Edit + Delete (both optional).
 // Additional custom actions can be slotted in via `extra`.
@@ -19,13 +21,21 @@ export function RowActions({
   deleteTitle = "Delete this item?",
   deleteDescription = "This action cannot be undone.",
   extra,
+  compactExtra,
 }: {
   onEdit?: () => void;
   onDelete?: () => Promise<void> | void;
   deleteTitle?: string;
   deleteDescription?: string;
   extra?: React.ReactNode;
+  compactExtra?:React.ReactNode;
 }) {
+  const compact=useCompactLayout();
+  if(compact)return <CardActions>
+    {onEdit&&<Button variant="outline" className="h-11" onClick={onEdit}><Pencil className="size-4"/>Edit</Button>}
+    {compactExtra}
+    {onDelete&&<ConfirmDialog trigger={<Button variant="outline" className="h-11 text-destructive"><Trash2 className="size-4"/>Delete</Button>} title={deleteTitle} description={deleteDescription} confirmLabel="Delete" onConfirm={onDelete}/>}
+  </CardActions>;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

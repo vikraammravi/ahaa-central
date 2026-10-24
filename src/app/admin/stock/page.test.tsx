@@ -1,12 +1,27 @@
-import { expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { expect, it } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Stock from "@/app/admin/stock/page";
 import { item, catalogFilterItems } from "@tests/mocks/fixtures";
 import { db, queryResult } from "@tests/mocks/supabase";
+import { mockViewport } from "@tests/mocks/viewport";
+
+it("admin tablet stock cards preserve edit, save and separate broadcast",async()=>{
+  mockViewport(900);db.from.mockReturnValue(queryResult([item]));
+  render(<Stock/>);await screen.findByText(item.name);
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button",{name:"Edit"}));
+  const input=screen.getByLabelText(`Available stock for ${item.name}`);await userEvent.clear(input);await userEvent.type(input,"15");
+  await userEvent.click(screen.getByRole("button",{name:"Save Changes"}));
+  expect(db.rpc).not.toHaveBeenCalled();expect(screen.getByText("Pending broadcast")).toBeVisible();
+  expect(screen.getByRole("button",{name:"Broadcast Changes"})).toBeEnabled();
+});
 
 it("common Edit unlocks quantities; Save stages and Broadcast persists with conflict checks",async()=>{
   db.from.mockReturnValue(queryResult([item]));render(<Stock/>);await screen.findByText(item.name);
+  expect(screen.queryByRole("columnheader",{name:"Rate"})).not.toBeInTheDocument();
+  expect(screen.queryByRole("columnheader",{name:"Tax"})).not.toBeInTheDocument();
+  expect(screen.queryByRole("columnheader",{name:"Threshold"})).not.toBeInTheDocument();
   expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button",{name:"Edit"}));
   const input=screen.getByLabelText(`Available stock for ${item.name}`);
@@ -44,10 +59,10 @@ it("validates quantities, retains hidden edits, and warns before discarding",asy
   await userEvent.type(screen.getByLabelText("Search products"),"paper");
   await userEvent.click(screen.getByRole("button",{name:"Save Changes"}));
   const unload=new Event("beforeunload",{cancelable:true});window.dispatchEvent(unload);expect(unload.defaultPrevented).toBe(true);
-  const confirm=vi.spyOn(window,"confirm").mockReturnValue(false);
-  await userEvent.click(screen.getByRole("button",{name:"Discard Changes"}));expect(confirm).toHaveBeenCalled();
+
+  await userEvent.click(screen.getByRole("button",{name:"Discard Changes"}));await userEvent.click(screen.getByRole("button",{name:"Keep Editing"}));
   expect(screen.getByRole("button",{name:"Broadcast Changes"})).toBeEnabled();
-  confirm.mockReturnValue(true);await userEvent.click(screen.getByRole("button",{name:"Discard Changes"}));
+  await userEvent.click(screen.getByRole("button",{name:"Discard Changes"}));await userEvent.click(within(screen.getByRole("dialog")).getByRole("button",{name:"Discard Changes"}));
   expect(screen.getByRole("button",{name:"Broadcast Changes"})).toBeDisabled();expect(db.rpc).not.toHaveBeenCalled();
 });
 
@@ -68,8 +83,8 @@ it("saved stock previews use matching status filters and cancel preserves staged
   expect(screen.getByText(item.name)).toBeVisible();
   await userEvent.click(screen.getByRole("button",{name:"Edit"}));
   await userEvent.type(screen.getByRole("spinbutton"),"5");
-  vi.spyOn(window,"confirm").mockReturnValue(true);
-  await userEvent.click(screen.getByRole("button",{name:"Cancel"}));
+
+  await userEvent.click(screen.getByRole("button",{name:"Cancel"}));await userEvent.click(within(screen.getByRole("dialog")).getByRole("button",{name:"Discard Changes"}));
   await userEvent.click(screen.getByRole("button",{name:"Broadcast Changes"}));
   await waitFor(()=>expect(db.rpc).toHaveBeenCalledWith("save_daily_stock",{p_updates:[{id:item.id,available_stock:0,expected_stock:20,expected_updated_at:item.updated_at}]}));
 });

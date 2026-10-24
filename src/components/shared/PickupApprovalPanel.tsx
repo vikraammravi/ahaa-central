@@ -11,6 +11,7 @@ import { Banner } from "./Banner";
 import { formatDateTime } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
 import type { PickupRequest } from "@/lib/supabase/types";
+import { DataTable } from "./DataTable";
 
 export function PickupApprovalPanel({ request, canReview, products, onReviewed }: {
   request: PickupRequest;
@@ -66,15 +67,12 @@ export function PickupApprovalPanel({ request, canReview, products, onReviewed }
           {request.already_collected && <p className="text-xs text-muted-foreground">Quantities were recorded as already physically collected.</p>}
           <p className="mt-1 text-xs text-muted-foreground">Requested by {request.requested_profile?.full_name ?? "Branch manager"} · {formatDateTime(request.requested_at)}</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b text-left"><th className="py-2 pr-3">Item</th><th className="p-2 text-right">Prepared</th><th className="p-2 text-right">Actual Pickup</th><th className="p-2 text-right">Difference</th></tr></thead>
-            <tbody>{request.pickup_request_lines.map((line) => {
-              const difference = line.pickup_quantity - line.prepared_quantity;
-              return <tr key={line.id} className="border-b"><td className="py-2 pr-3">{products[line.order_line_id] ?? "Item"}</td><td className="p-2 text-right">{line.prepared_quantity}</td><td className="p-2 text-right">{line.pickup_quantity}</td><td className="p-2 text-right">{difference > 0 ? "+" : ""}{difference}</td></tr>;
-            })}</tbody>
-          </table>
-        </div>
+        <DataTable data={request.pickup_request_lines} rowKey={line=>line.id} columns={[
+          {key:"product",header:"Item",render:line=>products[line.order_line_id]??"Item"},
+          {key:"prepared",header:"Prepared",align:"right",render:line=>line.prepared_quantity},
+          {key:"pickup",header:"Actual Pickup",align:"right",render:line=>line.pickup_quantity},
+          {key:"difference",header:"Difference",align:"right",render:line=>`${line.pickup_quantity>line.prepared_quantity?"+":""}${line.pickup_quantity-line.prepared_quantity}`},
+        ]}/>
         {pending && canReview && <>
           <div className="space-y-1.5"><Label htmlFor={`review-${request.id}`}>Notes</Label><Input id={`review-${request.id}`} value={note} onChange={(event) => setNote(event.target.value)} disabled={busy} placeholder="Add a note for the branch" /></div>
           {error && <Banner tone="danger">{error}</Banner>}

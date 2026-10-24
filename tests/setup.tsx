@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup,render } from "@testing-library/react";
+import { ConfirmationHost } from "@/components/shared/ConfirmationHost";
 import { afterEach, beforeEach, vi } from "vitest";
 import { db, router, queryResult } from "./mocks/supabase";
 
@@ -17,5 +18,6 @@ beforeEach(()=>{
   vi.stubGlobal("fetch",vi.fn().mockRejectedValue(new Error("Unexpected network request in UI tests")));
   Element.prototype.scrollIntoView=vi.fn();
   window.matchMedia=vi.fn().mockReturnValue({matches:false,addListener:vi.fn(),removeListener:vi.fn(),addEventListener:vi.fn(),removeEventListener:vi.fn()});
+  render(<ConfirmationHost/>);
 });
 afterEach(()=>{cleanup();vi.useRealTimers();vi.unstubAllGlobals();});

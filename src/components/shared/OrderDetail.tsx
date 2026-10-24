@@ -25,6 +25,8 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { OrderTimeline } from "./OrderTimeline";
 import { formatDateTime, TAX_RATE, POLL_INTERVAL } from "@/lib/format";
+import { useCompactLayout } from "@/lib/useCompactLayout";
+import { RecordCards } from "./RecordCards";
 
 type OrderWithLocation = Order & { locations: { name: string } | null; weekly_invoices: {sent_at: string | null} | null };
 type LineWithItem = OrderLine & {
@@ -38,6 +40,7 @@ export function OrderDetail({
   orderId: string;
   canEdit: boolean;
 }) {
+  const compact=useCompactLayout();
   const [order, setOrder] = useState<OrderWithLocation | null>(null);
   const [lines, setLines] = useState<LineWithItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,7 +253,7 @@ export function OrderDetail({
         const maxValue = canPickupEdit ? 2147483647 : r.quantity;
         if (!editable) return pickupPending || returnPending ? requests[0]?.pickup_request_lines.find((line) => line.order_line_id === r.id)?.pickup_quantity ?? r.fulfilled_quantity : r.fulfilled_quantity;
         return (
-          <div className="flex items-center justify-end gap-1">{canPickupEdit && <Button size="icon-sm" variant="outline" aria-label={`Decrease pickup ${r.catalog_items?.name}`} disabled={pickingUp || (edits[r.id]?.fulfilled ?? r.fulfilled_quantity)===0} onClick={()=>setEdits(p=>({...p,[r.id]:{reason:p[r.id]?.reason??"",fulfilled:Math.max(0,(p[r.id]?.fulfilled??r.fulfilled_quantity)-1)}}))}><Minus className="size-3"/></Button>}<Input
+          <div className="flex items-center justify-end gap-1">{canPickupEdit && <Button size="icon-sm" className="size-11 lg:size-8" variant="outline" aria-label={`Decrease pickup ${r.catalog_items?.name}`} disabled={pickingUp || (edits[r.id]?.fulfilled ?? r.fulfilled_quantity)===0} onClick={()=>setEdits(p=>({...p,[r.id]:{reason:p[r.id]?.reason??"",fulfilled:Math.max(0,(p[r.id]?.fulfilled??r.fulfilled_quantity)-1)}}))}><Minus className="size-3"/></Button>}<Input
             aria-label={`Pickup quantity ${r.catalog_items?.name ?? "Item"}`}
             type="number"
             min={0}
@@ -270,8 +273,8 @@ export function OrderDetail({
                 },
               }))
             }
-            className="w-20 h-9 text-right"
-          />{canPickupEdit && <Button size="icon-sm" aria-label={`Increase pickup ${r.catalog_items?.name}`} disabled={pickingUp || (edits[r.id]?.fulfilled ?? r.fulfilled_quantity)>=2147483647} onClick={()=>setEdits(p=>({...p,[r.id]:{reason:p[r.id]?.reason??"",fulfilled:(p[r.id]?.fulfilled??r.fulfilled_quantity)+1}}))}><Plus className="size-3"/></Button>}</div>
+            className="w-20 h-11 lg:h-9 text-base lg:text-sm text-right"
+          />{canPickupEdit && <Button size="icon-sm" className="size-11 lg:size-8" aria-label={`Increase pickup ${r.catalog_items?.name}`} disabled={pickingUp || (edits[r.id]?.fulfilled ?? r.fulfilled_quantity)>=2147483647} onClick={()=>setEdits(p=>({...p,[r.id]:{reason:p[r.id]?.reason??"",fulfilled:(p[r.id]?.fulfilled??r.fulfilled_quantity)+1}}))}><Plus className="size-3"/></Button>}</div>
         );
       },
     },
@@ -350,7 +353,7 @@ export function OrderDetail({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-start justify-between">
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle className="text-lg">
                 Order #{order.order_number}
@@ -445,10 +448,11 @@ export function OrderDetail({
 
             {canPickupEdit && <Button className="w-full mt-4" onClick={()=>setPickupOpen(true)}><PackageCheck className="size-4"/>Review Pickup</Button>}
 
+            {canCancel&&<div className="mt-4 grid grid-cols-2 gap-2">{!canEdit&&order.status==="SUBMITTED"&&<Button asChild className="w-full h-11"><Link href={`/branch/order?edit=${order.id}`}>Edit Order</Link></Button>}
             {canCancel && (
               <ConfirmDialog
                 trigger={
-                  <Button variant="outline" className="w-full mt-4">
+                  <Button variant="destructive" className="w-full min-h-11 h-auto whitespace-normal px-2">
                     <XCircle className="size-4" /> Cancel Order
                   </Button>
                 }
@@ -459,6 +463,7 @@ export function OrderDetail({
                 onConfirm={cancelOrder}
               />
             )}
+            </div>}
           </CardContent>
         </Card>
       </div>
@@ -472,13 +477,18 @@ export function OrderDetail({
         )}
       </div>
 
-      <Dialog open={pickupOpen && canPickupEdit} onOpenChange={(open)=>{if(!pickingUp)setPickupOpen(open);}}><DialogContent aria-describedby={undefined} className="sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto" showCloseButton={!pickingUp}><DialogHeader><DialogTitle>Confirm Pickup — Order #{order.order_number}</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Enter the total quantity you are picking up. Extra or reduced quantities go to admin for approval.</p><div className="space-y-3">{lines.map(line=><div key={line.id} className="rounded-xl border p-3 space-y-3"><div><p className="font-medium">{line.catalog_items?.name??"Item"}</p><p className="text-xs text-muted-foreground">Ordered: {line.quantity} · Prepared: {line.fulfilled_quantity} {line.catalog_items?.unit_type}</p></div><div className="flex flex-wrap justify-between items-center gap-2"><span className="text-sm">Pickup quantity</span>{columns.find(column=>column.key==="fulfilled")?.render(line)}</div></div>)}</div><div className="space-y-2"><Label htmlFor="pickup-notes">Notes</Label><Input id="pickup-notes" value={pickupReason} onChange={(event)=>setPickupReason(event.target.value)} disabled={pickingUp}/></div>{pickupChanged && <label className="flex gap-2 items-start text-sm"><input type="checkbox" checked={alreadyCollected} onChange={(event)=>setAlreadyCollected(event.target.checked)} disabled={pickingUp}/>These quantities have already been physically collected</label>}{error && <Banner tone="danger">{error}</Banner>}<div className="flex justify-end gap-2"><Button variant="outline" disabled={pickingUp} onClick={()=>setPickupOpen(false)}>Back</Button><Button onClick={branchPickup} disabled={pickingUp||!pickupValid}>{pickingUp?"Submitting…":pickupChanged?"Request Approval":"Confirm Pickup"}</Button></div></DialogContent></Dialog>
-      <DataTable
+      <Dialog open={pickupOpen && canPickupEdit} onOpenChange={(open)=>{if(!pickingUp)setPickupOpen(open);}}><DialogContent aria-describedby={undefined} className="sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto" showCloseButton={!pickingUp}><DialogHeader><DialogTitle>Confirm Pickup — Order #{order.order_number}</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Enter the total quantity you are picking up. Extra or reduced quantities go to admin for approval.</p><div className="space-y-3">{lines.map(line=><div key={line.id} className="rounded-xl border p-3 space-y-3"><div><p className="font-medium">{line.catalog_items?.name??"Item"}</p><p className="text-xs text-muted-foreground">Ordered: {line.quantity} · Prepared: {line.fulfilled_quantity} {line.catalog_items?.unit_type}</p></div><div className="flex flex-wrap justify-between items-center gap-2"><span className="text-sm">Pickup quantity</span>{columns.find(column=>column.key==="fulfilled")?.render(line)}</div></div>)}</div><div className="space-y-2"><Label htmlFor="pickup-notes">Notes</Label><Input id="pickup-notes" value={pickupReason} onChange={(event)=>setPickupReason(event.target.value)} disabled={pickingUp}/></div>{pickupChanged && <label className="flex gap-2 items-start text-sm"><input type="checkbox" checked={alreadyCollected} onChange={(event)=>setAlreadyCollected(event.target.checked)} disabled={pickingUp}/>These quantities have already been physically collected</label>}{error && <Banner tone="danger">{error}</Banner>}<div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end [&>button]:min-h-11 [&>button]:whitespace-normal"><Button variant="outline" disabled={pickingUp} onClick={()=>setPickupOpen(false)}>Back</Button><Button onClick={branchPickup} disabled={pickingUp||!pickupValid}>{pickingUp?"Submitting…":pickupChanged?"Request Approval":"Confirm Pickup"}</Button></div></DialogContent></Dialog>
+      {compact?<RecordCards data={lines} loading={false} rowKey={line=>line.id} emptyTitle="No line items on this order">{line=><>
+        {columns.find(column=>column.key==="product")?.render(line)}
+        <dl className="grid grid-cols-2 gap-3 text-sm">{columns.filter(column=>!["product","fulfilled","shortage"].includes(column.key)).map(column=><div key={column.key} className="min-w-0"><dt className="text-xs text-muted-foreground">{column.header}</dt><dd className="mt-1 break-words tabular-nums">{column.render(line)}</dd></div>)}</dl>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm"><span>{columns.find(column=>column.key==="fulfilled")?.header}</span>{columns.find(column=>column.key==="fulfilled")?.render(line)}</div>
+        {canPrepare&&<div><p className="mb-1 text-xs text-muted-foreground">Note</p>{columns.find(column=>column.key==="shortage")?.render(line)}</div>}
+      </>}</RecordCards>:<DataTable
         data={lines}
         columns={columns}
         rowKey={(r) => r.id}
         emptyTitle="No line items on this order"
-      />
+      />}
     </div>
   );
 }

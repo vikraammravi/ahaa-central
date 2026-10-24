@@ -2,6 +2,7 @@ import type { CatalogItem, Profile, Location, Order, PickupRequest, CateringEven
 import type { InvoiceEditLine } from "@/lib/invoices";
 import type { InventoryWorkspace } from "@/lib/inventory";
 export const branch = {id:"branch",name:"Oshawa",address:"10 King St",city:"Oshawa",province:"ON",phone:"4165550100",is_central:false} as Location;
+export const centralLocation:Location={...branch,id:"central",name:"Scarborough Central",is_central:true};
 export const profile = {id:"user",full_name:"Test Manager",email:"manager@example.invalid",phone:"4165550100",role:"BRANCH_MANAGER",status:"active",location_id:branch.id} as Profile;
 export const item = {id:"item",name:"Idli Batter",category:"Batter",unit_type:"Bucket",default_price:10,available_stock:20,is_taxable:false,is_active:true,low_stock_threshold:5,updated_at:"2026-10-12T12:00:00Z"} as CatalogItem;
 export const order = {id:"order",order_number:12,status:"COMPLETED",order_date:"2026-10-12",created_at:"2026-10-12T12:00:00Z",updated_at:"2026-10-12T12:00:00Z",weekly_invoice_id:null,pickup_approval_status:null,final_total_amount:50,final_subtotal:50,final_tax_amount:0} as Order;
@@ -10,5 +11,7 @@ export const invoiceLine={id:"line",quantity:5,fulfilled_quantity:5,unit_price:1
 export const pickupRequest={id:"pickup",status:"PENDING",requested_at:"2026-10-12T12:00:00Z",reason:"",already_collected:false,return_status:null,pickup_request_lines:[{id:"pickup-line",order_line_id:"line",prepared_quantity:5,pickup_quantity:7}]} as PickupRequest;
 export const combinedInvoice:WeeklyInvoiceDetails={id:"invoice",branch_name:"Oshawa",start_date:"2026-10-01",end_date:"2026-10-12",revision:0,sent_at:null,subtotal:50,tax:0,total:50,lines:[{item_id:"item",name:item.name,unit_type:"Bucket",unit_price:10,is_taxable:false,quantity:5,subtotal:50,tax:0}],orders:[{id:"order",order_number:12,order_date:"2026-10-12",total:50}]};
 export const cateringEvent={id:"event",location_id:"branch",created_at:"2026-10-12T12:00:00Z",updated_at:"2026-10-12T12:00:00Z",customer_name:"Test Customer",customer_phone:"4165550100",event_datetime:"2026-10-12T18:00:00Z",guest_count:20,total_amount:100,advance_paid:20,balance_due:80,status:"CONFIRMED",checklist:[],notes:null} as CateringEvent;
+export const cateringNotes="1. Prepare idli and dosa batter.\n2. Keep chutney in separate containers.\n3. Deliver before 6 PM.\n4. Call the customer on arrival.";
 export const catalogFilterItems:CatalogItem[]=[item,{...item,id:"dessert",name:"Milk Sweet",category:"Sweet",unit_type:"Tray"},{...item,id:"packaging",name:"Paper Bag",category:"Packaging",unit_type:"Bag"}];
 export const inventorySearchWorkspace:InventoryWorkspace={...workspace,items:[workspace.items[0],{...workspace.items[0],id:"packaging",name:"Paper Bag",unit_type:"Bag"}]};
+export const submittedOrderForEdit={...order,id:"submitted-order",status:"SUBMITTED",location_id:branch.id,order_lines:[{item_id:item.id,quantity:5,unit_price:10,is_taxable:false,catalog_items:item}]};

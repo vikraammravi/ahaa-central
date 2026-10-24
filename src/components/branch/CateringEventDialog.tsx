@@ -12,8 +12,9 @@ import { CATERING_STATUSES, CATERING_STATUS_LABEL, localDateInput, phoneHref } f
 import type { CateringEvent, CateringStatus } from "@/lib/supabase/types";
 
 type Mode = "create" | "edit";
+export type SavedCateringEvent=Pick<CateringEvent,"customer_name"|"event_datetime"|"status">;
 
-// Reusable create/edit dialog for a branch's catering event.
+// Reusable create/edit dialog for a location's catering event.
 // Pass no `event` for create; pass one for edit.
 export function CateringEventDialog({
   event,
@@ -26,7 +27,7 @@ export function CateringEventDialog({
   event?: CateringEvent;
   locationId: string | null;
   trigger?: ReactNode;
-  onSaved?: () => void;
+  onSaved?: (saved:SavedCateringEvent) => void;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 }) {
@@ -44,7 +45,7 @@ export function CateringEventDialog({
 
   async function handleSubmit() {
     if (!locationId && mode === "create") {
-      throw new Error("No branch assigned to your account");
+      throw new Error("No location is available for this booking.");
     }
     const total = Number(totalAmount);
     const advance = Number(advancePaid);
@@ -79,7 +80,7 @@ export function CateringEventDialog({
       setCustomerName(""); setCustomerPhone(""); setGuestCount(""); setEventDate(""); setEventTime("18:00");
       setTotalAmount(""); setAdvancePaid("0"); setStatus("INQUIRY"); setNotes("");
     }
-    onSaved?.();
+    onSaved?.({customer_name:payload.customer_name,event_datetime:payload.event_datetime,status});
   }
 
   return (
@@ -95,7 +96,7 @@ export function CateringEventDialog({
       description={
         mode === "edit"
           ? "Update this booking."
-          : "Log a catering booking for your branch."
+          : "Log a catering booking for this location."
       }
       submitLabel={mode === "edit" ? "Save Changes" : "Create Event"}
       onSubmit={handleSubmit}

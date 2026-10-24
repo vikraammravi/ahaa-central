@@ -1,5 +1,6 @@
 import { SelectHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { ChevronDown } from "lucide-react";
 
 export type SelectOption<T extends string = string> = {
   value: T;
@@ -23,11 +24,11 @@ export function FormSelect<T extends string = string>({
     typeof o === "string" ? { value: o, label: o } : o,
   );
   return (
-    <select
+    <div className="relative min-w-0 w-full"><select
       value={value}
       onChange={(e) => onChange(e.target.value as T)}
       className={cn(
-        "h-10 w-full rounded-lg border border-input bg-background px-3 text-sm",
+        "h-11 lg:h-10 w-full min-w-0 max-w-full appearance-none truncate rounded-lg border border-input bg-background pl-3 pr-9 text-base lg:text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...rest}
@@ -37,6 +38,6 @@ export function FormSelect<T extends string = string>({
           {o.label}
         </option>
       ))}
-    </select>
+    </select><ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/></div>
   );
 }
