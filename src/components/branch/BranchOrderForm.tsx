@@ -50,7 +50,7 @@ export function BranchOrderForm({editOrderId=null}:{editOrderId?:string|null}) {
     (async()=>{
       try{
         const [catalog,original]=await Promise.all([
-          supabase.from("catalog_items").select("*").eq("is_active",true).order("name").abortSignal(controller.signal),
+          supabase.from("catalog_items").select("*").eq("is_active",true).is("archived_at",null).order("name").abortSignal(controller.signal),
           editOrderId?loadSubmittedOrder(editOrderId,controller.signal):Promise.resolve(null),
         ]);
         if(catalog.error)throw new Error(catalog.error.message);

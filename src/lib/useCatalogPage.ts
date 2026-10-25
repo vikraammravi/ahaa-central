@@ -3,7 +3,6 @@ import { useCallback,useState } from "react";
 import { useAsyncData } from "./useAsyncData";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { supabase } from "./supabase/client";
-import { CATALOG_CATEGORIES } from "./catalog";
 import type { CatalogItem } from "./supabase/types";
 
 export type CatalogPage={rows:CatalogItem[];count:number;page:number;categories:string[]};
@@ -18,6 +17,6 @@ export function useCatalogPage({activeOnly=false,pollInterval,overrides={}}:{act
   const result=useAsyncData(load,{pollInterval});
   function filter(set:(value:string)=>void){return(value:string)=>{set(value);setPage(0);};}
   return {...result,page:result.data?.page??page,setPage,search,category,status,stockStatus,
-    categories:Array.from(new Set<string>([...CATALOG_CATEGORIES,...(result.data?.categories??[])])).sort((a,b)=>a.localeCompare(b,"en",{sensitivity:"base"})),
+    categories:Array.from(new Set<string>(result.data?.categories??[])).sort((a,b)=>a.localeCompare(b,"en",{sensitivity:"base"})),
     setSearch:filter(setSearchValue),setCategory:filter(setCategoryValue),setStatus:filter(setStatusValue),setStockStatus:filter(setStockStatusValue)};
 }

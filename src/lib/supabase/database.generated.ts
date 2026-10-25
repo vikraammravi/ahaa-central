@@ -91,37 +91,40 @@ export type DatabaseTables = {
       "id": string;
       "name": string;
       "category": string;
-      "unit_type": DatabaseEnums["unit_measurement"];
+      "unit_type": string;
       "default_price": number;
       "is_taxable": boolean | null;
       "available_stock": number | null;
       "is_active": boolean | null;
       "updated_at": string | null;
       "low_stock_threshold": number;
+      "archived_at": string | null;
     };
     Insert: {
       "id"?: string;
       "name": string;
       "category": string;
-      "unit_type": DatabaseEnums["unit_measurement"];
+      "unit_type": string;
       "default_price": number;
       "is_taxable"?: boolean | null;
       "available_stock"?: number | null;
       "is_active"?: boolean | null;
       "updated_at"?: string | null;
       "low_stock_threshold"?: number;
+      "archived_at"?: string | null;
     };
     Update: {
       "id"?: string;
       "name"?: string;
       "category"?: string;
-      "unit_type"?: DatabaseEnums["unit_measurement"];
+      "unit_type"?: string;
       "default_price"?: number;
       "is_taxable"?: boolean | null;
       "available_stock"?: number | null;
       "is_active"?: boolean | null;
       "updated_at"?: string | null;
       "low_stock_threshold"?: number;
+      "archived_at"?: string | null;
     };
   };
   "catering_events": {
@@ -562,6 +565,46 @@ export type DatabaseTables = {
       "payment_updated_by"?: string | null;
       "payment_updated_name"?: string | null;
       "payment_revision"?: number | null;
+    };
+  };
+  "catalog_categories": {
+    Row: {
+      "id": string;
+      "name": string;
+      "is_active": boolean;
+      "ever_used": boolean;
+    };
+    Insert: {
+      "id"?: string;
+      "name": string;
+      "is_active"?: boolean;
+      "ever_used"?: boolean;
+    };
+    Update: {
+      "id"?: string;
+      "name"?: string;
+      "is_active"?: boolean;
+      "ever_used"?: boolean;
+    };
+  };
+  "catalog_units": {
+    Row: {
+      "id": string;
+      "name": string;
+      "is_active": boolean;
+      "ever_used": boolean;
+    };
+    Insert: {
+      "id"?: string;
+      "name": string;
+      "is_active"?: boolean;
+      "ever_used"?: boolean;
+    };
+    Update: {
+      "id"?: string;
+      "name"?: string;
+      "is_active"?: boolean;
+      "ever_used"?: boolean;
     };
   };
 };

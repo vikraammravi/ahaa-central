@@ -1,0 +1,30 @@
+begin;
+do $$
+declare actor uuid; branch uuid; unused uuid; used uuid; original uuid; denied boolean; result text;
+begin
+ select id into actor from public.profiles where role::text='CENTRAL_ADMIN' and status::text='active' limit 1;
+ if actor is null then raise exception 'An active admin is required for rollback-only tests.';end if;
+ insert into public.locations(name,is_central) values('Catalog removal test (rolled back)',false) returning id into branch;
+ insert into public.catalog_items(name,category,unit_type,default_price,available_stock,is_active,is_taxable) values('Unused removal test','Grocery','Bucket',1,0,true,false) returning id into unused;
+ insert into public.catalog_items(name,category,unit_type,default_price,available_stock,is_active,is_taxable) values('Used removal test','Grocery','Bucket',1,0,true,false) returning id into used;
+ insert into public.orders(location_id,order_number,status) values(branch,-2147482901,'SUBMITTED') returning id into original;
+ insert into public.order_lines(order_id,item_id,quantity,fulfilled_quantity,unit_price,is_taxable,line_total) values(original,used,1,1,1,false,1);
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ execute 'set local role authenticated';
+ result:=public.remove_catalog_item(unused);
+ if result<>'deleted' or exists(select 1 from public.catalog_items where id=unused) then raise exception 'Unused item was not deleted.';end if;
+ result:=public.remove_catalog_item(used);
+ if result<>'archived' or not exists(select 1 from public.catalog_items where id=used and archived_at is not null and is_active=false) then raise exception 'Used item was not archived.';end if;
+ if not exists(select 1 from public.order_lines where order_id=original and item_id=used) then raise exception 'Order history was modified.';end if;
+ if (public.catalog_page(0,'Used removal test','','all','ALL','{}')->>'count')::integer<>0 then raise exception 'Archived item is still in catalog results.';end if;
+ denied:=false;begin delete from public.catalog_items where id=used;exception when others then denied:=true;end;
+ if not denied then raise exception 'Direct delete bypassed history protection.';end if;
+ execute 'set local role postgres';
+ update public.profiles set role='BRANCH_MANAGER',location_id=branch where id=actor;
+ execute 'set local role authenticated';
+ denied:=false;begin perform public.remove_catalog_item(used);exception when others then denied:=true;end;
+ if not denied then raise exception 'Branch manager removed a catalog item.';end if;
+ execute 'set local role postgres';
+end; $$;
+rollback;
+select 'Catalog removal passed: unused deleted, used archived, history preserved, authorization enforced; test data rolled back' as result;

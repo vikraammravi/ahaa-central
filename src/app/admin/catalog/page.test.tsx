@@ -1,11 +1,24 @@
 import { installCatalogRpc } from "@tests/mocks/catalog";
 import { expect, it } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor,within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Catalog from "@/app/admin/catalog/page";
 import { db, queryResult } from "@tests/mocks/supabase";
 import { item, catalogFilterItems } from "@tests/mocks/fixtures";
 import { mockViewport } from "@tests/mocks/viewport";
+
+it("catalog removal requires confirmation and reports archived history",async()=>{
+  let products=[item];db.from.mockImplementation(()=>queryResult(products));
+  db.rpc.mockImplementation(name=>{if(name==="remove_catalog_item"){products=[];return queryResult("archived");}return queryResult(null);});
+  installCatalogRpc();render(<Catalog/>);await screen.findByText(item.name);
+  await userEvent.click(screen.getByRole("button",{name:"Delete"}));
+  const dialog=within(screen.getByRole("dialog",{name:`Remove ${item.name}?`}));
+  expect(dialog.getByText(/history preserved/)).toBeVisible();
+  expect(db.rpc).not.toHaveBeenCalledWith("remove_catalog_item",expect.anything());
+  await userEvent.click(dialog.getByRole("button",{name:"Delete"}));
+  expect(await screen.findByText(`${item.name} archived. Past orders and inventory records are preserved.`)).toBeVisible();
+  expect(db.rpc).toHaveBeenCalledWith("remove_catalog_item",{p_item_id:item.id});
+});
 
 it.each([390,820])("compact catalog cards keep direct actions and filter state at %spx",async width=>{
   mockViewport(width);db.from.mockReturnValue(queryResult(catalogFilterItems));installCatalogRpc();render(<Catalog/>);await screen.findByText(item.name);

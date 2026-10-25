@@ -30,7 +30,7 @@ export function CateringTable({ events, loading, onEdit, onDelete }: {
 
     </>;
   };
-  const editActions=(event:CateringEvent)=><RowActions iconsOnly onEdit={()=>onEdit(event)} onDelete={()=>onDelete(event.id)} deleteTitle={`Delete ${event.customer_name}'s event?`} deleteDescription="This catering booking will be permanently removed."/>;
+  const editActions=(event:CateringEvent)=><RowActions onEdit={()=>onEdit(event)} onDelete={()=>onDelete(event.id)} deleteTitle={`Delete ${event.customer_name}'s event?`} deleteDescription="This catering booking will be permanently removed."/>;
   const actions=(event:CateringEvent)=><div className="flex items-center justify-end gap-2">{contacts(event)}{editActions(event)}</div>;
   const columns: Column<CateringEvent>[] = [
     {

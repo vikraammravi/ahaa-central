@@ -220,7 +220,7 @@
     },
     {
       "name": "unit_type",
-      "type": "unit_measurement",
+      "type": "text",
       "table": "catalog_items",
       "default": null,
       "nullable": false,
@@ -272,6 +272,14 @@
       "table": "catalog_items",
       "default": "20",
       "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "archived_at",
+      "type": "timestamptz",
+      "table": "catalog_items",
+      "default": null,
+      "nullable": true,
       "generated": false
     },
     {
@@ -1232,6 +1240,70 @@
       "table": "weekly_invoices",
       "default": null,
       "nullable": true,
+      "generated": false
+    },
+    {
+      "table": "catalog_categories",
+      "name": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "table": "catalog_categories",
+      "name": "name",
+      "type": "text",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "table": "catalog_categories",
+      "name": "is_active",
+      "type": "bool",
+      "default": "true",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "table": "catalog_categories",
+      "name": "ever_used",
+      "type": "bool",
+      "default": "false",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "table": "catalog_units",
+      "name": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "table": "catalog_units",
+      "name": "name",
+      "type": "text",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "table": "catalog_units",
+      "name": "is_active",
+      "type": "bool",
+      "default": "true",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "table": "catalog_units",
+      "name": "ever_used",
+      "type": "bool",
+      "default": "false",
+      "nullable": false,
       "generated": false
     }
   ]

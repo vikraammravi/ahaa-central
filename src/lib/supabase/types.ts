@@ -3,7 +3,7 @@ import type { DatabaseEnums, DatabaseTables } from "./database.generated";
 
 export type UserRole = DatabaseEnums["user_role"];
 export type ProfileStatus = DatabaseEnums["profile_status"];
-export type UnitMeasurement = DatabaseEnums["unit_measurement"];
+export type UnitMeasurement = string;
 export type OrderStatus = DatabaseEnums["order_status"];
 export type CateringStatus = DatabaseEnums["catering_status"];
 type Row<Name extends keyof DatabaseTables> = DatabaseTables[Name]["Row"];

@@ -12,6 +12,6 @@ it("users table separates email and keeps the requested column order",()=>{
 
 it("user deletion requires explicit confirmation",async()=>{
   const remove=vi.fn();render(<UsersTable profiles={[profile]} locations={[branch]} loading={false} onEdit={vi.fn()} onDelete={remove}/>);
-  await userEvent.click(screen.getByRole("button",{name:"Row actions"}));await userEvent.click(screen.getByRole("menuitem",{name:"Delete"}));
+  await userEvent.click(screen.getByRole("button",{name:"Delete"}));
   expect(remove).not.toHaveBeenCalled();await userEvent.click(within(screen.getByRole("dialog")).getByRole("button",{name:"Delete"}));expect(remove).toHaveBeenCalledWith(profile.id);
 });

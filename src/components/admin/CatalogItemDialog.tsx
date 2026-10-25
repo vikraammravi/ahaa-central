@@ -8,11 +8,11 @@ import { FormDialog } from "@/components/shared/FormDialog";
 import { FormField } from "@/components/shared/FormField";
 import { FormSelect } from "@/components/shared/FormSelect";
 import { supabase } from "@/lib/supabase/client";
-import type { CatalogItem, UnitMeasurement } from "@/lib/supabase/types";
+import type { CatalogItem } from "@/lib/supabase/types";
 import { DEFAULT_STOCK_THRESHOLD, taxLabel } from "@/lib/format";
 
-import { CATALOG_CATEGORIES as CATEGORIES, catalogCategory } from "@/lib/catalog";
-const UNITS: readonly UnitMeasurement[] = ["Bucket", "Tray", "Piece", "Can", "Box", "Bottle", "Bag"];
+import { catalogCategory } from "@/lib/catalog";
+import { selectableOptions, type CatalogOptions } from "@/lib/catalog-options";
 
 export function CatalogItemDialog({
   item,
@@ -20,18 +20,20 @@ export function CatalogItemDialog({
   onSaved,
   open,
   onOpenChange,
+  options,
 }: {
   item?: CatalogItem;
   trigger?: ReactNode;
   onSaved?: () => void;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
+  options: CatalogOptions;
 }) {
   const mode = item ? "edit" : "create";
 
   const [name, setName] = useState(item?.name ?? "");
-  const [category, setCategory] = useState<string>(item ? catalogCategory(item.category) : CATEGORIES[0]);
-  const [unit, setUnit] = useState<UnitMeasurement>(item?.unit_type ?? UNITS[0]);
+  const [category, setCategory] = useState<string>(item ? catalogCategory(item.category) : "");
+  const [unit, setUnit] = useState<string>(item?.unit_type ?? "");
   const [price, setPrice] = useState(item ? String(item.default_price) : "");
   const [threshold, setThreshold] = useState(String(item?.low_stock_threshold ?? DEFAULT_STOCK_THRESHOLD));
   const [isTaxable, setIsTaxable] = useState(item?.is_taxable ?? true);
@@ -39,6 +41,7 @@ export function CatalogItemDialog({
 
   async function handleSubmit() {
     if (!name.trim()) throw new Error("Enter an item name.");
+    if (!category || !unit) throw new Error("Choose a category and unit.");
     if (!Number.isFinite(Number(price)) || Number(price) < 0) throw new Error("Enter a valid nonnegative price.");
     const lowStockThreshold = Number(threshold);
     if (threshold.trim() === "" || !Number.isInteger(lowStockThreshold) || lowStockThreshold < 0 || lowStockThreshold > 2147483647) {
@@ -61,7 +64,7 @@ export function CatalogItemDialog({
             .insert({ ...payload, available_stock: 0 });
     if (error) throw new Error(error.message);
     if (!item) {
-      setName(""); setCategory(CATEGORIES[0]); setUnit(UNITS[0]); setPrice("");
+      setName(""); setCategory(""); setUnit(""); setPrice("");
       setThreshold(String(DEFAULT_STOCK_THRESHOLD)); setIsTaxable(true); setIsActive(true);
     }
     onSaved?.();
@@ -103,15 +106,15 @@ export function CatalogItemDialog({
             id="ci-cat"
             value={category}
             onChange={setCategory}
-            options={CATEGORIES}
+            options={[{value:"",label:"Select category"},...selectableOptions(options.categories,item?.category)]}
           />
         </FormField>
         <FormField label="Unit" htmlFor="ci-unit">
-          <FormSelect<UnitMeasurement>
+          <FormSelect
             id="ci-unit"
             value={unit}
             onChange={setUnit}
-            options={UNITS}
+            options={[{value:"",label:"Select unit"},...selectableOptions(options.units,item?.unit_type)]}
           />
         </FormField>
       </div>
