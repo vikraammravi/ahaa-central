@@ -11,8 +11,10 @@ it("branch order requires review before submitting selected items",async()=>{
   render(<BranchOrder/>);await userEvent.click(await screen.findByRole("button",{name:`Increase ${item.name}`}));await userEvent.click(screen.getByRole("button",{name:"Place Order"}));expect(orderQuery.insert).not.toHaveBeenCalled();const dialog=screen.getByRole("dialog");expect(within(dialog).getByText(item.name)).toBeVisible();await userEvent.click(within(dialog).getByRole("button",{name:"Submit Order"}));await waitFor(()=>expect(router.push).toHaveBeenCalledWith("/branch/invoices"));expect(db.rpc).toHaveBeenCalledWith("create_branch_order",expect.objectContaining({p_quantities:[{item_id:item.id,quantity:1}]}));expect(linesQuery.insert).not.toHaveBeenCalled();
 });
 
-it("filters central stock by threshold status while preserving the selected order",async()=>{
-  db.from.mockReturnValue(queryResult(catalogFilterItems));render(<BranchOrder/>);
+it("filters branch stock by threshold status while preserving the selected order",async()=>{
+  db.auth.getUser.mockResolvedValue({data:{user:{id:profile.id}},error:null});
+  db.from.mockImplementation(table=>table==="profiles"?queryResult(profile):queryResult(catalogFilterItems));
+  db.rpc.mockReturnValue(queryResult({...workspace,items:[{...workspace.items[0],quantity:3}]}));render(<BranchOrder/>);
   await userEvent.click(await screen.findByRole("button",{name:`Increase ${item.name}`}));
   await userEvent.selectOptions(screen.getByLabelText("Stock Status"),"out-of-stock");
   expect(screen.getByText("No products match these filters")).toBeVisible();

@@ -3,8 +3,6 @@ import { FilterBar } from "@/components/shared/FilterBar";
 import { FormSelect } from "@/components/shared/FormSelect";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,13 +19,13 @@ import { useAsyncData } from "@/lib/useAsyncData";
 import { Pagination } from "@/components/shared/Pagination";
 import { formatMoney, formatDate } from "@/lib/format";
 import { createCombinedInvoice } from "@/lib/invoice-data";
+import { InvoiceActions } from "@/components/shared/InvoiceActions";
 import { WeeklyInvoiceList } from "@/components/shared/WeeklyInvoiceList";
 import { collectEligibleInvoiceIds, eligibleForWeekly } from "@/lib/weekly";
 import { useCompactLayout } from "@/lib/useCompactLayout";
 type Section = "orders" | "invoices";
 
 export default function AdminInvoicesPage() {
-  const router = useRouter();
   const compact=useCompactLayout();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -51,11 +49,12 @@ export default function AdminInvoicesPage() {
   async function createWeekly(){setCreating(true);setActionError(null);try{await createCombinedInvoice({branchId,startDate,endDate},selectedIds);setSelected({});setSection("invoices");}catch(error){setActionError(error instanceof Error?error.message:"Unable to create invoice.");await refresh(true);}finally{setCreating(false);}}
   const columns: Column<OrderWithLocation>[] = [
     {key:"select",header:"Select",render:(order)=><SelectionCheckbox label={`Select order ${order.order_number}`} checked={!!selected[order.id]} disabled={creating||selecting||!branchId||!eligibleForWeekly(order)} onChange={checked=>setSelected(previous=>({...previous,[order.id]:checked}))}/>},
-    { key: "num", header: "Invoice #", render: (order) => <Link href={`/admin/invoices/${order.id}`} onClick={(event) => event.stopPropagation()} className="font-medium underline-offset-4 hover:underline">INV-{order.order_number}</Link> },
+    { key: "num", header: "Invoice #", render: (order) => <span className="font-medium">INV-{order.order_number}</span> },
     { key: "branch", header: "Branch", className: "whitespace-normal", render: (order) => order.locations?.name ?? "—" },
     { key: "date", header: "Date", hideOn: "sm", render: (order) => formatDate(invoiceDateKey(order)) },
     { key: "total", header: "Total", align: "right", render: (order) => formatMoney(order.final_total_amount) },
     { key: "status", header: "Status", render: (order) => <StatusBadge status={ORDER_STATUS_BADGE[order.status]} label={ORDER_STATUS_LABEL[order.status]} /> },
+    {key:"actions",header:"Actions",render:order=><InvoiceActions id={order.id} kind="individual" edit/>},
   ];
   return <div className={`max-w-[1200px] mx-auto space-y-5 ${compact&&section==="orders"?"pb-40":""}`}>
     <PageHeader title="Invoices" subtitle="Review individual orders, combine them into an invoice, then view and send it." />
@@ -71,11 +70,11 @@ export default function AdminInvoicesPage() {
     {section==="orders"&&<>
     {!compact&&<div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={creating||selecting||loading||!branchId||invalidDates} onClick={selectAll}>{selecting?"Selecting…":"Select All Eligible Invoices"}</Button><Button disabled={creating||selecting||!branchId||invalidDates||!selectedIds.length} onClick={createWeekly}>{creating?"Creating…":`Combine Invoices (${selectedIds.length} selected)`}</Button>{selectedIds.length>0&&<Button variant="outline" disabled={creating||selecting} onClick={()=>setSelected({})}>Clear Selection</Button>}<p className="text-xs text-muted-foreground">Choose a branch and select completed, settled orders. Dates are optional filters; the combined invoice dates come from your selection.</p></div>}
     {compact&&!branchId&&<p className="text-sm text-muted-foreground">Choose a branch in Search &amp; filters to select invoices.</p>}
-    <DataTable data={rows} columns={columns} loading={loading} rowKey={(order) => order.id} onRowClick={compact?undefined:(order)=>router.push(`/admin/invoices/${order.id}`)} rowClassName={order=>compact&&selected[order.id]?"bg-accent/40 ring-2 ring-forest":undefined}
+    <DataTable data={rows} columns={columns} loading={loading} rowKey={(order) => order.id}  rowClassName={order=>compact&&selected[order.id]?"bg-accent/40 ring-2 ring-forest":undefined}
       renderCard={order=><>
         <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="font-medium">INV-{order.order_number}</h3><p className="break-words text-sm text-muted-foreground">{order.locations?.name??"—"}</p></div><SelectionCheckbox label={`Select order ${order.order_number}`} checked={!!selected[order.id]} disabled={creating||selecting||!branchId||!eligibleForWeekly(order)} onChange={checked=>setSelected(previous=>({...previous,[order.id]:checked}))}/></div>
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{formatDate(invoiceDateKey(order))}</span><span className="font-medium">{formatMoney(order.final_total_amount)}</span></div>
-        <div className="flex items-center justify-between gap-2 border-t pt-2"><StatusBadge status={ORDER_STATUS_BADGE[order.status]} label={ORDER_STATUS_LABEL[order.status]}/><Button asChild variant="outline" className="min-h-11"><Link href={`/admin/invoices/${order.id}`}>View Invoice</Link></Button></div>
+        <div className="flex items-center justify-between gap-2 border-t pt-2"><StatusBadge status={ORDER_STATUS_BADGE[order.status]} label={ORDER_STATUS_LABEL[order.status]}/><InvoiceActions id={order.id} kind="individual" edit/></div>
       </>}
       emptyTitle="No invoices match these filters" />
     <Pagination page={data?.page ?? page} pageSize={PAGE_SIZE} count={data?.count ?? 0} busy={loading} onChange={setPage} />

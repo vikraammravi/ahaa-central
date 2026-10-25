@@ -10,6 +10,7 @@ import { LoadingState } from "./Spinner";
 import { DataTable,type Column } from "./DataTable";
 import { InvoicePaymentStatus } from "./InvoicePaymentStatus";
 import type { InvoicePaymentRecord } from "@/lib/payments";
+import { InvoiceActions } from "./InvoiceActions";
 import { InvoiceTotals } from "./InvoiceTotals";
 import { formatMoney,formatDate,taxLabel,POLL_INTERVAL } from "@/lib/format";
 import { weeklyNumber } from "@/lib/weekly";
@@ -37,7 +38,7 @@ export function WeeklyInvoiceDetail({invoiceId,isAdmin=false}:{invoiceId:string;
     {key:"tax",header:"Tax",render:(line)=>taxLabel(line.is_taxable)},
     {key:"subtotal",header:"Subtotal",align:"right",render:(line)=>formatMoney(line.subtotal)},
   ];
-  return <div className="space-y-4">{(error||loadError)&&<Banner tone="danger">{error||loadError}</Banner>}<Card><CardHeader className="flex flex-col sm:flex-row sm:justify-between gap-3"><div><CardTitle>{weeklyNumber(invoice.id)}</CardTitle><p className="mt-2 text-sm text-muted-foreground">{invoice.branch_name}</p></div>{isAdmin&&<Button disabled={busy||sent} onClick={send}>{sent?"Sent":busy?"Sending…":data.record?.sent_at?"Send Updated Invoice":"Send Invoice"}</Button>}</CardHeader><CardContent className="space-y-4">
+  return <div className="space-y-4">{(error||loadError)&&<Banner tone="danger">{error||loadError}</Banner>}<Card><CardHeader className="flex flex-col sm:flex-row sm:justify-between gap-3"><div><CardTitle>{weeklyNumber(invoice.id)}</CardTitle><p className="mt-2 text-sm text-muted-foreground">{invoice.branch_name}</p></div><div className="flex flex-wrap items-center gap-2"><InvoiceActions id={invoiceId} kind="combined"/>{isAdmin&&<Button disabled={busy||sent} onClick={send}>{sent?"Sent":busy?"Sending…":data.record?.sent_at?"Send Updated Invoice":"Send Invoice"}</Button>}</div></CardHeader><CardContent className="space-y-4">
     <div className="grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-muted-foreground">From Date</p><p className="font-medium">{formatDate(invoice.start_date)}</p></div><div><p className="text-xs text-muted-foreground">To Date</p><p className="font-medium">{formatDate(invoice.end_date)}</p></div></div>
     <InvoicePaymentStatus embedded invoiceId={invoiceId} payment={data.record} revision={isAdmin?data.record.revision:data.record.sent_revision??invoice.revision} isAdmin={isAdmin} onUpdated={()=>refresh(true)}/>
     </CardContent></Card>

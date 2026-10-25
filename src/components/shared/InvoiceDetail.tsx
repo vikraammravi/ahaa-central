@@ -17,6 +17,7 @@ import { invoiceDateKey } from "@/lib/invoices";
 import type { Order, OrderLine, Location, InvoiceEdit } from "@/lib/supabase/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from "next/link";
+import { InvoiceActions } from "./InvoiceActions";
 
 type InvoiceOrder = Order & { locations: Pick<Location, "name" | "address" | "city" | "province"> | null; pickup_requests: { return_status: string | null }[] };
 type InvoiceLine = OrderLine & { catalog_items: { name: string; unit_type: string } | null };
@@ -67,7 +68,7 @@ export function InvoiceDetail({ orderId, isAdmin = false }: { orderId: string; i
     {error && <Banner tone="danger">{error}</Banner>}
     <Card><CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div><CardTitle className="text-xl">Invoice INV-{order.order_number}</CardTitle><p className="text-sm text-muted-foreground mt-1">{formatDate(invoiceDateKey(order))} · Order #{order.order_number}</p></div>
-      <div className="flex flex-wrap items-center gap-2"><StatusBadge status="pending" label={order.weekly_invoice_id ? "Combined" : order.status === "COMPLETED" ? "Ready to Combine" : "Awaiting Pickup"} />{canEdit && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>Edit Invoice</Button>}</div>
+      <div className="flex flex-wrap items-center gap-2">{isAdmin&&<InvoiceActions id={orderId} kind="individual"/>}<StatusBadge status="pending" label={order.weekly_invoice_id ? "Combined" : order.status === "COMPLETED" ? "Ready to Combine" : "Awaiting Pickup"} />{canEdit && <Button variant="outline" size="sm" onClick={() => setEditing(true)}>Edit Invoice</Button>}</div>
     </CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
       <div><p className="text-xs text-muted-foreground uppercase tracking-wide">From</p><p className="font-medium mt-1">Aaha Central Kitchen</p></div>
       <div><p className="text-xs text-muted-foreground uppercase tracking-wide">Bill To</p><p className="font-medium mt-1">{order.locations?.name ?? "Branch"}</p><p className="text-muted-foreground">{[order.locations?.address, order.locations?.city, order.locations?.province].filter(Boolean).join(", ")}</p></div>
