@@ -15,4 +15,5 @@ export const cateringNotes="1. Prepare idli and dosa batter.\n2. Keep chutney in
 export const catalogFilterItems:CatalogItem[]=[item,{...item,id:"dessert",name:"Milk Sweet",category:"Desserts",unit_type:"Tray"},{...item,id:"packaging",name:"Paper Bag",category:"Packaging",unit_type:"Bag"}];
 export const inventorySearchWorkspace:InventoryWorkspace={...workspace,items:[workspace.items[0],{...workspace.items[0],id:"packaging",name:"Paper Bag",unit_type:"Bag"}]};
 export const submittedOrderForEdit={...order,id:"submitted-order",status:"SUBMITTED",location_id:branch.id,order_lines:[{item_id:item.id,quantity:5,unit_price:10,is_taxable:false,catalog_items:item}]};
-export const pagedCatalogItems=Array.from({length:30},(_,index)=>({...item,id:`paged-${index}`,name:`Paged product ${index+1}`}));
+export const pagedCatalogItems=Array.from({length:30},(_,index)=>({...item,id:`paged-${index}`,name:`Paged product ${String(index+1).padStart(2,"0")}`}));
+export const categorySortedCatalogItems=[{...item,id:"sort-packaging",name:"Apple Box",category:"Packaging"},{...item,id:"sort-batter-z",name:"Zebra Batter",category:"Batter"},{...item,id:"sort-batter-a",name:"Alpha Batter",category:"Batter"}];

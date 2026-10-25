@@ -6,3 +6,7 @@ export function stockBadge(available: number, threshold: number): StatusKind {
   if (available < threshold) return "low-stock";
   return "in-stock";
 }
+
+export function branchStockStatus(quantity: number | null | undefined): StatusKind | null {
+  return quantity == null ? null : stockBadge(quantity, BRANCH_STOCK_THRESHOLD);
+}

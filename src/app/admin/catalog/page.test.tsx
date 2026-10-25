@@ -4,8 +4,14 @@ import { render, screen, waitFor,within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Catalog from "@/app/admin/catalog/page";
 import { db, queryResult } from "@tests/mocks/supabase";
-import { item, catalogFilterItems } from "@tests/mocks/fixtures";
+import { item, catalogFilterItems,categorySortedCatalogItems } from "@tests/mocks/fixtures";
 import { mockViewport } from "@tests/mocks/viewport";
+
+it("shows categories alphabetically and items alphabetically within each category",async()=>{
+  db.from.mockReturnValue(queryResult(categorySortedCatalogItems));installCatalogRpc();render(<Catalog/>);
+  await screen.findByText("Apple Box");
+  expect(screen.getAllByRole("row").slice(1).map(row=>within(row).getAllByRole("cell")[0].textContent)).toEqual(["Alpha Batter","Zebra Batter","Apple Box"]);
+});
 
 it("catalog removal requires confirmation and reports archived history",async()=>{
   let products=[item];db.from.mockImplementation(()=>queryResult(products));

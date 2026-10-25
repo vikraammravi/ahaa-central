@@ -1,7 +1,7 @@
 "use client";
 import { FilterBar } from "@/components/shared/FilterBar";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InvoiceTotals } from "@/components/shared/InvoiceTotals";
@@ -11,7 +11,7 @@ import { CatalogFilters } from "@/components/shared/CatalogFilters";
 import { useCatalogFilters } from "@/lib/useCatalogFilters";
 import { StockStatusFilter } from "@/components/shared/StockStatusFilter";
 import { compareCatalogItems } from "@/lib/catalog";
-import { BRANCH_STOCK_THRESHOLD, stockBadge } from "@/lib/stock";
+import { branchStockStatus } from "@/lib/stock";
 
 import { Button } from "@/components/ui/button";
 
@@ -39,7 +39,8 @@ export function BranchOrderForm({editOrderId=null}:{editOrderId?:string|null}) {
   const [qty, setQty] = useState<Record<string, number>>({});
   const filters = useCatalogFilters(items);
   const [stockStatus,setStockStatus]=useState("ALL");
-  const rows=filters.filtered?.filter(item=>stockStatus==="ALL"||stockBadge(item.available_stock,BRANCH_STOCK_THRESHOLD)===stockStatus)??null;
+  const balances=useMemo(()=>new Map(inventory.data?.items.map(item=>[item.id,item.quantity])??[]),[inventory.data]);
+  const rows=filters.filtered?.filter(item=>stockStatus==="ALL"||branchStockStatus(balances.get(item.id))===stockStatus)??null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -108,6 +109,7 @@ export function BranchOrderForm({editOrderId=null}:{editOrderId?:string|null}) {
       <PageHeader title={editOrderId?`Edit Order${existing?` #${existing.order_number}`:""}`:"Place Order"} subtitle={editOrderId?"Update quantities while this order is Submitted. Changes stop once central kitchen starts preparing it.":"Order before 10:00 AM."} />
 
       {error && <Banner tone="danger">{error}</Banner>}
+      {inventory.error&&<Banner tone="danger">Unable to load branch stock: {inventory.error}</Banner>}
       {inventory.data?.latest&&<Banner tone="info">Branch inventory last updated: {formatDate(inventory.data.latest.count_date)} · {inventory.data.latest.submitted_name} · {formatDateTime(inventory.data.latest.submitted_at)}. <a href="/branch/inventory" className="underline">View inventory</a></Banner>}
 
       <FilterBar columns={3}>

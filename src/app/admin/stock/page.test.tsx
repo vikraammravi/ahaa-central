@@ -3,9 +3,15 @@ import { expect, it } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Stock from "@/app/admin/stock/page";
-import { item, catalogFilterItems,pagedCatalogItems } from "@tests/mocks/fixtures";
+import { item, catalogFilterItems,pagedCatalogItems,categorySortedCatalogItems } from "@tests/mocks/fixtures";
 import { db, queryResult } from "@tests/mocks/supabase";
 import { mockViewport } from "@tests/mocks/viewport";
+
+it("shows categories alphabetically and items alphabetically within each category",async()=>{
+  db.from.mockReturnValue(queryResult(categorySortedCatalogItems));installCatalogRpc();render(<Stock/>);
+  await screen.findByText("Apple Box");
+  expect(screen.getAllByRole("row").slice(1).map(row=>within(row).getAllByRole("cell")[0].textContent)).toEqual(["Alpha Batter","Zebra Batter","Apple Box"]);
+});
 
 it("keeps staged stock updates from different pages until one broadcast",async()=>{
   db.from.mockReturnValue(queryResult(pagedCatalogItems));installCatalogRpc();render(<Stock/>);

@@ -34,16 +34,20 @@ it("separates central stock, branch stock and units from the item name",()=>{
 
 it("distinguishes missing branch counts from zero stock",()=>{
   const {rerender}=render(<OrderItemsTable items={[item]} inventory={[]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
-  expect(screen.getByText("Not counted")).toBeVisible();
+  expect(screen.getAllByText("Not counted")).toHaveLength(2);
   rerender(<OrderItemsTable items={[item]} inventory={[{...workspace.items[0],quantity:0}]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
   expect(screen.queryByText("Not counted")).not.toBeInTheDocument();
   const headers=screen.getAllByRole("columnheader").map(header=>header.textContent);
   expect(screen.getAllByRole("row")[1].querySelectorAll("td")[headers.indexOf("Branch Stock")]).toHaveTextContent(/^0$/);
 });
 
-it("uses the branch threshold of three independently of the catalog threshold",()=>{
-  const {rerender}=render(<OrderItemsTable items={[{...item,available_stock:2,low_stock_threshold:99}]} inventory={[]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
+it.each([390,820,1280])("uses branch counts for status at %spx independently of central stock",width=>{
+  mockViewport(width);
+  const {rerender}=render(<OrderItemsTable items={[{...item,available_stock:100,low_stock_threshold:99}]} inventory={[{...workspace.items[0],quantity:2}]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
   expect(screen.getByText("Low Stock")).toBeVisible();
-  rerender(<OrderItemsTable items={[{...item,available_stock:3,low_stock_threshold:99}]} inventory={[]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
+  rerender(<OrderItemsTable items={[{...item,available_stock:0,low_stock_threshold:99}]} inventory={[{...workspace.items[0],quantity:3}]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
   expect(screen.getByText("In Stock")).toBeVisible();
+  expect(screen.getByRole("spinbutton")).toBeDisabled();
+  rerender(<OrderItemsTable items={[{...item,available_stock:100}]} inventory={[{...workspace.items[0],quantity:0}]} quantities={{}} onQuantity={vi.fn()} loading={false} disabled={false}/>);
+  expect(screen.getByText("Out of Stock")).toBeVisible();
 });

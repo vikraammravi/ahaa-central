@@ -39,3 +39,14 @@ it("retains the edited quantities if central kitchen advances the order before s
   await waitFor(()=>expect(within(screen.getByRole("dialog")).getByText("Only Submitted orders can be edited.")).toBeVisible());
   expect(router.push).not.toHaveBeenCalled();
 });
+
+it("filters by branch inventory rather than central availability",async()=>{
+  setup();
+  db.rpc.mockImplementation(name=>queryResult(name==="branch_inventory_workspace"?{...workspace,items:[{...workspace.items[0],quantity:1}]}:null));
+  render(<BranchOrderForm/>);
+  await screen.findByLabelText(`Order quantity for ${item.name}`);
+  await userEvent.selectOptions(screen.getByLabelText("Stock Status"),"low-stock");
+  expect(screen.getByLabelText(`Order quantity for ${item.name}`)).toBeVisible();
+  await userEvent.selectOptions(screen.getByLabelText("Stock Status"),"in-stock");
+  expect(screen.queryByLabelText(`Order quantity for ${item.name}`)).not.toBeInTheDocument();
+});
