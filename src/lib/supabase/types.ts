@@ -21,7 +21,8 @@ export type Order = Omit<WithDefaults<Row<"orders">, "status" | "order_date" | "
   pickup_confirmed_at: string | null;
 };
 export type OrderLine = WithDefaults<Row<"order_lines">, "final_line_total"> & { invoice_quantity: number | null; invoice_is_taxable: boolean | null; invoice_line_total: number };
-export type CateringEvent = WithDefaults<Row<"catering_events">, "advance_paid" | "status" | "created_at" | "updated_at">;
+export type CateringFulfillment = "PICKUP" | "DELIVERY";
+export type CateringEvent = Omit<WithDefaults<Row<"catering_events">, "advance_paid" | "status" | "created_at" | "updated_at">,"fulfillment_method"> & {fulfillment_method:CateringFulfillment};
 export type PickupRequestLine = Row<"pickup_request_lines"> & { extra_stock_debited: number; allocation_shortfall: number; return_quantity: number };
 export type InvoicePublishedLine = OrderLine & { catalog_items: { name: string; unit_type: string } | null };
 export type InvoiceEdit = Omit<Row<"invoice_edits">, "previous_lines" | "updated_lines" | "stock_adjustments"> & {

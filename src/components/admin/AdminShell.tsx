@@ -17,6 +17,7 @@ const entries: NavEntry[] = [
     label: "Inventory Management",
     items: [
       { label: "Daily Stock", href: "/admin/stock", icon: icons.stock },
+      { label: "Branch Stock", href: "/admin/branch-stock", icon: icons.branches },
       { label: "Catalog", href: "/admin/catalog", icon: icons.catalog },
     ],
   },

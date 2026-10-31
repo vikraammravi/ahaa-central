@@ -1305,6 +1305,22 @@
       "default": "false",
       "nullable": false,
       "generated": false
+    },
+    {
+      "name": "fulfillment_method",
+      "type": "text",
+      "table": "catering_events",
+      "default": "'PICKUP'::text",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "delivery_address",
+      "type": "text",
+      "table": "catering_events",
+      "default": null,
+      "nullable": true,
+      "generated": false
     }
   ]
 }

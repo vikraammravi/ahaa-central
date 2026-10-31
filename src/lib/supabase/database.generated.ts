@@ -143,6 +143,8 @@ export type DatabaseTables = {
       "notes": string | null;
       "created_at": string | null;
       "updated_at": string | null;
+      "fulfillment_method": string;
+      "delivery_address": string | null;
     };
     Insert: {
       "id"?: string;
@@ -159,6 +161,8 @@ export type DatabaseTables = {
       "notes"?: string | null;
       "created_at"?: string | null;
       "updated_at"?: string | null;
+      "fulfillment_method"?: string;
+      "delivery_address"?: string | null;
     };
     Update: {
       "id"?: string;
@@ -175,6 +179,8 @@ export type DatabaseTables = {
       "notes"?: string | null;
       "created_at"?: string | null;
       "updated_at"?: string | null;
+      "fulfillment_method"?: string;
+      "delivery_address"?: string | null;
     };
   };
   "invoice_edits": {

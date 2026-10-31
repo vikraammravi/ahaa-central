@@ -1,9 +1,17 @@
-import { cateringEvent as event, cateringNotes } from "@tests/mocks/fixtures";
+import { cateringEvent as event, cateringNotes, deliveryCateringEvent } from "@tests/mocks/fixtures";
 import { expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CateringTable } from "@/components/branch/CateringTable";
 import { mockViewport } from "@tests/mocks/viewport";
+
+it.each([390,820,1280])("shows delivery method and the full address at %spx",async width=>{
+  mockViewport(width);
+  render(<CateringTable events={[deliveryCateringEvent]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);
+  expect(screen.getByText("Delivery")).toBeVisible();
+  await userEvent.click(screen.getByRole("button",{name:"View address"}));
+  expect(screen.getByRole("region",{name:"Full delivery address"})).toHaveTextContent("1180 Simcoe St N");
+});
 
 it("tablet catering cards preserve notes, contacts and edit actions",async()=>{
   mockViewport(820);const onEdit=vi.fn();
