@@ -39,7 +39,7 @@ export default function AdminStockPage() {
   const columns: Column<CatalogItem>[] = [
     {
       key: "product",
-      header: "Product",
+      header: "Item Name",
       render: (r) => <span className="font-medium">{r.name}</span>,
     },
     {key:"category",header:"Category",render:r=>catalogCategory(r.category)},
