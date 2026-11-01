@@ -16,6 +16,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run test:coverage
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npx eslint src tests scripts vitest.config.mts
       - uses: actions/upload-artifact@v4
