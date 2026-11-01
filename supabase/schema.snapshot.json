@@ -1321,6 +1321,150 @@
       "default": null,
       "nullable": true,
       "generated": false
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "purchase_receipts",
+      "default": "gen_random_uuid()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "created_by",
+      "type": "uuid",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "table": "purchase_receipts",
+      "default": "now()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "table": "purchase_receipts",
+      "default": "now()",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "file_name",
+      "type": "text",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "file_path",
+      "type": "text",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "file_hash",
+      "type": "text",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "model",
+      "type": "text",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "category",
+      "type": "text",
+      "table": "purchase_receipts",
+      "default": "'Miscellaneous'::text",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "table": "purchase_receipts",
+      "default": "'DRAFT'::text",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "scan_status",
+      "type": "text",
+      "table": "purchase_receipts",
+      "default": "'NOT_SCANNED'::text",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "operation_url",
+      "type": "text",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "scan_started_at",
+      "type": "timestamptz",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "scan_usage",
+      "type": "jsonb",
+      "table": "purchase_receipts",
+      "default": "'{}'::jsonb",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "details",
+      "type": "jsonb",
+      "table": "purchase_receipts",
+      "default": "'{}'::jsonb",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "warnings",
+      "type": "jsonb",
+      "table": "purchase_receipts",
+      "default": "'[]'::jsonb",
+      "nullable": false,
+      "generated": false
+    },
+    {
+      "name": "deleted_at",
+      "type": "timestamp with time zone",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": true,
+      "generated": false
+    },
+    {
+      "name": "location_id",
+      "type": "uuid",
+      "table": "purchase_receipts",
+      "default": null,
+      "nullable": true,
+      "generated": false
     }
   ]
 }

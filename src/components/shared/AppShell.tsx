@@ -30,16 +30,16 @@ function Sidebar({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground">
-      <div className="px-5 py-5 border-b border-sidebar-border">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
+      <div className="shrink-0 px-5 py-5 lg:py-3 border-b border-sidebar-border">
         <Logo variant="full" size="md" href={brandHref} priority />
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:thin]">
         <SidebarNav entries={entries} onNavigate={onNavigate} />
       </div>
-      <div className="border-t border-sidebar-border p-3">
-        {footerEntries&&<SidebarNav entries={footerEntries} onNavigate={onNavigate} className="p-0 pb-2"/>}
-        <div className="flex items-center gap-3 px-2 py-2">
+      <div className="shrink-0 border-t border-sidebar-border p-3 lg:p-2">
+        {footerEntries&&<SidebarNav entries={footerEntries} onNavigate={onNavigate} className="p-0 pb-2 lg:py-0 lg:pb-1"/>}
+        <div className="flex items-center gap-3 px-2 py-2 lg:py-1">
           <Avatar className="w-9 h-9">
             <AvatarFallback className="bg-accent text-accent-foreground text-xs font-semibold">
               {user.initials}
@@ -78,7 +78,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden lg:block w-64 shrink-0 h-screen sticky top-0 border-r border-sidebar-border">
+      <aside className="hidden lg:block w-64 shrink-0 h-dvh sticky top-0 border-r border-sidebar-border">
         <Sidebar entries={entries} footerEntries={footerEntries} user={user} brandHref={brandHref} />
       </aside>
 
