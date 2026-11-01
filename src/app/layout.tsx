@@ -20,6 +20,12 @@ const serif = Instrument_Serif({
 export const metadata: Metadata = {
   title: "Aaha Central",
   description: "Central Kitchen operations for Aaha branches",
+  robots: {
+    index: false,
+    follow: false,
+    nosnippet: true,
+    noimageindex: true,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
