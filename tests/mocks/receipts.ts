@@ -1,4 +1,4 @@
-import type { PurchaseReceipt } from "@/lib/receipts";
+import type { PurchaseReceipt } from "@/features/vendor-documents/domain";
 export const receiptUploadFile = () => new File(["%PDF-test"], "invoice.pdf", { type: "application/pdf" });
 export const invoiceScan = { documents: [{ fields: {
   VendorName: { valueString: "Bombay Foods", confidence: 0.98 },

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { receiptFilters, emptyReceipt, extractReceipt, receiptWarnings, validReceiptDetails } from "./receipts";
+import { receiptFilters, emptyReceipt, extractReceipt, receiptWarnings, validReceiptDetails } from "./domain";
 import { invoiceScan, purchaseReceipt } from "@tests/mocks/receipts";
 it("extracts invoice fields and flags low confidence without inventing missing amounts", () => {
   const result = extractReceipt(invoiceScan);

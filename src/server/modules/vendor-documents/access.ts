@@ -20,18 +20,6 @@ export function receiptError(error: unknown) {
   const status = message === "Sign in first." ? 401 : message.includes("Only active") || message === "Request not allowed." ? 403 : 400;
   return Response.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
 }
-export function azureConfig() {
-  if (process.env.AZURE_DOCUMENT_SCANNING_ENABLED !== "true") throw new Error("AI scanning is temporarily disabled. Manual invoice entry remains available.");
-  const endpoint = process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT;
-  const key = process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY;
-  if (!endpoint || !key) throw new Error("Azure scanning is not configured on the server.");
-  const url = new URL(endpoint);
-  if (url.protocol !== "https:" || !url.hostname.endsWith(".cognitiveservices.azure.com")) throw new Error("Invalid Azure endpoint configuration.");
-  return { endpoint: url.origin, key };
-}
-export function azureFailure(status: number): Error {
-  return new Error(status === 401 ? "Azure rejected the server key. Check the scanner configuration." : status === 403 ? "Azure blocked access. Check the resource network/firewall settings and server key." : status === 429 ? "Azure is busy or its quota has been reached. Try later; manual entry is still available." : "Azure could not scan this file. Try a clearer PDF/photo or enter details manually.");
-}
 export const receiptSelection = "id,file_name,category,status,details,warnings,scan_status,created_at";
 
 export function receiptScope<T>(query: T, locationId: string | null): T {

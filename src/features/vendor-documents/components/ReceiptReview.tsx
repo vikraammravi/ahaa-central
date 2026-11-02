@@ -9,7 +9,7 @@ import { FormField } from "@/components/shared/FormField";
 import { FormSelect } from "@/components/shared/FormSelect";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useUnsavedChanges } from "@/lib/useUnsavedChanges";
-import { expenseCategories, receiptWarnings, type PurchaseReceipt, type ReceiptDetails } from "@/lib/receipts";
+import { expenseCategories, receiptWarnings, type PurchaseReceipt, type ReceiptDetails } from "@/features/vendor-documents/domain";
 
 export function ReceiptReview({ receipt, busy, onSave, onScan, onClose }: {
   receipt: PurchaseReceipt; busy: boolean;

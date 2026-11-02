@@ -8,17 +8,12 @@ import { FilterBar } from "@/components/shared/FilterBar";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Pagination } from "@/components/shared/Pagination";
-import { ReceiptReview } from "@/components/receipts/ReceiptReview";
-import { ReceiptList } from "@/components/receipts/ReceiptList";
-import { ReceiptUploadDialog } from "@/components/receipts/ReceiptUploadDialog";
-import { expenseCategories, type PurchaseReceipt, type ReceiptDetails } from "@/lib/receipts";
+import { ReceiptReview } from "@/features/vendor-documents/components/ReceiptReview";
+import { ReceiptList } from "@/features/vendor-documents/components/ReceiptList";
+import { ReceiptUploadDialog } from "@/features/vendor-documents/components/ReceiptUploadDialog";
+import { expenseCategories, type PurchaseReceipt, type ReceiptDetails } from "@/features/vendor-documents/domain";
 
-async function api(url: string, options?: RequestInit) {
-  const response = await fetch(url, { ...options, cache: "no-store" });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error ?? "Unable to complete receipt request.");
-  return result;
-}
+import { receiptApi as api } from "../api";
 export default function ReceiptsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");

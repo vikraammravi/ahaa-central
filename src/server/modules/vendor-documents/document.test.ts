@@ -1,16 +1,15 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { queryResult } from "@tests/mocks/supabase";
 import { purchaseReceipt } from "@tests/mocks/receipts";
-import { receiptAccess } from "@/lib/receipt-server";
-import { POST, PATCH, GET, DELETE } from "./route";
+import { receiptAccess } from "@/server/modules/vendor-documents/access";
+import { POST, PATCH, GET, DELETE } from "./document";
 
-vi.mock("@/lib/receipt-server", () => ({
+vi.mock("@/server/modules/vendor-documents/access", () => ({
   receiptAccess: vi.fn(),
   receiptError: (error: Error) => Response.json({ error: error.message }, { status: 400 }),
   receiptScope: (query: unknown) => query,
   receiptSelection: "id,file_name,category,status,details,warnings,scan_status,created_at",
-  azureConfig: () => ({ endpoint: "https://receipt-test.cognitiveservices.azure.com", key: "test-only" }),
-  azureFailure: () => new Error("Azure unavailable"),
+
 }));
 const context = { params: Promise.resolve({ id: purchaseReceipt.id }) };
 const storage = { download: vi.fn(), createSignedUrl: vi.fn() };
@@ -19,6 +18,9 @@ function request(method: string, body?: unknown) {
   return new Request(`https://app.test/api/admin/receipts/${purchaseReceipt.id}`, { method, headers: { origin: "https://app.test", "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) });
 }
 beforeEach(() => {
+  vi.stubEnv("AZURE_DOCUMENT_SCANNING_ENABLED", "true");
+  vi.stubEnv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT", "https://receipt-test.cognitiveservices.azure.com");
+  vi.stubEnv("AZURE_DOCUMENT_INTELLIGENCE_KEY", "test-only");
   vi.mocked(receiptAccess).mockResolvedValue({ db: database, user: { id: "admin-test" } } as unknown as Awaited<ReturnType<typeof receiptAccess>>);
   database.from.mockReturnValue(queryResult({ file_path: "private/original.pdf", model: "prebuilt-invoice" }));
   database.storage.from.mockReturnValue(storage);

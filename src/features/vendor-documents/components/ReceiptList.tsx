@@ -6,7 +6,7 @@ import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { RowActions } from "@/components/shared/RowActions";
 import { formatDate, formatMoney } from "@/lib/format";
-import type { PurchaseReceipt } from "@/lib/receipts";
+import type { PurchaseReceipt } from "@/features/vendor-documents/domain";
 
 export function ReceiptList({ rows, loading, busy, onEdit, onDelete }: {
   rows: PurchaseReceipt[]; loading: boolean; busy: boolean;

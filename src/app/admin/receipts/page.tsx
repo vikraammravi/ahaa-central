@@ -1,1 +1,1 @@
-export { default } from "@/components/receipts/ReceiptsPage";
+export { default } from "@/features/vendor-documents/components/ReceiptsPage";

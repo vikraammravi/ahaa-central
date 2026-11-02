@@ -1,2 +1,2 @@
-export { GET, POST, PATCH, DELETE } from "@/app/api/admin/receipts/[id]/route";
+export { GET, POST, PATCH, DELETE } from "@/server/modules/vendor-documents/document";
 export const runtime = "nodejs";
