@@ -1,10 +1,10 @@
 import {expect,it,vi} from "vitest";
-import {GET} from "@/server/modules/billing/pdf-handler";
+import {GET} from "@/server/business/billing/pdf-handler";
 import {db,queryResult} from "@tests/mocks/supabase";
 import {pdfId,pdfProfile,pdfOrder} from "@tests/mocks/invoice-pdf";
 vi.mock("@/lib/supabase/server",()=>({createSupabaseServer:vi.fn(async()=>db)}));
 vi.mock("@react-pdf/renderer",()=>({renderToBuffer:vi.fn(async()=>Buffer.from("%PDF-1.7 test"))}));
-vi.mock("@/server/modules/billing/InvoicePdfDocument",()=>({InvoicePdfDocument:vi.fn(()=>null)}));
+vi.mock("@/server/business/billing/InvoicePdfDocument",()=>({InvoicePdfDocument:vi.fn(()=>null)}));
 function request(kind="individual",id=pdfId){return GET(new Request(`http://localhost/api/invoices/${kind}/${id}/pdf`),{params:Promise.resolve({kind,id})});}
 it("returns an inline PDF with private no-store headers",async()=>{
   db.auth.getUser.mockResolvedValue({data:{user:{id:pdfProfile.id}},error:null});

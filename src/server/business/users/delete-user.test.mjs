@@ -9,7 +9,7 @@ function load(path,require){const exports={};vm.runInNewContext(ts.transpileModu
 function deletion(role="CENTRAL_ADMIN",signedIn=true,fail=false){
   const removed=[];
   const session={auth:{getUser:async()=>({data:{user:signedIn?{id:actorId}:null},error:null})},from(){const query={select(){return query;},eq(column,value){query.id=value;return query;},single:async()=>({data:query.id===actorId?{role,status:"active"}:{id:targetId},error:null})};return query;}};
-  const api=load("src/server/modules/users/delete-user.ts",name=>name==="server-only"?{}:name.includes("/server")?{createSupabaseServer:async()=>session}:name.includes("supabase/admin")?{createSupabaseAdmin:()=>({auth:{admin:{deleteUser:async id=>{removed.push(id);return {error:fail?new Error("failure"):null};}}}})}:{activeRole:profile=>profile.status==="active"?profile.role:null});
+  const api=load("src/server/business/users/delete-user.ts",name=>name==="server-only"?{}:name.includes("/server")?{createSupabaseServer:async()=>session}:name.includes("supabase/admin")?{createSupabaseAdmin:()=>({auth:{admin:{deleteUser:async id=>{removed.push(id);return {error:fail?new Error("failure"):null};}}}})}:{activeRole:profile=>profile.status==="active"?profile.role:null});
   return {removed,run:(id=targetId,origin="http://localhost:3000")=>api.DELETE(new Request(`http://localhost:3000/api/admin/users/${id}`,{method:"DELETE",headers:{origin}}),{params:Promise.resolve({id})})};
 }
 test("user deletion requires active admin, matching origin and a different account",async()=>{

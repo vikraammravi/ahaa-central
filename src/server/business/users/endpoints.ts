@@ -1,0 +1,10 @@
+import "server-only";
+import { businessEndpoint } from "../http";
+import { businessWorkspacesEnabled } from "@/features/workspaces/context";
+import { POST as legacyCreate } from "./create-user";
+import { DELETE as legacyDelete } from "./delete-user";
+import { createBusinessUser, removeBusinessUser, updateBusinessUser } from "./workspace-users";
+type Context = { params: Promise<{ id: string }> };
+export const createBranchUser = businessEndpoint((request: Request) => businessWorkspacesEnabled() ? createBusinessUser(request) : legacyCreate(request));
+export const removeBranchUser = businessEndpoint((request: Request, context: Context) => businessWorkspacesEnabled() ? removeBusinessUser(request, context) : legacyDelete(request, context));
+export const updateBranchUser = businessEndpoint(updateBusinessUser);

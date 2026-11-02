@@ -1,8 +1,8 @@
 import "server-only";
 import {renderToBuffer} from "@react-pdf/renderer";
 import {createSupabaseServer} from "@/lib/supabase/server";
-import {InvoicePdfError,loadInvoicePdf} from "@/server/modules/billing/pdf-data";
-import {InvoicePdfDocument} from "@/server/modules/billing/InvoicePdfDocument";
+import {InvoicePdfError,loadInvoicePdf} from "@/server/business/billing/pdf-data";
+import {InvoicePdfDocument} from "@/server/business/billing/InvoicePdfDocument";
 export const runtime="nodejs";
 export async function GET(_request:Request,{params}:{params:Promise<{kind:string;id:string}>}){
   const {kind,id}=await params;

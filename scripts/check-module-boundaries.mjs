@@ -28,6 +28,12 @@ for (const filename of files) {
       if ((relative.startsWith("src/features/") || relative.startsWith("src/server/")) && target.startsWith("src/app/")) reason = "Modules cannot depend on route implementations";
       if (relative.startsWith("src/components/ui/") && target.startsWith("src/features/")) reason = "UI primitives cannot depend on business features";
       if (relative.startsWith("src/app/api/") && target.startsWith("src/app/api/")) reason = "API routes must delegate to shared services, not other routes";
+      if (relative.startsWith("src/server/business/") && target.startsWith("src/server/platform/")) reason = "Business backend cannot depend on platform operations";
+      if (relative.startsWith("src/server/platform/") && target.startsWith("src/server/business/")) reason = "Platform backend cannot depend on customer operations";
+      if (relative.startsWith("src/server/infrastructure/") && (target.startsWith("src/server/business/") || target.startsWith("src/server/platform/"))) reason = "Infrastructure cannot depend on business or platform modules";
+      if (relative.startsWith("src/app/api/platform/") && target.startsWith("src/server/business/")) reason = "Platform APIs cannot call business modules";
+      if (relative.startsWith("src/app/api/") && !relative.startsWith("src/app/api/platform/") && target.startsWith("src/server/platform/")) reason = "Business APIs cannot call platform modules";
+      if (relative.startsWith("src/app/api/") && target.startsWith("src/server/business/") && !/^src\/server\/business\/[^/]+\/endpoints$/.test(target)) reason = "Business API routes must use guarded feature endpoints";
       if (reason) violations.push(`${relative}: ${reason}: ${name}`);
     }
     ts.forEachChild(node, visit);

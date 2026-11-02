@@ -1,0 +1,10 @@
+import "server-only";
+import { businessEndpoint } from "../http";
+import { GET as list, POST as upload } from "./collection";
+import { GET as read, POST as rescan, PATCH as save, DELETE as remove } from "./document";
+export const listReceipts = businessEndpoint(list);
+export const uploadReceipt = businessEndpoint(upload);
+export const readReceipt = businessEndpoint(read);
+export const rescanReceipt = businessEndpoint(rescan);
+export const saveReceipt = businessEndpoint(save);
+export const deleteReceipt = businessEndpoint(remove);

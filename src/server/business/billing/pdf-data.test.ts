@@ -1,5 +1,5 @@
 import {expect,it} from "vitest";
-import {loadInvoicePdf} from "@/server/modules/billing/pdf-data";
+import {loadInvoicePdf} from "@/server/business/billing/pdf-data";
 import {db,queryResult} from "@tests/mocks/supabase";
 import {pdfId,pdfProfile,pdfOrder,pdfCombinedRecord,pdfSnapshot} from "@tests/mocks/invoice-pdf";
 type Database=Parameters<typeof loadInvoicePdf>[0];

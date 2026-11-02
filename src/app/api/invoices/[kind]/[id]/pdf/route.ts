@@ -1,2 +1,2 @@
-export { GET } from "@/server/modules/billing/pdf-handler";
+export { viewInvoicePdf as GET } from "@/server/business/billing/endpoints";
 export const runtime = "nodejs";

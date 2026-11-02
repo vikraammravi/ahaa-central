@@ -1,7 +1,7 @@
 import "server-only";
 import { businessWorkspacesEnabled } from "@/features/workspaces/context";
 import { azureConfig, readDocumentScan, startDocumentScan } from "@/server/infrastructure/azure-document-intelligence";
-import { receiptAccess, receiptError, receiptSelection, receiptScope } from "@/server/modules/vendor-documents/access";
+import { receiptAccess, receiptError, receiptSelection, receiptScope } from "@/server/business/vendor-documents/access";
 import { expenseCategories, extractReceipt, receiptWarnings, validReceiptDetails } from "@/features/vendor-documents/domain";
 type Context = { params: Promise<{ id: string }> };
 const validId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);

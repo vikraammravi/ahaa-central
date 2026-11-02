@@ -1,2 +1,2 @@
-export { GET, POST, PATCH, DELETE } from "@/server/modules/vendor-documents/document";
+export { readReceipt as GET, rescanReceipt as POST, saveReceipt as PATCH, deleteReceipt as DELETE } from "@/server/business/vendor-documents/endpoints";
 export const runtime = "nodejs";

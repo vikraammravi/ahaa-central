@@ -1,7 +1,7 @@
 import "server-only";
 import { businessWorkspacesEnabled } from "@/features/workspaces/context";
 import { createHash } from "node:crypto";
-import { receiptAccess, receiptError, receiptSelection, receiptScope } from "@/server/modules/vendor-documents/access";
+import { receiptAccess, receiptError, receiptSelection, receiptScope } from "@/server/business/vendor-documents/access";
 import { emptyReceipt, receiptFilters } from "@/features/vendor-documents/domain";
 export async function GET(request: Request) {
   try {

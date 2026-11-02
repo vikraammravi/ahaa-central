@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { platformSession, PlatformAccessError } from "@/server/modules/platform/access";
+import { platformSession, PlatformAccessError } from "@/server/platform/access";
 import PlatformConsole from "@/features/platform/components/PlatformConsole";
 
 export const dynamic = "force-dynamic";

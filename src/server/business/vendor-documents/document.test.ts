@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { queryResult } from "@tests/mocks/supabase";
 import { purchaseReceipt } from "@tests/mocks/receipts";
-import { receiptAccess } from "@/server/modules/vendor-documents/access";
+import { receiptAccess } from "@/server/business/vendor-documents/access";
 import { POST, PATCH, GET, DELETE } from "./document";
 import { businessId } from "@tests/mocks/workspaces";
 
-vi.mock("@/server/modules/vendor-documents/access", () => ({
+vi.mock("@/server/business/vendor-documents/access", () => ({
   receiptAccess: vi.fn(),
   receiptError: (error: Error) => Response.json({ error: error.message }, { status: 400 }),
   receiptScope: (query: unknown) => query,
