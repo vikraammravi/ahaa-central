@@ -1,4 +1,4 @@
-import type { InvoicePaymentRecord } from "../payments";
+import type { InvoicePaymentRecord } from "@/features/billing/payments";
 import type { DatabaseEnums, DatabaseTables } from "./database.generated";
 
 export type UserRole = DatabaseEnums["user_role"];

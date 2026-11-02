@@ -2,7 +2,7 @@
 
 import { BackLink } from "@/components/shared/BackLink";
 import { use } from "react";
-import { OrderDetail } from "@/components/shared/OrderDetail";
+import { OrderDetail } from "@/features/orders/components/OrderDetail";
 
 export default function AdminOrderDetailPage({
   params,

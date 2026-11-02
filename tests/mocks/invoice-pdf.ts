@@ -1,4 +1,4 @@
-import type {InvoicePdfData} from "@/lib/invoice-pdf";
+import type {InvoicePdfData} from "@/features/billing/pdf-contract";
 import {branch,combinedInvoice,invoiceLine,order,profile} from "./fixtures";
 export const pdfId="12345678-1234-1234-1234-123456789012";
 export const pdfProfile={...profile,role:"CENTRAL_ADMIN",status:"active"};

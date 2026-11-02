@@ -1,4 +1,4 @@
-import type {BranchStockOverview} from "@/lib/admin/branch-stock";
+import type {BranchStockOverview} from "@/features/inventory/admin-branch-stock";
 import {branch,item} from "./fixtures";
 export const branchStockOverview:BranchStockOverview={
   rows:[{id:item.id,name:item.name,category:item.category,unit_type:item.unit_type,central_stock:20,branch_stock:{[branch.id]:3,second:0}}],

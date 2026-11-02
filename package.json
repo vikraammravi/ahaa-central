@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "node --test scripts/run-unit-tests.mjs && vitest run",
     "test:unit": "node --test scripts/run-unit-tests.mjs",
+    "test:boundaries": "node scripts/check-module-boundaries.mjs",
     "test:ui": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

@@ -16,7 +16,7 @@ export default defineConfig({
     unstubEnvs: true,
     coverage: {
       provider: "v8",
-      include: ["src/components/**/*.{ts,tsx}", "src/features/**/components/**/*.{ts,tsx}", "src/app/**/page.tsx", "src/lib/use*.ts"],
+      include: ["src/components/**/*.{ts,tsx}", "src/features/**/components/**/*.{ts,tsx}", "src/features/**/screens/**/*.{ts,tsx}", "src/features/**/hooks/*.ts", "src/app/**/page.tsx", "src/lib/use*.ts"],
       exclude: ["src/components/ui/**", "src/**/*.test.*"],
       reporter: ["text", "html", "json-summary"],
       thresholds: { statements: 70, branches: 60, functions: 65, lines: 80 },

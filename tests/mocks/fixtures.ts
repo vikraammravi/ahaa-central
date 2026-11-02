@@ -1,6 +1,6 @@
 import type { CatalogItem, Profile, Location, Order, PickupRequest, CateringEvent, WeeklyInvoiceDetails } from "@/lib/supabase/types";
-import type { InvoiceEditLine } from "@/lib/invoices";
-import type { InventoryWorkspace } from "@/lib/inventory";
+import type { InvoiceEditLine } from "@/features/billing/domain";
+import type { InventoryWorkspace } from "@/features/inventory/data";
 export const branch = {id:"branch",name:"Oshawa",address:"10 King St",city:"Oshawa",province:"ON",phone:"4165550100",is_central:false} as Location;
 export const centralLocation:Location={...branch,id:"central",name:"Scarborough Central",is_central:true};
 export const profile = {id:"user",full_name:"Test Manager",email:"manager@example.invalid",phone:"4165550100",role:"BRANCH_MANAGER",status:"active",location_id:branch.id} as Profile;

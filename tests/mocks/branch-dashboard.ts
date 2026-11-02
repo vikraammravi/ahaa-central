@@ -1,4 +1,4 @@
-import type { BranchDashboardSummary } from "@/lib/branch-dashboard-data";
+import type { BranchDashboardSummary } from "@/features/dashboard/branch-data";
 import { branch, order } from "./fixtures";
 export const branchDashboard: BranchDashboardSummary = {
  branch: { id: branch.id, name: branch.name }, businessDate: "2026-10-12", todaysOrder: { final_total_amount: 50 }, pendingOrders: 2,

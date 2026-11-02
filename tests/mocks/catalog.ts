@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import type { CatalogItem } from "@/lib/supabase/types";
-import { catalogCategory,compareCatalogItems,matchesCatalogFilter } from "@/lib/catalog";
-import { stockBadge } from "@/lib/stock";
+import { catalogCategory,compareCatalogItems,matchesCatalogFilter } from "@/features/catalog/domain";
+import { stockBadge } from "@/features/inventory/stock";
 
 export function installCatalogRpc(){
   const fallback=db.rpc.getMockImplementation();

@@ -1,6 +1,6 @@
 # SaaS modularization plan
 
-Status: proposed implementation sequence. No application or database changes are included in this document.
+Status: existing feature isolation (Phases 1 and 2) implemented and verified on the feature branch. The additive business foundation passed a staging rollback-only rehearsal; it is not installed. Operational business isolation and superadmin remain subsequent work. Production is unchanged.
 
 ## Objective
 

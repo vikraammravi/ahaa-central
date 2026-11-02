@@ -1,0 +1,92 @@
+"use client";
+
+import { useState } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { DataTable, type Column } from "@/components/shared/DataTable";
+import { Banner } from "@/components/shared/Banner";
+import { RowActions } from "@/components/shared/RowActions";
+import { LocationDialog } from "@/features/locations/components/LocationDialog";
+import { supabase } from "@/lib/supabase/client";
+import { useAsyncData } from "@/lib/useAsyncData";
+import { fetchLocations } from "@/features/locations/data";
+import type { Location } from "@/lib/supabase/types";
+
+export default function AdminBranchesPage() {
+  const { data, loading, error, refresh } = useAsyncData(fetchLocations);
+  const [editing, setEditing] = useState<Location | null>(null);
+
+
+  async function handleDelete(id: string) {
+    const { error } = await supabase.from("locations").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    await refresh();
+  }
+
+  const columns: Column<Location>[] = [
+    {
+      key: "name", cardSpan:2,
+      header: "Branch",
+      render: (r) => <span className="font-medium">{r.name}</span>,
+    },
+    { key: "address", header: "Address", render: (r) => r.address ?? "—", hideOn: "md" },
+    {
+      key: "city",
+      header: "City",
+      render: (r) => (r.city ? `${r.city}, ${r.province ?? ""}` : "—"),
+    },
+    { key: "phone", header: "Phone", render: (r) => r.phone ?? "—", hideOn: "sm" },
+    {
+      key: "type",
+      header: "Branch Type",
+      render: (r) => (
+        <StatusBadge status="active" label={r.is_central ? "Central" : "Branch"} />
+      ),
+    },
+    {
+      key: "actions", cardSpan:2,
+      header: "",
+      align: "right",
+      render: (r) => (
+        <RowActions
+          onEdit={() => setEditing(r)}
+          onDelete={() => handleDelete(r.id)}
+          deleteTitle={`Delete "${r.name}"?`}
+          deleteDescription="Removes this branch. Any orders or users linked to it will need reassignment."
+        />
+      ),
+    },
+  ];
+
+  return (
+    <div className="max-w-[1200px] mx-auto space-y-5">
+      <PageHeader
+        title="Branches"
+        subtitle="All Aaha locations, including the central kitchen."
+        actions={<LocationDialog onSaved={() => { void refresh(); }} />}
+      />
+      {error && <Banner tone="danger">{error}</Banner>}
+      <DataTable
+        data={data}
+        columns={columns}
+        loading={loading}
+        rowKey={(r) => r.id}
+        emptyTitle="No branches yet"
+        emptyBody="Add your first branch to start assigning managers and orders."
+      />
+
+      {editing && (
+        <LocationDialog
+          key={editing.id}
+          location={editing}
+          open
+          onOpenChange={(v) => !v && setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}

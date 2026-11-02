@@ -1,2 +1,2 @@
-import { BranchInventoryScreen } from "@/components/inventory/BranchInventoryScreen";
+import { BranchInventoryScreen } from "@/features/inventory/components/BranchInventoryScreen";
 export default function Page(){return <BranchInventoryScreen canSubmit/>;}
