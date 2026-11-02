@@ -28,3 +28,18 @@ it.each(["SUBMITTED","PREPARING"])("branch edit link is available only for Submi
   const link=screen.queryByRole("link",{name:"Edit Order"});
   if(status==="SUBMITTED")expect(link).toHaveAttribute("href",`/branch/order?edit=${order.id}`);else expect(link).not.toBeInTheDocument();
 });
+
+it("saves fulfillment through one batch operation and keeps edits when it fails",async()=>{
+ const lines=queryResult([invoiceLine]);
+ db.from.mockImplementation(table=>table==="order_lines"?lines:queryResult(table==="orders"?{...order,status:"PREPARING",locations:{name:branch.name},weekly_invoices:null}:[]));
+ db.rpc.mockReturnValue(queryResult(null,{message:"Changed by another admin. Refresh before saving."}));
+ render(<OrderDetail orderId={order.id} canEdit/>);
+ const quantity=await screen.findByLabelText(`Pickup quantity ${item.name}`);
+ await userEvent.clear(quantity);await userEvent.type(quantity,"3");
+ await userEvent.click(screen.getByRole("button",{name:"Save Fulfillment"}));
+ expect(await screen.findByText("Changed by another admin. Refresh before saving.")).toBeVisible();
+ expect(quantity).toHaveValue(3);
+ expect(db.rpc).toHaveBeenCalledTimes(1);
+ expect(db.rpc).toHaveBeenCalledWith("save_order_fulfillment",expect.objectContaining({p_order_id:order.id}));
+ expect(lines.update).not.toHaveBeenCalled();
+});

@@ -11,6 +11,7 @@ beforeEach(()=>{
   vi.resetAllMocks();
   db.from.mockReturnValue(queryResult([]));
   db.rpc.mockReturnValue(queryResult(null));
+  db.auth.onAuthStateChange.mockReturnValue({data:{subscription:{unsubscribe:vi.fn()}}});
   db.auth.getUser.mockResolvedValue({data:{user:null},error:null});
   db.auth.signOut.mockResolvedValue({error:null});
   db.auth.updateUser.mockResolvedValue({error:null});

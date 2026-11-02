@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useAsyncData<T>(load: (signal: AbortSignal) => Promise<T>, {
-  pollInterval, enabled = true,
-}: { pollInterval?: number; enabled?: boolean } = {}) {
+  pollInterval, enabled = true, refreshOnFocus = true,
+}: { pollInterval?: number; enabled?: boolean; refreshOnFocus?: boolean } = {}) {
   const [state, setState] = useState<{ data: T | null; loading: boolean; error: string | null }>({ data: null, loading: enabled, error: null });
   const activeRequest = useRef<AbortController | null>(null);
   const refresh = useCallback(async (quiet = false) => {
@@ -31,8 +31,7 @@ export function useAsyncData<T>(load: (signal: AbortSignal) => Promise<T>, {
     const initial = window.setTimeout(() => { void refresh(); }, 0);
     const update = () => { if (!document.hidden && !activeRequest.current) void refresh(true); };
     const timer = pollInterval ? window.setInterval(update, pollInterval) : undefined;
-    window.addEventListener("focus", update);
-    document.addEventListener("visibilitychange", update);
+    if (refreshOnFocus) { window.addEventListener("focus", update); document.addEventListener("visibilitychange", update); }
     return () => {
       window.clearTimeout(initial);
       if (timer) window.clearInterval(timer);
@@ -40,7 +39,10 @@ export function useAsyncData<T>(load: (signal: AbortSignal) => Promise<T>, {
       window.removeEventListener("focus", update);
       document.removeEventListener("visibilitychange", update);
     };
-  }, [refresh, enabled, pollInterval]);
+  }, [refresh, enabled, pollInterval, refreshOnFocus]);
 
-  return { ...state, loading: enabled && state.loading, refresh };
+  const mutate = useCallback((update: (current: T | null) => T) => {
+    setState(previous => ({ ...previous, data: update(previous.data) }));
+  }, []);
+  return { ...state, mutate, loading: enabled && state.loading, refresh };
 }

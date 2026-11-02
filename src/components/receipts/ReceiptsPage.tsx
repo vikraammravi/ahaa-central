@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAsyncData } from "@/lib/useAsyncData";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/shared/FormField";
 import { FormSelect } from "@/components/shared/FormSelect";
@@ -23,30 +24,20 @@ export default function ReceiptsPage() {
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const debouncedSearch = useDebouncedValue(search);
-  const [rows, setRows] = useState<PurchaseReceipt[]>([]);
   const [page, setPage] = useState(0);
-  const [count, setCount] = useState(0);
   const [receipt, setReceipt] = useState<PurchaseReceipt | null>(null);
   const [revision, setRevision] = useState(0);
-  const [loadedUrl, setLoadedUrl] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const listUrl = useMemo(() => "/api/receipts?" + new URLSearchParams({ page: String(page), search: debouncedSearch, category, status }), [page, debouncedSearch, category, status]);
-  const loading = loadedUrl !== listUrl || refreshing;
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    try { const data = await api(listUrl); setRows(data.rows); setCount(data.count); }
-    finally { setRefreshing(false); }
-  }, [listUrl]);
-  useEffect(() => {
-    let active = true;
-    api(listUrl).then(data => { if (active) { setRows(data.rows); setCount(data.count); setError(""); } })
-      .catch(e => { if (active) setError(e.message); })
-      .finally(() => { if (active) setLoadedUrl(listUrl); });
-    return () => { active = false; };
-  }, [listUrl]);
+  const loadList = useCallback((signal: AbortSignal) => api(listUrl, { signal }) as Promise<{ rows: PurchaseReceipt[]; count: number }>, [listUrl]);
+  const list = useAsyncData(loadList, { refreshOnFocus: false });
+  const rows = list.data?.rows ?? [];
+  const count = list.data?.count ?? 0;
+  const loading = list.loading;
+  const refresh = list.refresh;
+  const pageError = error || list.error;
   const receiptId = receipt?.id;
   const scanStatus = receipt?.scan_status;
   useEffect(() => {
@@ -72,12 +63,11 @@ export default function ReceiptsPage() {
     setNotice(data.restored ? "Previously deleted invoice restored. Scan usage is unchanged." : data.duplicate ? "This file already exists in the invoice list." : "Invoice uploaded as a draft. Open Edit to scan and review it.");
     if (page === 0 && !debouncedSearch && !category && !status) {
       if (!rows.some(row => row.id === data.receipt.id)) {
-        setRows(current => [data.receipt, ...current].slice(0, 25));
-        setCount(current => current + 1);
+        list.mutate(current => ({ rows: [data.receipt, ...(current?.rows ?? [])].slice(0, 25), count: (current?.count ?? 0) + 1 }));
       }
     }
     if (page !== 0) setPage(0);
-    else void refresh().catch(() => setError("Upload succeeded, but the invoice list could not refresh. Reload the page."));
+    else void refresh();
   }
   async function remove(row: PurchaseReceipt) {
     await api(`/api/receipts/${row.id}`, { method: "DELETE" });
@@ -90,7 +80,7 @@ export default function ReceiptsPage() {
       await api(`/api/receipts/${receipt!.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ details, category, reviewed: true }) });
       setReceipt(null);
       setNotice("Vendor invoice completed successfully. Inventory has not changed.");
-      await refresh().catch(() => setError("Invoice saved, but the list could not refresh. Reload the page."));
+      await refresh();
     } finally { setBusy(false); }
   }
   async function scan() {
@@ -100,9 +90,9 @@ export default function ReceiptsPage() {
   }
   return <div className="max-w-[1400px] mx-auto min-w-0 space-y-5">
     <PageHeader title="Vendor Invoices" subtitle="10 AI scans per user per day · 4 MB per file · 100 scans/month per environment." actions={!receipt && <ReceiptUploadDialog onUpload={upload} />} />
-    {error && <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{error}</p>}
+    {pageError && <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{pageError}</p>}
     {notice && <p role="status" className="rounded-lg border p-3 text-sm">{notice}</p>}
-    {receipt ? <ReceiptReview key={`${receipt.id}-${revision}`} receipt={receipt} busy={busy} onSave={save} onScan={scan} onClose={() => { setReceipt(null); void refresh().catch(e => setError(e.message)); }} /> : <>
+    {receipt ? <ReceiptReview key={`${receipt.id}-${revision}`} receipt={receipt} busy={busy} onSave={save} onScan={scan} onClose={() => { setReceipt(null); void refresh(); }} /> : <>
       <FilterBar columns={3}>
         <FormField label="Search invoices" htmlFor="receipt-search"><Input id="receipt-search" type="search" placeholder="Vendor or invoice number" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} /></FormField>
         <FormField label="Category" htmlFor="receipt-category-filter"><FormSelect id="receipt-category-filter" value={category} onChange={value => { setCategory(value); setPage(0); }} options={[{ value: "", label: "All categories" }, ...expenseCategories.map(value => ({ value, label: value }))]} /></FormField>

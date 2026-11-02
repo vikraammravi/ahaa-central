@@ -12,6 +12,7 @@ import { DataTable, type Column } from "./DataTable";
 import { Banner } from "./Banner";
 import { EmptyState } from "./EmptyState";
 import { LoadingState } from "./Spinner";
+import { saveOrderFulfillment } from "@/lib/order-detail-data";
 import { supabase } from "@/lib/supabase/client";
 import {
   ORDER_STATUS_BADGE,
@@ -115,24 +116,8 @@ export function OrderDetail({
     setSaving(true);
     setError(null);
     try {
-      for (const line of lines) {
-        const e = edits[line.id];
-        if (!e) continue;
-        if (
-          e.fulfilled === line.fulfilled_quantity &&
-          (e.reason ?? "") === (line.shortage_reason ?? "")
-        )
-          continue;
-        const { error } = await supabase
-          .from("order_lines")
-          .update({
-            fulfilled_quantity: e.fulfilled,
-            shortage_reason: e.reason.trim() || null,
-          })
-          .eq("id", line.id);
-        if (error) throw error;
-      }
-      load();
+      await saveOrderFulfillment(orderId, lines, edits);
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {

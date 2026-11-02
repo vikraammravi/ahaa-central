@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BranchInventorySummary } from "@/components/inventory/BranchInventorySummary";
 import { formatDate, formatTime } from "@/lib/format";
@@ -12,86 +11,43 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { KpiGrid, type Kpi } from "@/components/shared/KpiCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Banner } from "@/components/shared/Banner";
-import { supabase } from "@/lib/supabase/client";
+import { fetchBranchDashboard } from "@/lib/branch-dashboard-data";
+import { useAsyncData } from "@/lib/useAsyncData";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import { ORDER_STATUS_BADGE, ORDER_STATUS_LABEL } from "@/lib/orders";
 import { StatusBadge } from "@/components/ui/status-badge";
-import type { CateringEvent, Location, Order } from "@/lib/supabase/types";
 
 export default function BranchHomePage() {
   const greeting = useGreeting();
   const { profile, loading: userLoading, error: userError } = useCurrentUser();
-  const [branch, setBranch] = useState<Location | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [catering, setCatering] = useState<CateringEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (userLoading) return;
-    if (!profile?.location_id) return;
-    (async () => {
-      const [{ data: l }, { data: o, error: oe }, { data: c, error: ce }] =
-        await Promise.all([
-          supabase
-            .from("locations")
-            .select("*")
-            .eq("id", profile.location_id)
-            .single(),
-          supabase
-            .from("orders")
-            .select("*")
-            .eq("location_id", profile.location_id)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("catering_events")
-            .select("*")
-            .eq("location_id", profile.location_id)
-            .order("event_datetime"),
-        ]);
-      setBranch(l as Location);
-      if (oe) setError(oe.message);
-      else setOrders((o as Order[]) ?? []);
-      if (ce) setError(ce.message);
-      else setCatering((c as CateringEvent[]) ?? []);
-      setLoading(false);
-    })();
-  }, [userLoading, profile?.location_id]);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todaysOrders = orders.filter((o) => new Date(o.created_at) >= today);
-  const pending = orders.filter(
-    (o) => o.status === "SUBMITTED" || o.status === "PREPARING",
-  ).length;
-
-  const upcomingCatering = catering.filter(
-    (e) =>
-      new Date(e.event_datetime) >= today &&
-      e.status !== "CANCELLED" &&
-      e.status !== "COMPLETED",
-  );
+  const summary = useAsyncData(fetchBranchDashboard, { enabled: !userLoading && !!profile?.location_id });
+  const data = summary.data?.branch?.id === profile?.location_id ? summary.data : null;
+  const branch = data?.branch;
+  const orders = data?.recentOrders ?? [];
+  const upcomingCatering = data?.upcomingCatering ?? [];
+  const todaysOrder = data?.todaysOrder;
+  const pending = data?.pendingOrders ?? 0;
 
   const kpis: Kpi[] = [
     {
       label: "Today's Order",
-      value: todaysOrders.length
-        ? `CA$${Number(todaysOrders[0].final_total_amount).toFixed(2)}`
+      value: todaysOrder
+        ? `CA$${Number(todaysOrder.final_total_amount).toFixed(2)}`
         : "—",
-      hint: todaysOrders.length ? "Submitted" : "Not placed yet",
-      tone: todaysOrders.length ? "success" : "default",
+      hint: todaysOrder ? "Submitted" : "Not placed yet",
+      tone: todaysOrder ? "success" : "default",
     },
     { label: "In Progress", value: `${pending}`, hint: "Orders" },
     {
       label: "Upcoming Catering",
-      value: `${upcomingCatering.length}`,
+      value: `${summary.data?.upcomingCateringCount ?? 0}`,
       hint: "Events booked",
       tone: upcomingCatering.length ? "success" : "default",
     },
   ];
 
-  const pageError = error ?? userError;
-  const showLoading = userLoading || (!!profile?.location_id && loading);
+  const pageError = summary.error ?? userError;
+  const showLoading = userLoading || summary.loading;
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-4 lg:space-y-6">

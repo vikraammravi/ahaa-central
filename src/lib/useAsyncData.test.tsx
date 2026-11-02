@@ -13,3 +13,15 @@ it("query errors preserve data and can recover on retry",async()=>{
 it("query cleanup cancels the active request",async()=>{
   let signal:AbortSignal|undefined;const load=vi.fn((input:AbortSignal)=>{signal=input;return new Promise(()=>{});});const view=renderHook(()=>useAsyncData(load));await waitFor(()=>expect(load).toHaveBeenCalled());view.unmount();expect(signal?.aborted).toBe(true);
 });
+
+it("ignores an older response after the query changes even when transport ignores abort",async()=>{
+ let finish!: (value:string)=>void;
+ const oldLoad=vi.fn(()=>new Promise<string>(resolve=>{finish=resolve;}));
+ const newLoad=vi.fn().mockResolvedValue("latest filters");
+ const {result,rerender}=renderHook(({load})=>useAsyncData(load),{initialProps:{load:oldLoad}});
+ await waitFor(()=>expect(oldLoad).toHaveBeenCalled());
+ rerender({load:newLoad});
+ await waitFor(()=>expect(result.current.data).toBe("latest filters"));
+ await act(async()=>finish("old filters"));
+ expect(result.current.data).toBe("latest filters");
+});

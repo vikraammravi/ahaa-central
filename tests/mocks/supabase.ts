@@ -2,7 +2,7 @@ import { vi } from "vitest";
 export const router = {push:vi.fn(),replace:vi.fn(),refresh:vi.fn(),back:vi.fn()};
 export const db = {
   from: vi.fn(), rpc: vi.fn(),
-  auth: {getUser:vi.fn(),signInWithPassword:vi.fn(),signOut:vi.fn(),updateUser:vi.fn(),resetPasswordForEmail:vi.fn()},
+  auth: {getUser:vi.fn(),onAuthStateChange:vi.fn(),signInWithPassword:vi.fn(),signOut:vi.fn(),updateUser:vi.fn(),resetPasswordForEmail:vi.fn()},
 };
 export function queryResult(data: unknown, error: {message:string}|null = null, count = 0) {
   const promise = Promise.resolve({data,error,count});
