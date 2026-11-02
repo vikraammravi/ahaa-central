@@ -1,6 +1,6 @@
 # SaaS modularization plan
 
-Status: existing feature isolation (Phases 1 and 2) implemented and verified on the feature branch. The additive business foundation passed a staging rollback-only rehearsal; it is not installed. Operational business isolation and superadmin remain subsequent work. Production is unchanged.
+Status: existing feature isolation (Phases 1 and 2) implemented and verified on the feature branch. The additive business foundation was installed in staging after its rollback-only rehearsal and explicit approval. The staging admin was explicitly granted platform access. Operational business isolation and superadmin remain unfinished; their SQL drafts are outside the migration folder. No refactor code has been deployed, and production is unchanged. See saas-checkpoint.md for the verified handoff.
 
 ## Objective
 

@@ -17,7 +17,11 @@ Current authorization is appropriate to one Ahaa organization with multiple bran
 
 Existing profiles are copied into memberships for Ahaa without changing auth users, passwords or legacy operational records. No existing business admin is automatically promoted. No operational authorization helper is replaced in this foundation. Creating these tables does not enable a second customer, enforce suspension of legacy operations or make any existing data tenant-safe.
 
-The migration and foundation assertions passed in one staging transaction that ended in ROLLBACK. The foundation is prepared, not installed. The separately prepared staging bootstrap targets only the active admin@aahatrulysouth.com account and must not run without explicit approval for its expanded platform role. It is an operations script, not an automatic migration.
+The migration and foundation assertions passed in one staging transaction that ended in ROLLBACK. After explicit user approval, the foundation and the staging-only bootstrap were installed together in one transaction. Only the active staging admin@aahatrulysouth.com account was granted platform access. Real-login checks passed for admin, manager, employee and anonymous access. Production has no foundation tables. The bootstrap remains an operations script, not an automatic migration or authorization to promote production accounts.
+
+The foundation was applied through SQL Editor; reconcile its migration history before adopting automated CLI migration deployment. Do not replay a non-idempotent CREATE TABLE migration into staging.
+
+Unfinished operational-isolation SQL and proposed assertions are stored in `supabase/planned/*.draft.sql`, not in migrations or runnable test discovery. They have not been executed or validated. They deliberately revoke legacy receipt functions, and must not be applied before replacement scoped functions, workspace-aware APIs/UI and full cross-business tests are complete.
 
 Do not enable platform onboarding or claim tenant isolation until the following cutover is implemented and tested.
 
