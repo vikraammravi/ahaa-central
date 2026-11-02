@@ -61,8 +61,10 @@ function LoginInner() {
 
   return (
     <AuthShell
-      title="Welcome back"
-      subtitle="Sign in to keep the kitchen moving."
+      title={next === "/superadmin" ? "Superadmin sign in" : "Welcome back"}
+      subtitle={next === "/superadmin" ? "Sign in to manage businesses on the platform." : "Sign in to keep the kitchen moving."}
+      showBrand={next !== "/superadmin"}
+      brandName={next === "/superadmin" ? "Platform administration" : undefined}
     >
       {(activated || reset) && (
         <Banner tone="success" className="mb-4">

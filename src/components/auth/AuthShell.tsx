@@ -7,12 +7,14 @@ export function AuthShell({
   children,
   footer,
   showBrand = true,
+  brandName = "Aaha Central · Truly South",
 }: {
   title?: string;
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
   showBrand?: boolean;
+  brandName?: string;
 }) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -45,7 +47,7 @@ export function AuthShell({
       </main>
 
       <footer className="p-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Aaha Central · Truly South
+        © {new Date().getFullYear()} {brandName}
       </footer>
     </div>
   );

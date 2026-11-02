@@ -4,14 +4,29 @@ import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_CONFIGURED } from "@/lib/supabase/
 import { activeRole, safeNextPath, userHome } from "@/lib/auth";
 import { BUSINESS_COOKIE, BUSINESS_HEADER, businessWorkspacesEnabled, selectedBusiness } from "@/features/workspaces/context";
 import { loadSessionProfile } from "@/features/workspaces/session";
+import { platformConsoleEnabled, platformDeployment } from "@/lib/app-surface";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
+  const platformOnly = platformDeployment();
+  const consoleEnabled = platformConsoleEnabled();
+  const isPlatformApi = pathname === "/api/platform" || pathname.startsWith("/api/platform/");
+  if (platformOnly) {
+    if (pathname === "/") return NextResponse.redirect(new URL("/superadmin", request.url));
+    if (pathname === "/login" && request.nextUrl.searchParams.get("next") !== "/superadmin") return NextResponse.redirect(new URL("/login?next=/superadmin", request.url));
+    const allowed = pathname === "/superadmin" || pathname.startsWith("/superadmin/") || isPlatformApi
+      || ["/login", "/forgot-password", "/set-password", "/auth/confirm"].includes(pathname);
+    if (!allowed) return new NextResponse("Not found.", { status: 404 });
+  } else if (isPlatformApi || pathname === "/superadmin" || pathname.startsWith("/superadmin/") || (pathname === "/login" && request.nextUrl.searchParams.get("next") === "/superadmin")) {
+    return new NextResponse("Not found.", { status: 404 });
+  }
+  // API handlers enforce their own session/role checks. Surface separation applies first.
+  if (pathname.startsWith("/api/")) return response;
   const businessMode = businessWorkspacesEnabled();
   const isPlatform = pathname === "/superadmin" || pathname.startsWith("/superadmin/");
   const platformLogin = pathname === "/login" && request.nextUrl.searchParams.get("next") === "/superadmin";
-  if (isPlatform && process.env.PLATFORM_CONSOLE_ENABLED !== "true") return new NextResponse("Not found.", { status: 404 });
+  if (isPlatform && !consoleEnabled) return new NextResponse("Not found.", { status: 404 });
   const isWorkspaces = businessMode && pathname === "/workspaces";
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isBranch = pathname === "/branch" || pathname.startsWith("/branch/");
@@ -51,9 +66,10 @@ export async function proxy(request: NextRequest) {
     const permission = await supabase.rpc("platform_is_administrator");
     return !permission.error && permission.data === true ? response : new NextResponse("Platform access is required.", { status: 403 });
   }
-  if (pathname === "/login" && user && !authError && request.nextUrl.searchParams.get("next") === "/superadmin" && process.env.PLATFORM_CONSOLE_ENABLED === "true") {
+  if (pathname === "/login" && user && !authError && platformLogin && consoleEnabled) {
     const permission = await supabase.rpc("platform_is_administrator");
     if (!permission.error && permission.data === true) return redirect("/superadmin");
+    return response;
   }
   if (isWorkspaces && user && !authError) return response;
   if (user && (protectedRoute || pathname === "/login")) {
@@ -77,4 +93,4 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|api/|.*\\.).*)"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|aaha-logo\\.(?:png|svg)$|(?:window|vercel|next|globe|file)\\.svg$).*)"] };

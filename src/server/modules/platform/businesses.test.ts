@@ -4,10 +4,18 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { createBusiness, listBusinesses } from "./businesses";
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServer: vi.fn(() => db) }));
 beforeEach(() => {
+  vi.stubEnv("APP_SURFACE", "platform");
   vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "true");
+  vi.stubEnv("PLATFORM_BUSINESS_REGISTRATION_ENABLED", "true");
   db.auth.getUser.mockResolvedValue({ data: { user: { id: "platform-user" } }, error: null });
   db.rpc.mockImplementation((name: string) => queryResult(name === "platform_is_administrator" ? true : { id: "new-business", status: "provisioning" }));
   db.from.mockReturnValue(queryResult([]));
+});
+it("can enable the dashboard while registration remains disabled", async () => {
+  vi.stubEnv("PLATFORM_BUSINESS_REGISTRATION_ENABLED", "false");
+  expect((await listBusinesses()).status).toBe(200);
+  expect((await createBusiness(request({ name: "Test", slug: "test" }))).status).toBe(409);
+  expect(db.rpc.mock.calls.some(([name]) => name === "platform_create_business")).toBe(false);
 });
 function request(value: unknown, origin = "https://app.test") {
   return new Request("https://app.test/api/platform/businesses", { method: "POST", headers: { origin, "Content-Type": "application/json" }, body: JSON.stringify(value) });

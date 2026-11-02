@@ -11,5 +11,5 @@ export default async function SuperadminPage() {
     if (error instanceof PlatformAccessError) notFound();
     throw error;
   }
-  return <PlatformConsole />;
+  return <PlatformConsole registrationEnabled={process.env.PLATFORM_BUSINESS_REGISTRATION_ENABLED === "true"} />;
 }

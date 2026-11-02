@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { ConfirmationHost } from "@/components/shared/ConfirmationHost";
+import { platformDeployment } from "@/lib/app-surface";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,8 +19,8 @@ const serif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Aaha Central",
-  description: "Central Kitchen operations for Aaha branches",
+  title: platformDeployment() ? "Platform administration" : "Aaha Central",
+  description: platformDeployment() ? "Business platform administration" : "Central Kitchen operations for Aaha branches",
   robots: {
     index: false,
     follow: false,

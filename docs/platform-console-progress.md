@@ -10,6 +10,8 @@ Ahaa is a customer business. Platform authorization is a separate explicit grant
 - Registration creates only a provisioning business with isolation readiness false. Caller-provided status, readiness or privilege fields are never forwarded.
 - Database registration draft checks platform permission again, validates the name/address, enforces address uniqueness and uses the existing audit trigger. No new tables.
 - `PLATFORM_CONSOLE_ENABLED=true` is server-only and defaults off. Do not enable it in production during staging work.
+- The console also requires `APP_SURFACE=platform`. The default business deployment cannot serve platform pages/APIs. See platform-deployment.md for the separate Vercel project setup.
+- Registration additionally requires server-only `PLATFORM_BUSINESS_REGISTRATION_ENABLED=true`; it defaults off in the page and API, so a read-only starting dashboard can run before the registration migration is installed.
 
 ## Not released
 
@@ -20,6 +22,8 @@ Next: rehearse the platform function with unauthorized/authorized users and audi
 ## Local verification
 
 21 focused tests passed across the console UI, platform API, proxy authorization and existing login flows. TypeScript, scoped ESLint and module boundaries passed. The 37 Node unit tests passed; the full Vitest run stalled before reporting results and was stopped, so no full-suite pass is claimed. The combined rollback-only SQL rehearsal now includes platform registration permission/audit/duplicate checks, but that revised SQL has not been executed. Browser layout review is pending staging installation.
+
+The subsequent local preview passed 23 focused tests, TypeScript and scoped lint. A real staging platform login was verified through the local sign-in screen to `/superadmin`; the dashboard loaded the existing Ahaa registry entry. Only the local development process enables the console, with registration disabled. No hosted flags, business records or database permissions were changed. Local browser proof is saved outside Git as `superadmin-starting-dashboard.png`.
 
 ## Routes
 

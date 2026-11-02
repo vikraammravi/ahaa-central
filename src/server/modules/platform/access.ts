@@ -1,11 +1,12 @@
 import "server-only";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { platformConsoleEnabled } from "@/lib/app-surface";
 
 export class PlatformAccessError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
 }
 export async function platformSession() {
-  if (process.env.PLATFORM_CONSOLE_ENABLED !== "true") throw new PlatformAccessError("Not found.", 404);
+  if (!platformConsoleEnabled()) throw new PlatformAccessError("Not found.", 404);
   // Platform authorization is independent of the selected customer and customer role.
   const session = await createSupabaseServer({ workspace: false });
   const { data: { user }, error } = await session.auth.getUser();

@@ -14,7 +14,7 @@ import { useAsyncData } from "@/lib/useAsyncData";
 import { fetchBusinesses, registerBusiness } from "../data";
 import { businessWorkspacesEnabled } from "@/features/workspaces/context";
 
-export default function PlatformConsole() {
+export default function PlatformConsole({ registrationEnabled = false }: { registrationEnabled?: boolean }) {
   const list = useAsyncData(fetchBusinesses);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,11 +33,15 @@ export default function PlatformConsole() {
   }
   return <main className="mx-auto min-h-screen max-w-6xl space-y-6 px-4 py-6 sm:px-6">
     <header className="flex flex-wrap items-center justify-between gap-3">
-      <div><p className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4" />Platform administration</p><h1 className="mt-1 text-2xl font-semibold">Businesses</h1></div>
+      <div><p className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4" />Platform administration</p><h1 className="mt-1 text-2xl font-semibold">Superadmin dashboard</h1></div>
       <div className="flex flex-wrap gap-2">{businessWorkspacesEnabled() && <Button asChild variant="outline"><Link href="/workspaces">My workspaces</Link></Button>}<SignOutButton variant="compact" /></div>
     </header>
     <p className="text-sm text-muted-foreground">Each business has its own users and operations. Platform access manages business setup; it does not open customer orders or invoices.</p>
-    <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Business directory</h2><Button onClick={() => { setError(""); setOpen(true); }}><Plus />Add business</Button></div>
+    {!list.loading && list.data && <section aria-label="Business overview" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {[["Registered businesses", list.data.length], ["In setup", list.data.filter(business => !business.isolation_ready || business.status === "provisioning").length], ["Suspended", list.data.filter(business => business.status === "suspended").length]].map(([label, count]) => <Card key={label}><CardContent className="p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{count}</p></CardContent></Card>)}
+    </section>}
+    {!registrationEnabled && <Banner tone="info">Business registration is coming next. You can review the business directory here.</Banner>}
+    <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Business directory</h2>{registrationEnabled && <Button onClick={() => { setError(""); setOpen(true); }}><Plus />Add business</Button>}</div>
     {notice && <Banner tone="success">{notice}</Banner>}
     {list.error && <Banner tone="danger">{list.error}<Button variant="ghost" onClick={() => void list.refresh()}>Retry</Button></Banner>}
     {list.loading ? <LoadingState label="Loading businesses…" /> : <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -47,6 +51,7 @@ export default function PlatformConsole() {
       </CardContent></Card>)}
       {!list.data?.length && !list.error && <p className="text-sm text-muted-foreground">No businesses registered yet.</p>}
     </div>}
+    {!!list.data && list.data.length === 100 && <p className="text-sm text-muted-foreground">Showing the first 100 businesses. Summary counts reflect this list.</p>}
     <Dialog open={open} onOpenChange={value => { if (!busy) setOpen(value); }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Add business</DialogTitle><DialogDescription>Register a separate customer business. It stays in setup until owner provisioning and isolation checks are complete.</DialogDescription></DialogHeader>
       <form className="space-y-4" onSubmit={submit}>{error && <Banner tone="danger">{error}</Banner>}<div className="space-y-2"><Label htmlFor="business-name">Business name</Label><Input id="business-name" name="name" required maxLength={200} disabled={busy} /></div><div className="space-y-2"><Label htmlFor="business-slug">Business address</Label><Input id="business-slug" name="slug" required minLength={2} maxLength={60} pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="example-business" disabled={busy} /><p className="text-xs text-muted-foreground">A unique identifier using lowercase letters, numbers and hyphens.</p></div><Button className="w-full" type="submit" disabled={busy}>{busy ? "Registering…" : "Register business"}</Button></form>
     </DialogContent></Dialog>

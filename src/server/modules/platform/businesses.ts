@@ -19,6 +19,7 @@ export async function createBusiness(request: Request) {
   try {
     if (!hasSameOrigin(request)) throw new PlatformAccessError("Request not allowed.", 403);
     const session = await platformSession();
+    if (process.env.PLATFORM_BUSINESS_REGISTRATION_ENABLED !== "true") throw new PlatformAccessError("Business registration is not enabled yet.", 409);
     const raw = await request.text();
     if (raw.length > 4096) throw new PlatformAccessError("Business details are too large.", 413);
     let input: unknown;

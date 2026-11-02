@@ -17,7 +17,7 @@ it("shows business setup separately from customer operations", async () => {
   expect(screen.queryByRole("link", { name: /invoice/i })).not.toBeInTheDocument();
 });
 it("registers a business in a dialog and explains the pending activation", async () => {
-  render(<PlatformConsole />);
+  render(<PlatformConsole registrationEnabled />);
   fireEvent.click(screen.getByRole("button", { name: "Add business" }));
   fireEvent.change(screen.getByLabelText("Business name"), { target: { value: "New Customer" } });
   fireEvent.change(screen.getByLabelText("Business address"), { target: { value: "new-customer" } });
@@ -27,11 +27,17 @@ it("registers a business in a dialog and explains the pending activation", async
 });
 it("keeps entered details available when registration fails", async () => {
   vi.mocked(registerBusiness).mockRejectedValue(new Error("That business address is already in use."));
-  render(<PlatformConsole />);
+  render(<PlatformConsole registrationEnabled />);
   fireEvent.click(screen.getByRole("button", { name: "Add business" }));
   fireEvent.change(screen.getByLabelText("Business name"), { target: { value: "Ahaa" } });
   fireEvent.change(screen.getByLabelText("Business address"), { target: { value: "ahaa" } });
   fireEvent.click(screen.getByRole("button", { name: "Register business" }));
   expect(await screen.findByText("That business address is already in use.")).toBeInTheDocument();
   expect(screen.getByLabelText("Business name")).toHaveValue("Ahaa");
+});
+it("shows the starting dashboard with registration unavailable by default", async () => {
+  render(<PlatformConsole />);
+  expect(await screen.findByRole("heading", { name: "Superadmin dashboard" })).toBeInTheDocument();
+  expect(await screen.findByRole("region", { name: "Business overview" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Add business" })).not.toBeInTheDocument();
 });

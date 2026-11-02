@@ -46,6 +46,7 @@ it("keeps the platform console unavailable by default", async () => {
   expect((await proxy(new NextRequest("https://app.test/superadmin"))).status).toBe(404);
 });
 it("authorizes platform access independently of customer selection and role", async () => {
+  vi.stubEnv("APP_SURFACE", "platform");
   vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "true");
   db.rpc.mockReturnValue(queryResult(true));
   const response = await proxy(new NextRequest("https://app.test/superadmin", { headers: { cookie: "ahaa_business=invalid" } }));
@@ -54,7 +55,25 @@ it("authorizes platform access independently of customer selection and role", as
   expect(db.from).not.toHaveBeenCalled();
 });
 it("does not treat a customer admin as a platform admin", async () => {
+  vi.stubEnv("APP_SURFACE", "platform");
   vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "true");
   db.rpc.mockReturnValue(queryResult(false));
   expect((await proxy(new NextRequest("https://app.test/superadmin"))).status).toBe(403);
+});
+it("keeps business pages and APIs unavailable on the platform deployment", async () => {
+  vi.stubEnv("APP_SURFACE", "platform");
+  for (const path of ["/admin/orders", "/branch/home", "/employee/inventory", "/workspaces", "/api/admin/branch-users", "/api/receipts", "/api/invoices/order/id/pdf", "/admin/orders/id.pdf"]) {
+    expect((await proxy(new NextRequest(`https://app.test${path}`))).status).toBe(404);
+  }
+  expect(db.auth.getUser).not.toHaveBeenCalled();
+});
+it("keeps platform pages, login and APIs unavailable on the business deployment even if the console flag is set", async () => {
+  vi.stubEnv("APP_SURFACE", "business");
+  vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "true");
+  for (const path of ["/superadmin", "/login?next=/superadmin", "/api/platform/businesses"]) expect((await proxy(new NextRequest(`https://app.test${path}`))).status).toBe(404);
+});
+it("uses the platform sign-in destination for its root and plain login", async () => {
+  vi.stubEnv("APP_SURFACE", "platform");
+  expect((await proxy(new NextRequest("https://app.test/"))).headers.get("location")).toBe("https://app.test/superadmin");
+  expect((await proxy(new NextRequest("https://app.test/login"))).headers.get("location")).toBe("https://app.test/login?next=/superadmin");
 });
