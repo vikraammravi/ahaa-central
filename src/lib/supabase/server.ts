@@ -4,9 +4,9 @@ import { SUPABASE_URL, SUPABASE_KEY } from "./env";
 import { BUSINESS_COOKIE, BUSINESS_HEADER, businessWorkspacesEnabled, selectedBusiness } from "@/features/workspaces/context";
 
 // Server Supabase client for Server Components, Route Handlers, Server Actions.
-export async function createSupabaseServer() {
+export async function createSupabaseServer(options: { workspace?: boolean } = {}) {
   const cookieStore = await cookies();
-  const selection = businessWorkspacesEnabled() ? selectedBusiness(cookieStore.getAll().filter(cookie => cookie.name === BUSINESS_COOKIE).map(cookie => `${cookie.name}=${cookie.value}`).join(";")) : null;
+  const selection = options.workspace !== false && businessWorkspacesEnabled() ? selectedBusiness(cookieStore.getAll().filter(cookie => cookie.name === BUSINESS_COOKIE).map(cookie => `${cookie.name}=${cookie.value}`).join(";")) : null;
   return createServerClient(SUPABASE_URL, SUPABASE_KEY, {
     global: { headers: selection ? { [BUSINESS_HEADER]: selection } : {} },
     cookies: {

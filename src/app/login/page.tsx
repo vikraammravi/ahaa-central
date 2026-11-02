@@ -37,6 +37,12 @@ function LoginInner() {
         await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
 
+      if (next === "/superadmin") {
+        const permission = await supabase.rpc("platform_is_administrator");
+        if (!permission.error && permission.data === true) { router.replace("/superadmin"); router.refresh(); return; }
+        throw new Error("Platform access is required for this account.");
+      }
+
       const { profile, error: profileError } = await loadSessionProfile(supabase, data.user.id);
 
       const role = activeRole(profileError ? null : profile);

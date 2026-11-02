@@ -4,7 +4,7 @@ Branch: codex/business-isolation. Production changes are excluded from this work
 
 ## URL plan
 
-The existing production hostname remains www.aahastore.com. Admin, manager and employee routes remain /admin/dashboard, /branch/home and /employee/inventory. The planned /workspaces chooser selects an authorized business; the later platform console will use /superadmin. Staging uses the same paths on staging.aahastore.com. The new chooser is unavailable while workspace mode is off, and /superadmin is not implemented yet.
+The existing production hostname remains www.aahastore.com for the Ahaa customer business. Admin, manager and employee routes remain /admin/dashboard, /branch/home and /employee/inventory. The /workspaces chooser selects an authorized business. The separate platform console uses /superadmin; its directory and provisioning-only registration are implemented behind a disabled server flag, with database release and owner onboarding pending. Staging uses the same paths on staging.aahastore.com. See platform-console-progress.md. Platform and customer authorization remain separate even when one test identity has both roles.
 
 Businesses initially share these route paths. The selected business is validated through authenticated memberships; a URL or cookie alone never grants business access. Customer-specific domains/subdomains are optional later work, not part of the current release.
 

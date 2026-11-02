@@ -41,3 +41,20 @@ it("preserves the existing route authorization while business mode is disabled",
   expect(response.headers.get("location")).toBeNull();
   expect(db.rpc).not.toHaveBeenCalled();
 });
+it("keeps the platform console unavailable by default", async () => {
+  vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "false");
+  expect((await proxy(new NextRequest("https://app.test/superadmin"))).status).toBe(404);
+});
+it("authorizes platform access independently of customer selection and role", async () => {
+  vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "true");
+  db.rpc.mockReturnValue(queryResult(true));
+  const response = await proxy(new NextRequest("https://app.test/superadmin", { headers: { cookie: "ahaa_business=invalid" } }));
+  expect(response.status).toBe(200);
+  expect(db.rpc).toHaveBeenCalledWith("platform_is_administrator");
+  expect(db.from).not.toHaveBeenCalled();
+});
+it("does not treat a customer admin as a platform admin", async () => {
+  vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "true");
+  db.rpc.mockReturnValue(queryResult(false));
+  expect((await proxy(new NextRequest("https://app.test/superadmin"))).status).toBe(403);
+});

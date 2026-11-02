@@ -9,17 +9,20 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
   const businessMode = businessWorkspacesEnabled();
+  const isPlatform = pathname === "/superadmin" || pathname.startsWith("/superadmin/");
+  const platformLogin = pathname === "/login" && request.nextUrl.searchParams.get("next") === "/superadmin";
+  if (isPlatform && process.env.PLATFORM_CONSOLE_ENABLED !== "true") return new NextResponse("Not found.", { status: 404 });
   const isWorkspaces = businessMode && pathname === "/workspaces";
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isBranch = pathname === "/branch" || pathname.startsWith("/branch/");
   const isEmployee = pathname === "/employee" || pathname.startsWith("/employee/");
-  const protectedRoute = isAdmin || isBranch || isEmployee || isWorkspaces;
+  const protectedRoute = isAdmin || isBranch || isEmployee || isWorkspaces || isPlatform;
   if (!SUPABASE_CONFIGURED) {
     return protectedRoute ? new NextResponse("Application authentication is not configured.", { status: 503 }) : response;
   }
   let selection: string | null = null;
   try {
-    if (businessMode && !isWorkspaces) selection = selectedBusiness(request.cookies.getAll().filter(cookie => cookie.name === BUSINESS_COOKIE).map(cookie => `${cookie.name}=${cookie.value}`).join(";"));
+    if (businessMode && !isWorkspaces && !isPlatform && !platformLogin) selection = selectedBusiness(request.cookies.getAll().filter(cookie => cookie.name === BUSINESS_COOKIE).map(cookie => `${cookie.name}=${cookie.value}`).join(";"));
   } catch { return NextResponse.redirect(new URL("/workspaces", request.url)); }
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_KEY, {
     global: { headers: selection ? { [BUSINESS_HEADER]: selection } : {} },
@@ -44,6 +47,14 @@ export async function proxy(request: NextRequest) {
   };
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (protectedRoute && (!user || authError)) return redirect("/login");
+  if (isPlatform) {
+    const permission = await supabase.rpc("platform_is_administrator");
+    return !permission.error && permission.data === true ? response : new NextResponse("Platform access is required.", { status: 403 });
+  }
+  if (pathname === "/login" && user && !authError && request.nextUrl.searchParams.get("next") === "/superadmin" && process.env.PLATFORM_CONSOLE_ENABLED === "true") {
+    const permission = await supabase.rpc("platform_is_administrator");
+    if (!permission.error && permission.data === true) return redirect("/superadmin");
+  }
   if (isWorkspaces && user && !authError) return response;
   if (user && (protectedRoute || pathname === "/login")) {
     const { profile, error } = await loadSessionProfile(supabase, user.id);
