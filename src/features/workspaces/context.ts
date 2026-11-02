@@ -3,6 +3,7 @@ import { activeRole } from "@/lib/auth";
 
 export const BUSINESS_COOKIE = "ahaa_business";
 export const BUSINESS_HEADER = "x-business-id";
+export const WORKSPACE_CHANGED_EVENT = "ahaa:workspace-changed";
 export type Business = { id: string; name: string; slug: string; settings: Record<string, unknown> };
 export type Workspace = { business: Business; profile: Profile };
 export function businessWorkspacesEnabled() { return process.env.NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED === "true"; }

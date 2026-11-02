@@ -18,12 +18,12 @@ begin
  if selected is not null then
    if selected !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then raise exception 'Invalid workspace'; end if;
    select m.business_id into result from public.business_memberships m join public.businesses b on b.id=m.business_id
-   where m.user_id=auth.uid() and m.business_id=selected::uuid and m.status::text='active' and b.status='active';
+   where m.user_id=auth.uid() and m.business_id=selected::uuid and m.status::text='active' and b.status='active' and b.isolation_ready;
    if result is null then raise exception 'Workspace access is unavailable'; end if;
  else
    select count(*),(array_agg(m.business_id order by m.business_id))[1] into choices,result
    from public.business_memberships m join public.businesses b on b.id=m.business_id
-   where m.user_id=auth.uid() and m.status::text='active' and b.status='active';
+   where m.user_id=auth.uid() and m.status::text='active' and b.status='active' and b.isolation_ready;
    if choices>1 then raise exception 'Choose a workspace'; end if;
  end if;
  return result;

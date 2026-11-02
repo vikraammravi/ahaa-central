@@ -1,9 +1,23 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Login from "@/app/login/page";
 import { profile } from "@tests/mocks/fixtures";
 import { db, queryResult, router } from "@tests/mocks/supabase";
+import { workspaceProfile } from "@tests/mocks/workspaces";
+
+it("keeps a valid login and asks for a workspace instead of falling back to a global role",async()=>{
+ vi.stubEnv("NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED","true");
+ db.auth.signInWithPassword.mockResolvedValue({data:{user:{id:workspaceProfile.id}},error:null});
+ db.rpc.mockReturnValue(queryResult(null,{message:"Choose a workspace"}));
+ render(<Login/>);
+ await userEvent.type(screen.getByLabelText("Email"),workspaceProfile.email);
+ await userEvent.type(screen.getByLabelText("Password"),"test-password-123");
+ await userEvent.click(screen.getByRole("button",{name:"Sign In"}));
+ expect(router.replace).toHaveBeenCalledWith("/workspaces");
+ expect(db.auth.signOut).not.toHaveBeenCalled();
+ expect(db.from).not.toHaveBeenCalled();
+});
 
 it("login removes activation links and routes active employees to inventory",async()=>{
   db.auth.signInWithPassword.mockResolvedValue({data:{user:{id:"user"}},error:null});db.from.mockReturnValue(queryResult({...profile,role:"BRANCH_EMPLOYEE"}));render(<Login/>);

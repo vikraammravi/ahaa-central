@@ -4,7 +4,11 @@ import { LoadingState } from "@/components/shared/Spinner";
 import { supabase } from "./supabase/client";
 import type { Profile } from "./supabase/types";
 import { loadSessionProfile } from "@/features/workspaces/session";
-import type { Business } from "@/features/workspaces/context";
+import { WORKSPACE_CHANGED_EVENT, businessWorkspacesEnabled, type Business } from "@/features/workspaces/context";
+import { setDisplayedBusiness } from "@/features/workspaces/fetch";
+import { saveBusinessSelection } from "@/features/workspaces/selection";
+import { useRouter } from "next/navigation";
+import { userHome } from "@/lib/auth";
 export type CurrentUser = { userId: string | null; profile: Profile | null; business?: Business | null; loading: boolean; error: string | null };
 const initial: CurrentUser = { userId: null, profile: null, loading: true, error: null };
 const signedOut: CurrentUser = { ...initial, loading: false };
@@ -28,6 +32,8 @@ function useUserQuery(enabled: boolean): CurrentUser {
     knownUserId = user.id;
     const result = await loadSessionProfile(supabase, user.id, signal);
     if (!active || request !== generation) return;
+    if (result.business) saveBusinessSelection(result.business.id);
+    setDisplayedBusiness(result.business?.id ?? null);
     setState({ userId: user.id, profile: result.profile, business: result.business, loading: false, error: result.error?.message ?? null });
    } catch (error) {
     if (active && request === generation) setState({ ...signedOut, error: error instanceof Error ? error.message : "Unable to load profile." });
@@ -37,7 +43,7 @@ function useUserQuery(enabled: boolean): CurrentUser {
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
    if (!active) return;
    if (event === "SIGNED_OUT" || event === "SIGNED_IN" || event === "USER_UPDATED") { timers.forEach(clearTimeout); timers.clear(); }
-   if (event === "SIGNED_OUT") { ++generation; knownUserId = null; controller?.abort(); setState(signedOut); }
+   if (event === "SIGNED_OUT") { ++generation; knownUserId = null; controller?.abort(); setDisplayedBusiness(null); setState(signedOut); }
    else if (event === "SIGNED_IN" || event === "USER_UPDATED") {
     // Defer Supabase queries until its auth callback has released its lock.
     ++generation; controller?.abort();
@@ -51,16 +57,26 @@ function useUserQuery(enabled: boolean): CurrentUser {
   });
   const onFocus = () => { if (!document.hidden) void refresh(); };
   window.addEventListener("focus", onFocus);
-  return () => { active = false; ++generation; controller?.abort(); subscription.unsubscribe(); timers.forEach(clearTimeout); window.removeEventListener("focus", onFocus); };
+  window.addEventListener(WORKSPACE_CHANGED_EVENT, onFocus);
+  return () => { active = false; ++generation; controller?.abort(); subscription.unsubscribe(); timers.forEach(clearTimeout); window.removeEventListener("focus", onFocus); window.removeEventListener(WORKSPACE_CHANGED_EVENT, onFocus); };
  }, [enabled]);
  return state;
 }
 /** Protected layouts own one profile request shared by their shell and pages. */
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
  const value = useUserQuery(true);
+ const router = useRouter();
+ useEffect(() => {
+  if (!businessWorkspacesEnabled() || value.loading || !value.userId) return;
+  if (!value.profile || !value.business) { router.replace("/workspaces"); return; }
+  const pathname = window.location.pathname;
+  const role = value.profile.role;
+  if ((pathname.startsWith("/admin/") && role !== "CENTRAL_ADMIN") || (pathname.startsWith("/branch/") && role !== "BRANCH_MANAGER") || (pathname.startsWith("/employee/") && role !== "BRANCH_EMPLOYEE")) router.replace(userHome(role));
+ }, [router, value.loading, value.userId, value.profile, value.business]);
+ const accessKey = value.business ? `${value.business.id}:${value.profile?.role}:${value.profile?.location_id}` : "legacy";
  return createElement(CurrentUserContext.Provider, { value }, value.loading
   ? createElement(LoadingState, { label: "Loading your workspace…", minHeight: "min-h-screen" })
-  : createElement(Fragment, { key: `${value.userId ?? "signed-out"}:${value.business?.id ?? "legacy"}` }, children));
+  : createElement(Fragment, { key: `${value.userId ?? "signed-out"}:${accessKey}` }, children));
 }
 /** Standalone consumers retain their existing behavior outside a layout provider. */
 export function useCurrentUser(): CurrentUser {

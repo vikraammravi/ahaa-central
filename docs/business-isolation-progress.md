@@ -15,7 +15,7 @@ Branch: codex/business-isolation. No deployment or permanent database change in 
 
 ## Feature flag
 
-NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED defaults off. It has not been added to local or hosted environment settings. Do not enable it yet: login/proxy routing, workspace chooser, membership user-management paths and full API acceptance still require integration. Enabling it against the existing foundation-only database would fail closed because current_workspace is not installed.
+NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED defaults off. It has not been added to local or hosted environment settings. The subsequent chooser/membership step implements routing and user-management integration; see workspace-membership-progress.md. Do not enable the flag until the complete paired database release and API acceptance checks pass. Enabling it against the existing foundation-only database would fail closed because current_workspace is not installed.
 
 ## Database rehearsal
 
@@ -35,4 +35,4 @@ The 37 Node unit checks and full 252-test Vitest run passed. After the final rec
 
 ## Next implementation step
 
-Wire login and proxy authorization to workspace memberships; add the authorized chooser and stale-workspace request protection. Replace global user role updates/deletion with membership-aware operations. Complete tests for those paths before installing isolation or enabling workspace mode in staging. Superadmin follows the isolation acceptance gate.
+The next-step chooser and membership implementation is recorded in workspace-membership-progress.md. Complete the full API/storage/function acceptance matrix before installing isolation or enabling workspace mode in staging. Superadmin follows the isolation acceptance gate.

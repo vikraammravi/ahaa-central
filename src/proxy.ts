@@ -2,18 +2,27 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_CONFIGURED } from "@/lib/supabase/env";
 import { activeRole, safeNextPath, userHome } from "@/lib/auth";
+import { BUSINESS_COOKIE, BUSINESS_HEADER, businessWorkspacesEnabled, selectedBusiness } from "@/features/workspaces/context";
+import { loadSessionProfile } from "@/features/workspaces/session";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
+  const businessMode = businessWorkspacesEnabled();
+  const isWorkspaces = businessMode && pathname === "/workspaces";
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isBranch = pathname === "/branch" || pathname.startsWith("/branch/");
   const isEmployee = pathname === "/employee" || pathname.startsWith("/employee/");
-  const protectedRoute = isAdmin || isBranch || isEmployee;
+  const protectedRoute = isAdmin || isBranch || isEmployee || isWorkspaces;
   if (!SUPABASE_CONFIGURED) {
     return protectedRoute ? new NextResponse("Application authentication is not configured.", { status: 503 }) : response;
   }
+  let selection: string | null = null;
+  try {
+    if (businessMode && !isWorkspaces) selection = selectedBusiness(request.cookies.getAll().filter(cookie => cookie.name === BUSINESS_COOKIE).map(cookie => `${cookie.name}=${cookie.value}`).join(";"));
+  } catch { return NextResponse.redirect(new URL("/workspaces", request.url)); }
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_KEY, {
+    global: { headers: selection ? { [BUSINESS_HEADER]: selection } : {} },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookies) {
@@ -35,10 +44,12 @@ export async function proxy(request: NextRequest) {
   };
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (protectedRoute && (!user || authError)) return redirect("/login");
+  if (isWorkspaces && user && !authError) return response;
   if (user && (protectedRoute || pathname === "/login")) {
-    const { data: profile, error } = await supabase.from("profiles").select("role, status").eq("id", user.id).single();
+    const { profile, error } = await loadSessionProfile(supabase, user.id);
     const role = activeRole(error ? null : profile);
     if (!role) {
+      if (businessMode) return redirect("/workspaces");
       await supabase.auth.signOut({ scope: "local" });
       if (protectedRoute) return redirect("/login", "account_inactive");
       return response;

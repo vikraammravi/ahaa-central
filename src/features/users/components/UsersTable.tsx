@@ -4,6 +4,7 @@ import type { Profile, Location } from "@/lib/supabase/types";
 import { StatusBadge, type StatusKind } from "@/components/ui/status-badge";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { RowActions } from "@/components/shared/RowActions";
+import { businessWorkspacesEnabled } from "@/features/workspaces/context";
 const statusKind:Record<Profile["status"],StatusKind>={active:"active",pending:"pending",disabled:"inactive"};
 export function UsersTable({profiles,locations,loading,onEdit,onDelete}:{profiles:Profile[]|null;locations:Location[];loading:boolean;onEdit:(profile:Profile)=>void;onDelete:(id:string)=>Promise<void>}) {
   const branchName = (id?: string | null) =>
@@ -38,7 +39,7 @@ export function UsersTable({profiles,locations,loading,onEdit,onDelete}:{profile
       key: "actions", cardSpan:2,
       header: "",
       align: "right",
-      render: (r) => <RowActions onEdit={() => onEdit(r)} onDelete={()=>onDelete(r.id)} deleteTitle={`Delete ${r.full_name||r.email}?`} deleteDescription="Permanently removes their login and profile. Orders, invoices and inventory history will remain." />,
+      render: (r) => <RowActions onEdit={() => onEdit(r)} onDelete={()=>onDelete(r.id)} deleteLabel={businessWorkspacesEnabled() ? "Remove access" : "Delete"} deleteTitle={businessWorkspacesEnabled() ? `Remove ${r.full_name||r.email} from this business?` : `Delete ${r.full_name||r.email}?`} deleteDescription={businessWorkspacesEnabled() ? "Removes access to this business only. Their login, access to other businesses and business history remain." : "Permanently removes their login and profile. Orders, invoices and inventory history will remain."} />,
     },
   ];
 

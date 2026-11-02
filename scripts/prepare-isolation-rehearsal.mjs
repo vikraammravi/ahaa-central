@@ -5,6 +5,10 @@ const migration = (await fs.readFile("supabase/planned/business_isolation.draft.
   .replace(/^begin;\r?\n/m, "").replace(/^commit;\s*$/m, "");
 const assertions = (await fs.readFile("supabase/planned/business_isolation.tests.draft.sql", "utf8"))
   .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
+const membershipMigration = (await fs.readFile("supabase/planned/workspace_memberships.draft.sql", "utf8"))
+  .replace(/^begin;\r?\n/m, "").replace(/^commit;\s*$/m, "");
+const membershipAssertions = (await fs.readFile("supabase/planned/workspace_memberships.tests.draft.sql", "utf8"))
+  .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
 const regression = (await fs.readFile("supabase/tests/operations_refactor.sql", "utf8"))
   .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
 const baseline = `
@@ -28,6 +32,6 @@ const selectAhaa = "select set_config('request.headers',jsonb_build_object('x-bu
 await fs.mkdir(".local-backups/saas", { recursive: true });
 await fs.writeFile(".local-backups/saas/isolation-rehearsal.sql", [
   "-- STAGING ONLY. Entire migration, privilege changes and fixtures roll back.",
-  "begin;", baseline, migration, unchanged, assertions, selectAhaa, regression, "rollback;",
+  "begin;", baseline, migration, membershipMigration, unchanged, assertions, membershipAssertions, selectAhaa, regression, "rollback;",
 ].join("\n"));
 console.log("Prepared .local-backups/saas/isolation-rehearsal.sql (rollback-only; no database connection).");

@@ -1,5 +1,7 @@
 import { BUSINESS_HEADER, businessWorkspacesEnabled, selectedBusiness } from "./context";
 import { SUPABASE_URL } from "@/lib/supabase/env";
+let displayedBusiness: string | null = null;
+export function setDisplayedBusiness(id: string | null) { displayedBusiness = id; }
 
 /** Restrict the preference header to our own data/storage endpoints. */
 export async function workspaceFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -10,7 +12,12 @@ export async function workspaceFetch(input: RequestInfo | URL, init?: RequestIni
   new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
   // A missing selection must not preserve a stale header from an earlier workspace.
   headers.delete(BUSINESS_HEADER);
-  const businessId = selectedBusiness(document.cookie);
+  const choosing = url.pathname === "/rest/v1/rpc/my_workspaces";
+  const resolving = url.pathname === "/rest/v1/rpc/current_workspace";
+  const businessId = choosing ? null : selectedBusiness(document.cookie);
+  if (!choosing && !resolving && displayedBusiness && businessId !== displayedBusiness) throw new Error("Workspace changed. Reload before continuing.");
   if (businessId) headers.set(BUSINESS_HEADER, businessId);
-  return fetch(input, { ...init, headers });
+  const response = await fetch(input, { ...init, headers });
+  if (!choosing && businessId !== selectedBusiness(document.cookie)) throw new Error("Workspace changed. Reload before continuing.");
+  return response;
 }

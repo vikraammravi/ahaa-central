@@ -1,7 +1,13 @@
 import { supabase } from "@/lib/supabase/client";
 import { pageRange, lastPage, searchFilter } from "@/lib/pagination";
 import type {Profile, ProfileStatus} from "@/lib/supabase/types";
+import { businessWorkspacesEnabled } from "@/features/workspaces/context";
 export async function fetchUsers(filters: {page:number;search:string;branchId?:string;status?:ProfileStatus|""}, signal: AbortSignal): Promise<{ profiles: Profile[]; count:number; page:number }> {
+  if (businessWorkspacesEnabled()) {
+    const { data, error } = await supabase.rpc("business_users", { p_page: filters.page, p_search: filters.search.trim().slice(0,200), p_location_id: filters.branchId || null, p_status: filters.status || "" }).abortSignal(signal);
+    if (error) throw new Error(error.message);
+    return data as { profiles: Profile[]; count: number; page: number };
+  }
   let query = supabase.from("profiles").select("*", {count:"exact"}).order("full_name").order("id");
   if(filters.search.trim()) query = query.or(searchFilter(["full_name", "email"], filters.search));
   if(filters.branchId) query = query.eq("location_id", filters.branchId);

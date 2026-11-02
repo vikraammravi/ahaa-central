@@ -13,6 +13,8 @@ import { Spinner } from "@/components/shared/Spinner";
 import { supabase } from "@/lib/supabase/client";
 import { activeRole, safeNextPath } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { businessWorkspacesEnabled } from "@/features/workspaces/context";
+import { loadSessionProfile } from "@/features/workspaces/session";
 
 function LoginInner() {
   const params = useSearchParams();
@@ -35,14 +37,11 @@ function LoginInner() {
         await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role, status")
-        .eq("id", data.user.id)
-        .single();
+      const { profile, error: profileError } = await loadSessionProfile(supabase, data.user.id);
 
       const role = activeRole(profileError ? null : profile);
       if (!role) {
+        if (businessWorkspacesEnabled()) { router.replace("/workspaces"); router.refresh(); return; }
         await supabase.auth.signOut({ scope: "local" });
         throw new Error("This account is not active. Contact your admin.");
       }

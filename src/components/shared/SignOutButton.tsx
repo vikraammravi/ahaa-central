@@ -4,6 +4,9 @@ import { LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { businessWorkspacesEnabled } from "@/features/workspaces/context";
+import { saveBusinessSelection } from "@/features/workspaces/selection";
+import { setDisplayedBusiness } from "@/features/workspaces/fetch";
 
 type Variant = "row" | "icon" | "compact";
 
@@ -17,6 +20,7 @@ export function SignOutButton({
   const router = useRouter();
   async function handleSignOut() {
     await supabase.auth.signOut();
+    if (businessWorkspacesEnabled()) { saveBusinessSelection(null); setDisplayedBusiness(null); }
     router.replace("/login");
     router.refresh();
   }
