@@ -5,7 +5,20 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { CurrentUserProvider, useCurrentUser } from "./useCurrentUser";
 import { db, queryResult } from "@tests/mocks/supabase";
 import { profile } from "@tests/mocks/fixtures";
+import { businessWorkspace, otherBusinessId, workspaceProfile } from "@tests/mocks/workspaces";
 function Reader({label}:{label:string}) { const user=useCurrentUser(); return <p>{label}: {user.loading ? "loading" : user.profile?.full_name ?? "signed out"}</p>; }
+it("remounts user-scoped page state when the authorized business changes",async()=>{
+ vi.stubEnv("NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED","true");
+ db.auth.getUser.mockResolvedValue({data:{user:{id:workspaceProfile.id}},error:null});
+ db.rpc.mockReturnValue(queryResult(businessWorkspace));
+ function Draft(){const [value,setValue]=useState("draft");return <input aria-label="Workspace draft" value={value} onChange={e=>setValue(e.target.value)}/>;}
+ render(<CurrentUserProvider><Draft/></CurrentUserProvider>);
+ const initial=await screen.findByLabelText("Workspace draft");
+ db.rpc.mockReturnValue(queryResult({...businessWorkspace,business:{...businessWorkspace.business,id:otherBusinessId}}));
+ act(()=>window.dispatchEvent(new Event("focus")));
+ await waitFor(()=>expect(screen.getByLabelText("Workspace draft")).not.toBe(initial));
+ expect(db.from).not.toHaveBeenCalled();
+});
 it("shares one user/profile fetch between a shell and page",async()=>{
  db.auth.getUser.mockResolvedValue({data:{user:{id:profile.id}},error:null});db.from.mockReturnValue(queryResult(profile));
  render(<CurrentUserProvider><Reader label="shell"/><Reader label="page"/></CurrentUserProvider>);

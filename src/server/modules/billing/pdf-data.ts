@@ -5,6 +5,7 @@ import type { WeeklyInvoiceDetails } from "@/lib/supabase/types";
 import { paymentNeedsReview } from "@/features/billing/payments";
 import { weeklyNumber } from "@/features/billing/combined";
 import { BUSINESS_TIME_ZONE } from "@/lib/format";
+import { loadSessionProfile } from "@/features/workspaces/session";
 
 type Database = Awaited<ReturnType<typeof createSupabaseServer>>;
 export class InvoicePdfError extends Error {
@@ -14,7 +15,7 @@ function address(location:{address?:string;city?:string;province?:string}|null){
 export async function loadInvoicePdf(db:Database,kind:InvoicePdfKind,id:string):Promise<InvoicePdfData>{
   const {data:{user},error:authError}=await db.auth.getUser();
   if(authError||!user)throw new InvoicePdfError("Please sign in to view this invoice.",401);
-  const {data:profile,error:profileError}=await db.from("profiles").select("role,status,location_id").eq("id",user.id).single();
+  const {profile,error:profileError}=await loadSessionProfile(db,user.id);
   if(profileError||!profile||profile.status!=="active"||!["CENTRAL_ADMIN","BRANCH_MANAGER"].includes(profile.role))throw new InvoicePdfError("You do not have invoice access.",403);
   const admin=profile.role==="CENTRAL_ADMIN";
   if(kind==="individual"){

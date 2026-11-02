@@ -3,6 +3,7 @@ import { queryResult } from "@tests/mocks/supabase";
 import { purchaseReceipt } from "@tests/mocks/receipts";
 import { receiptAccess } from "@/server/modules/vendor-documents/access";
 import { POST, PATCH, GET, DELETE } from "./document";
+import { businessId } from "@tests/mocks/workspaces";
 
 vi.mock("@/server/modules/vendor-documents/access", () => ({
   receiptAccess: vi.fn(),
@@ -33,6 +34,15 @@ it("does not contact Azure when a scan reservation is denied", async () => {
   expect(fetch).not.toHaveBeenCalled();
   expect(storage.download).not.toHaveBeenCalled();
   expect(database.rpc).toHaveBeenCalledWith("reserve_receipt_scan", { p_receipt_id: purchaseReceipt.id, p_user_id: "admin-test" });
+});
+it("passes the authorized business to the new reservation and still denies Azure when quota is refused", async () => {
+  vi.stubEnv("NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED", "true");
+  vi.mocked(receiptAccess).mockResolvedValue({ db: database, user: { id: "admin-test" }, businessId, locationId: null } as unknown as Awaited<ReturnType<typeof receiptAccess>>);
+  database.rpc.mockResolvedValue({ data: false, error: null });
+  expect((await POST(request("POST"), context)).status).toBe(429);
+  expect(database.rpc).toHaveBeenCalledWith("reserve_receipt_scan_for_business", { p_business_id: businessId, p_receipt_id: purchaseReceipt.id, p_user_id: "admin-test" });
+  expect(fetch).not.toHaveBeenCalled();
+  expect(storage.download).not.toHaveBeenCalled();
 });
 it("stops before file access when authorization fails", async () => {
   vi.mocked(receiptAccess).mockRejectedValue(new Error("Sign in first."));

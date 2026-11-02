@@ -3,7 +3,9 @@ import { createContext, createElement, Fragment, useContext, useEffect, useState
 import { LoadingState } from "@/components/shared/Spinner";
 import { supabase } from "./supabase/client";
 import type { Profile } from "./supabase/types";
-export type CurrentUser = { userId: string | null; profile: Profile | null; loading: boolean; error: string | null };
+import { loadSessionProfile } from "@/features/workspaces/session";
+import type { Business } from "@/features/workspaces/context";
+export type CurrentUser = { userId: string | null; profile: Profile | null; business?: Business | null; loading: boolean; error: string | null };
 const initial: CurrentUser = { userId: null, profile: null, loading: true, error: null };
 const signedOut: CurrentUser = { ...initial, loading: false };
 const CurrentUserContext = createContext<CurrentUser | null>(null);
@@ -24,9 +26,9 @@ function useUserQuery(enabled: boolean): CurrentUser {
     if (!active || request !== generation) return;
     if (error || !user) { knownUserId = null; setState({ ...signedOut, error: error?.message ?? null }); return; }
     knownUserId = user.id;
-    const result = await supabase.from("profiles").select("*").eq("id", user.id).abortSignal(signal).single();
+    const result = await loadSessionProfile(supabase, user.id, signal);
     if (!active || request !== generation) return;
-    setState({ userId: user.id, profile: result.data as Profile | null, loading: false, error: result.error?.message ?? null });
+    setState({ userId: user.id, profile: result.profile, business: result.business, loading: false, error: result.error?.message ?? null });
    } catch (error) {
     if (active && request === generation) setState({ ...signedOut, error: error instanceof Error ? error.message : "Unable to load profile." });
    }
@@ -58,7 +60,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
  const value = useUserQuery(true);
  return createElement(CurrentUserContext.Provider, { value }, value.loading
   ? createElement(LoadingState, { label: "Loading your workspace…", minHeight: "min-h-screen" })
-  : createElement(Fragment, { key: value.userId ?? "signed-out" }, children));
+  : createElement(Fragment, { key: `${value.userId ?? "signed-out"}:${value.business?.id ?? "legacy"}` }, children));
 }
 /** Standalone consumers retain their existing behavior outside a layout provider. */
 export function useCurrentUser(): CurrentUser {

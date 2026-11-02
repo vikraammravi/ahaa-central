@@ -21,7 +21,7 @@ The migration and foundation assertions passed in one staging transaction that e
 
 The foundation was applied through SQL Editor; reconcile its migration history before adopting automated CLI migration deployment. Do not replay a non-idempotent CREATE TABLE migration into staging.
 
-Unfinished operational-isolation SQL and proposed assertions are stored in `supabase/planned/*.draft.sql`, not in migrations or runnable test discovery. They have not been executed or validated. They deliberately revoke legacy receipt functions, and must not be applied before replacement scoped functions, workspace-aware APIs/UI and full cross-business tests are complete.
+Unfinished operational-isolation SQL and assertions are stored in `supabase/planned/*.draft.sql`, not in migrations or runnable test discovery. An initial rollback-only staging rehearsal passed, including scoped receipt function replacements, metadata/data-preservation checks and original fulfillment regressions. They deliberately revoke legacy receipt functions and must not be applied before workspace-aware routing, membership management and the full API/function/storage acceptance matrix are complete. See business-isolation-progress.md for the tested scope and remaining work.
 
 Do not enable platform onboarding or claim tenant isolation until the following cutover is implemented and tested.
 

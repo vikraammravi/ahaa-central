@@ -205,4 +205,53 @@ grant execute on function public.current_workspace() to authenticated;
 revoke all on function public.create_purchase_receipt(uuid,uuid,text,text,text,text) from public,anon,authenticated,service_role;
 revoke all on function public.reserve_receipt_scan(uuid,uuid) from public,anon,authenticated,service_role;
 
+-- Privileged server paths must carry an explicitly authorized business.
+create function public.create_purchase_receipt_for_business(p_business_id uuid,p_id uuid,p_user_id uuid,p_file_name text,p_file_path text,p_file_hash text,p_model text) returns boolean
+language plpgsql security definer set search_path='' as $$
+declare branch uuid; member_role text;
+begin
+ perform pg_advisory_xact_lock(730030003);
+ select m.role::text,m.location_id into member_role,branch from public.business_memberships m
+ join public.businesses b on b.id=m.business_id join public.profiles p on p.id=m.user_id
+ where m.business_id=p_business_id and m.user_id=p_user_id and m.status::text='active' and p.status::text='active'
+ and b.status='active' and b.isolation_ready;
+ if member_role is null or member_role not in ('CENTRAL_ADMIN','BRANCH_MANAGER') or (member_role='BRANCH_MANAGER' and branch is null) then return false; end if;
+ if p_model not in ('prebuilt-invoice','prebuilt-receipt') or length(p_file_name) not between 1 and 250 or p_file_hash !~ '^[0-9a-f]{64}$'
+ or p_file_path !~ ('^'||p_business_id::text||'/'||p_id::text||'/original\.(pdf|png|jpg)$') then return false; end if;
+ if member_role='CENTRAL_ADMIN' then branch=null; end if;
+ insert into public.purchase_receipts(id,business_id,created_by,location_id,file_name,file_path,file_hash,model,category)
+ values(p_id,p_business_id,p_user_id,branch,p_file_name,p_file_path,p_file_hash,p_model,case when p_model='prebuilt-receipt' then 'Miscellaneous' else 'Supplier Invoice' end)
+ on conflict do nothing;
+ return found;
+end; $$;
+revoke all on function public.create_purchase_receipt_for_business(uuid,uuid,uuid,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.create_purchase_receipt_for_business(uuid,uuid,uuid,text,text,text,text) to service_role;
+
+create function public.reserve_receipt_scan_for_business(p_business_id uuid,p_receipt_id uuid,p_user_id uuid) returns boolean
+language plpgsql security definer set search_path='' as $$
+declare month_key text:=to_char(now() at time zone 'UTC','YYYY-MM');
+ user_day_key text:=p_user_id::text||':'||to_char(now() at time zone 'America/Toronto','YYYY-MM-DD');
+ member_role text; branch uuid;
+begin
+ perform pg_advisory_xact_lock(730030003);
+ select m.role::text,m.location_id into member_role,branch from public.business_memberships m
+ join public.businesses b on b.id=m.business_id join public.profiles p on p.id=m.user_id
+ where m.business_id=p_business_id and m.user_id=p_user_id and m.status::text='active' and p.status::text='active'
+ and b.status='active' and b.isolation_ready;
+ if member_role is null or member_role not in ('CENTRAL_ADMIN','BRANCH_MANAGER') then return false; end if;
+ if not exists(select 1 from public.purchase_receipts r where r.id=p_receipt_id and r.business_id=p_business_id and r.deleted_at is null
+ and ((member_role='CENTRAL_ADMIN' and r.location_id is null) or (member_role='BRANCH_MANAGER' and branch is not null and r.location_id=branch))) then return false; end if;
+ -- These ceilings deliberately span every business, including archived receipts.
+ if (select coalesce(sum((scan_usage->>month_key)::integer),0) from public.purchase_receipts)>=100
+ or (select coalesce(sum((scan_usage->>user_day_key)::integer),0) from public.purchase_receipts)>=10
+ or exists(select 1 from public.purchase_receipts where scan_started_at>now()-interval '5 seconds')
+ or exists(select 1 from public.purchase_receipts where id=p_receipt_id and scan_status='RUNNING' and scan_started_at>now()-interval '1 hour') then return false; end if;
+ update public.purchase_receipts set
+ scan_usage=jsonb_set(jsonb_set(scan_usage,array[month_key],to_jsonb(coalesce((scan_usage->>month_key)::integer,0)+1)),array[user_day_key],to_jsonb(coalesce((scan_usage->>user_day_key)::integer,0)+1)),
+ scan_status='RUNNING',scan_started_at=now(),operation_url=null where id=p_receipt_id and business_id=p_business_id and deleted_at is null;
+ return found;
+end; $$;
+revoke all on function public.reserve_receipt_scan_for_business(uuid,uuid,uuid) from public,anon,authenticated;
+grant execute on function public.reserve_receipt_scan_for_business(uuid,uuid,uuid) to service_role;
+
 commit;

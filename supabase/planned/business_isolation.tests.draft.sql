@@ -7,11 +7,12 @@ do $$
 declare a uuid; b uuid; admin_user uuid; manager_user uuid; outsider uuid; branch_a uuid; branch_b uuid:=gen_random_uuid(); item_a uuid:=gen_random_uuid(); item_b uuid:=gen_random_uuid(); order_a uuid:=gen_random_uuid(); order_b uuid:=gen_random_uuid();
 begin
  select id into strict a from public.businesses where slug='ahaa';
+ update public.businesses set isolation_ready=true where id=a;
  select user_id into admin_user from public.platform_administrators where is_active limit 1;
  select id,location_id into manager_user,branch_a from public.profiles where role::text='BRANCH_MANAGER' and status::text='active' and location_id is not null order by id limit 1;
  select id into outsider from public.profiles where id not in (admin_user,manager_user) and status::text='active' order by id limit 1;
  if admin_user is null or manager_user is null or outsider is null then raise exception 'Staging fixture accounts are missing'; end if;
- insert into public.businesses(slug,name,status) values('isolation-fixture','Isolation fixture','active') returning id into b;
+ insert into public.businesses(slug,name,status,isolation_ready) values('isolation-fixture','Isolation fixture','active',true) returning id into b;
  insert into public.locations(id,name,is_central,business_id) values(branch_b,'Isolated branch',false,b);
  insert into public.business_memberships(business_id,user_id,role,status,location_id) values
  (b,admin_user,'BRANCH_MANAGER','active',branch_b),(b,manager_user,'BRANCH_EMPLOYEE','active',branch_b);
@@ -77,6 +78,25 @@ do $$ declare f isolation_fixture%rowtype; begin
  exception when foreign_key_violation then null; end;
  begin update public.locations set business_id=f.business_a where id=f.branch_b; raise exception 'Ownership move accepted';
  exception when raise_exception then if sqlerrm='Ownership move accepted' then raise; end if; end;
+end; $$;
+
+-- Service-only receipt operations enforce business/branch ownership and global scan ceilings.
+do $$
+declare f isolation_fixture%rowtype; receipt uuid:=gen_random_uuid(); path text; allowed boolean; month_key text:=to_char(now() at time zone 'UTC','YYYY-MM'); day_key text;
+begin
+ select * into f from isolation_fixture;
+ path=f.business_a::text||'/'||receipt::text||'/original.pdf';
+ day_key=f.admin_id::text||':'||to_char(now() at time zone 'America/Toronto','YYYY-MM-DD');
+ if has_function_privilege('authenticated','public.create_purchase_receipt_for_business(uuid,uuid,uuid,text,text,text,text)','EXECUTE')
+ or has_function_privilege('anon','public.reserve_receipt_scan_for_business(uuid,uuid,uuid)','EXECUTE') then raise exception 'Public receipt service permission'; end if;
+ if not public.create_purchase_receipt_for_business(f.business_a,receipt,f.admin_id,'fixture.pdf',path,repeat('a',64),'prebuilt-invoice') then raise exception 'Authorized scoped upload rejected'; end if;
+ if public.reserve_receipt_scan_for_business(f.business_b,receipt,f.admin_id) then raise exception 'Foreign receipt scan reserved'; end if;
+ if public.create_purchase_receipt_for_business(f.business_b,gen_random_uuid(),f.outsider_id,'foreign.pdf',path,repeat('b',64),'prebuilt-invoice') then raise exception 'Non-member upload created'; end if;
+ if public.create_purchase_receipt_for_business(f.business_a,gen_random_uuid(),f.admin_id,'foreign.pdf',f.business_b::text||'/original.pdf',repeat('b',64),'prebuilt-invoice') then raise exception 'Foreign storage prefix accepted'; end if;
+ update public.purchase_receipts set scan_usage=jsonb_build_object(month_key,100) where id=receipt;
+ if public.reserve_receipt_scan_for_business(f.business_a,receipt,f.admin_id) then raise exception 'Monthly ceiling bypassed'; end if;
+ update public.purchase_receipts set scan_usage=jsonb_build_object(day_key,10) where id=receipt;
+ if public.reserve_receipt_scan_for_business(f.business_a,receipt,f.admin_id) then raise exception 'Daily user ceiling bypassed'; end if;
 end; $$;
 
 -- Forged, absent/ambiguous, suspended and disabled contexts fail closed.
