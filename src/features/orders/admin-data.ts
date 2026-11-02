@@ -19,4 +19,3 @@ export async function fetchOrders(filters: OrderFilters, signal: AbortSignal): P
   if (filters.page > lastPage(result.count ?? 0)) return fetchOrders({ ...filters, page: lastPage(result.count ?? 0) }, signal);
   return { rows: (result.data ?? []) as OrderWithLocation[], count: result.count ?? 0, page: filters.page };
 }
-
