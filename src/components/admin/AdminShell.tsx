@@ -32,13 +32,14 @@ const entries: NavEntry[] = [
     label: "Branch Management",
     items: [
       { label: "Branch List", href: "/admin/branches", icon: icons.branches },
-      { label: "Users & Access", href: "/admin/users", icon: icons.users },
+      { label: "User Access", href: "/admin/users", icon: icons.users },
     ],
   },
   {
     label: "Finance",
     items: [
-      { label: "Invoices", href: "/admin/invoices", icon: icons.invoices },
+      { label: "Branch Invoices", href: "/admin/invoices", icon: icons.invoices },
+      { label: "Vendor Invoices", href: "/admin/receipts", icon: icons.vendorInvoices },
     ],
   },
 ];

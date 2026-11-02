@@ -14,9 +14,11 @@ const entries: NavEntry[] = [
   { label: "Orders", href: "/branch/invoices", icon: icons.orders },
   { label: "Inventory", href: "/branch/inventory", icon: icons.stock },
   { label: "Catering", href: "/branch/catering", icon: icons.catering },
+  { label: "Vendor Invoices", href: "/branch/receipts", icon: icons.vendorInvoices },
 ];
 
 const bottomItems: BottomNavItem[] = [
+  { label: "Invoices", href: "/branch/receipts", icon: icons.vendorInvoices },
   { label: "Home", href: "/branch/home", icon: icons.dashboard },
   { label: "Place Order", href: "/branch/order", icon: icons.placeOrder },
   { label: "Orders", href: "/branch/invoices", icon: icons.orders },

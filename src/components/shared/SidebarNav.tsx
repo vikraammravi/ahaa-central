@@ -44,7 +44,7 @@ export function SidebarNav({
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <nav className={cn("py-3 px-2 text-sm", className)}>
+    <nav className={cn("py-3 lg:py-2 px-2 text-sm", className)}>
       {entries.map((e) => {
         if (!isGroup(e)) {
           const active = isActive(e.href);
@@ -55,7 +55,7 @@ export function SidebarNav({
               href={e.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-lg text-[14px] transition-colors",
+                "flex min-h-11 lg:min-h-8 items-center gap-2.5 px-3 py-2 lg:py-1.5 rounded-lg text-[14px] transition-colors",
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -72,7 +72,7 @@ export function SidebarNav({
             <button
               type="button"
               onClick={() => setOpen((o) => ({ ...o, [e.label]: !isOpen }))}
-              className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+              className="w-full flex min-h-11 lg:min-h-6 items-center justify-between px-3 py-2 lg:py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
             >
               <span>{e.label}</span>
               <span
@@ -95,7 +95,7 @@ export function SidebarNav({
                       href={it.href}
                       onClick={onNavigate}
                       className={cn(
-                        "flex items-center gap-2.5 pl-6 pr-3 py-2 rounded-lg text-[14px] transition-colors",
+                        "flex min-h-11 lg:min-h-8 items-center gap-2.5 pl-6 pr-3 py-2 lg:py-1.5 rounded-lg text-[14px] transition-colors",
                         active
                           ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground",
