@@ -13,7 +13,7 @@ import { Spinner } from "@/components/shared/Spinner";
 import { supabase } from "@/lib/supabase/client";
 import { activeRole, safeNextPath } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { businessWorkspacesEnabled } from "@/features/workspaces/context";
+import { businessEntrySlug, businessWorkspacesEnabled } from "@/features/workspaces/context";
 import { loadSessionProfile } from "@/features/workspaces/session";
 
 function LoginInner() {
@@ -36,6 +36,8 @@ function LoginInner() {
       const { data, error: signInError } =
         await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
+
+      if (businessWorkspacesEnabled() && businessEntrySlug(next)) { router.replace(next!); router.refresh(); return; }
 
       if (next === "/superadmin") {
         const permission = await supabase.rpc("platform_is_administrator");

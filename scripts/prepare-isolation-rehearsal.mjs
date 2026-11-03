@@ -15,6 +15,8 @@ const platformMigration = (await fs.readFile("supabase/planned/platform_console.
   .replace(/^begin;\r?\n/m, "").replace(/^commit;\s*$/m, "");
 const platformAssertions = (await fs.readFile("supabase/planned/platform_console.tests.draft.sql", "utf8"))
   .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
+const privilegeAssertions = (await fs.readFile("supabase/planned/isolation_privilege_audit.tests.draft.sql", "utf8"))
+  .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
 const baseline = `
 create temp table migration_baseline(table_name text, checksum text);
 do $$ declare n text; hash text; begin
@@ -36,6 +38,6 @@ const selectAhaa = "select set_config('request.headers',jsonb_build_object('x-bu
 await fs.mkdir(".local-backups/saas", { recursive: true });
 await fs.writeFile(".local-backups/saas/isolation-rehearsal.sql", [
   "-- STAGING ONLY. Entire migration, privilege changes and fixtures roll back.",
-  "begin;", baseline, migration, membershipMigration, platformMigration, unchanged, assertions, membershipAssertions, platformAssertions, selectAhaa, regression, "rollback;",
+  "begin;", baseline, migration, membershipMigration, platformMigration, unchanged, privilegeAssertions, assertions, membershipAssertions, platformAssertions, selectAhaa, regression, "rollback;",
 ].join("\n"));
 console.log("Prepared .local-backups/saas/isolation-rehearsal.sql (rollback-only; no database connection).");

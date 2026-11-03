@@ -26,9 +26,17 @@ export async function chooseWorkspace(id: string) {
     window.dispatchEvent(new Event(WORKSPACE_CHANGED_EVENT));
     return workspace;
   } catch (error) {
-    try { if (selectedBusiness(document.cookie) === id) saveBusinessSelection(null); }
-    catch { saveBusinessSelection(null); }
-    setDisplayedBusiness(null);
+    // A newer selection in another tab or request must survive this failure.
+    try {
+      const currentSelection = selectedBusiness(document.cookie);
+      if (currentSelection === id || currentSelection === null) {
+        if (currentSelection === id) saveBusinessSelection(null);
+        setDisplayedBusiness(null);
+      }
+    } catch {
+      saveBusinessSelection(null);
+      setDisplayedBusiness(null);
+    }
     throw error;
   }
 }

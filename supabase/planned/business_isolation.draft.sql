@@ -40,8 +40,14 @@ do $$ begin
  if exists(select 1 from pg_roles where rolname='ahaa_operations' and (rolcanlogin or rolbypassrls or rolsuper)) then raise exception 'Unsafe operations role'; end if;
 end; $$;
 grant ahaa_operations to postgres;
-grant usage on schema public,auth,app_private to ahaa_operations;
-grant execute on function auth.uid() to ahaa_operations;
+grant usage on schema public,app_private to ahaa_operations;
+-- Supabase owns the auth schema; postgres cannot grant a new role USAGE there.
+-- This helper exposes only the current request identity, never another user's data.
+create function app_private.request_user_id() returns uuid
+language sql stable security definer set search_path=''
+as $$ select auth.uid(); $$;
+revoke all on function app_private.request_user_id() from public,anon;
+grant execute on function app_private.request_user_id() to authenticated,ahaa_operations;
 grant execute on function public.current_business_id() to ahaa_operations;
 
 do $$
@@ -144,14 +150,16 @@ do $$
 declare item record; definition text;
 begin
  for item in select p.oid,p.proname,p.prosecdef from pg_proc p join pg_namespace n on n.oid=p.pronamespace
- where n.nspname='public' and p.prokind='f' and p.proname in (
+ where n.nspname='public' and p.prokind='f' and (p.proname in (
  'admin_branch_stock','admin_dashboard_summary','admin_order_counts','branch_dashboard_summary','branch_inventory_workspace',
  'catalog_page','complete_past_catering_events','create_branch_order','create_weekly_invoice','deduct_stock_when_order_ready',
  'edit_invoice','edit_submitted_branch_order','guard_catalog_history_delete','inventory_day_state',
  'receive_pickup_return','remove_catalog_item','review_pickup','save_branch_inventory_day','save_daily_stock',
- 'save_order_fulfillment','send_weekly_invoice','set_invoice_payment_status','submit_pickup','validate_catalog_options','weekly_invoice_details') loop
+ 'save_order_fulfillment','send_weekly_invoice','set_invoice_payment_status','submit_pickup','validate_catalog_options','weekly_invoice_details')
+ or (not p.prosecdef and p.prosrc ~* 'auth\.uid\(\)')) loop
    definition=pg_get_functiondef(item.oid);
    definition=regexp_replace(definition,'(from|join) public\.profiles\M','\1 app_private.workspace_profiles','gi');
+   definition=regexp_replace(definition,'auth\.uid\(\)','app_private.request_user_id()','gi');
    execute definition;
    if item.prosecdef then execute format('alter function %s owner to ahaa_operations',item.oid::regprocedure); end if;
    execute format('grant execute on function %s to ahaa_operations',item.oid::regprocedure);

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_CONFIGURED } from "@/lib/supabase/env";
 import { activeRole, safeNextPath, userHome } from "@/lib/auth";
-import { BUSINESS_COOKIE, BUSINESS_HEADER, businessWorkspacesEnabled, selectedBusiness } from "@/features/workspaces/context";
+import { BUSINESS_COOKIE, BUSINESS_HEADER, businessEntrySlug, businessWorkspacesEnabled, selectedBusiness } from "@/features/workspaces/context";
 import { loadSessionProfile } from "@/features/workspaces/session";
 import { platformConsoleEnabled, platformDeployment } from "@/lib/app-surface";
 
@@ -24,6 +24,8 @@ export async function proxy(request: NextRequest) {
   // API handlers enforce their own session/role checks. Surface separation applies first.
   if (pathname.startsWith("/api/")) return response;
   const businessMode = businessWorkspacesEnabled();
+  const isBusinessEntry = businessMode && businessEntrySlug(pathname) !== null;
+  const loginBusinessEntry = businessMode && pathname === "/login" && businessEntrySlug(request.nextUrl.searchParams.get("next")) !== null;
   const isPlatform = pathname === "/superadmin" || pathname.startsWith("/superadmin/");
   const platformLogin = pathname === "/login" && request.nextUrl.searchParams.get("next") === "/superadmin";
   if (isPlatform && !consoleEnabled) return new NextResponse("Not found.", { status: 404 });
@@ -31,13 +33,13 @@ export async function proxy(request: NextRequest) {
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isBranch = pathname === "/branch" || pathname.startsWith("/branch/");
   const isEmployee = pathname === "/employee" || pathname.startsWith("/employee/");
-  const protectedRoute = isAdmin || isBranch || isEmployee || isWorkspaces || isPlatform;
+  const protectedRoute = isAdmin || isBranch || isEmployee || isWorkspaces || isPlatform || isBusinessEntry;
   if (!SUPABASE_CONFIGURED) {
     return protectedRoute ? new NextResponse("Application authentication is not configured.", { status: 503 }) : response;
   }
   let selection: string | null = null;
   try {
-    if (businessMode && !isWorkspaces && !isPlatform && !platformLogin) selection = selectedBusiness(request.cookies.getAll().filter(cookie => cookie.name === BUSINESS_COOKIE).map(cookie => `${cookie.name}=${cookie.value}`).join(";"));
+    if (businessMode && !isWorkspaces && !isBusinessEntry && !loginBusinessEntry && !isPlatform && !platformLogin) selection = selectedBusiness(request.cookies.getAll().filter(cookie => cookie.name === BUSINESS_COOKIE).map(cookie => `${cookie.name}=${cookie.value}`).join(";"));
   } catch { return NextResponse.redirect(new URL("/workspaces", request.url)); }
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_KEY, {
     global: { headers: selection ? { [BUSINESS_HEADER]: selection } : {} },
@@ -62,6 +64,8 @@ export async function proxy(request: NextRequest) {
   };
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (protectedRoute && (!user || authError)) return redirect("/login");
+  if (isBusinessEntry && user && !authError) return response;
+  if (loginBusinessEntry && user && !authError) return redirect(request.nextUrl.searchParams.get("next")!);
   if (isPlatform) {
     const permission = await supabase.rpc("platform_is_administrator");
     return !permission.error && permission.data === true ? response : new NextResponse("Platform access is required.", { status: 403 });

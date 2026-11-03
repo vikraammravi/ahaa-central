@@ -132,7 +132,7 @@ begin
    if tg_op='INSERT' then raise exception 'Use business member management'; end if;
    if new.id is distinct from old.id or new.role is distinct from old.role or new.status is distinct from old.status
    or new.location_id is distinct from old.location_id or new.email is distinct from old.email then raise exception 'Use business member management'; end if;
-   if old.id<>auth.uid() then raise exception 'Use business member management'; end if;
+   if old.id<>app_private.request_user_id() then raise exception 'Use business member management'; end if;
  end if;
  return new;
 end; $$;

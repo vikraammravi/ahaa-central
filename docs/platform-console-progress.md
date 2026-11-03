@@ -12,12 +12,17 @@ Ahaa is a customer business. Platform authorization is a separate explicit grant
 - `PLATFORM_CONSOLE_ENABLED=true` is server-only and defaults off. Do not enable it in production during staging work.
 - The console also requires `APP_SURFACE=platform`. The default business deployment cannot serve platform pages/APIs. See platform-deployment.md for the separate Vercel project setup.
 - Registration additionally requires server-only `PLATFORM_BUSINESS_REGISTRATION_ENABLED=true`; it defaults off in the page and API, so a read-only starting dashboard can run before the registration migration is installed.
+- First-admin assignment accepts an existing active identity for a provisioning business, records a membership and audit event, and leaves the business in setup. It creates no login and sends no email. It is gated by the same disabled registration flag and the pending database function.
+- A draft service-only function for assigning a newly created pending identity rechecks the platform actor, prevents assignment while active businesses lack isolation, and leaves the customer in setup. An authenticated preflight runs before the server creates a login. The combined rollback-only staging rehearsal passed permission, readiness, assignment, audit and duplicate-owner assertions. These functions are not installed.
+- The first-admin dialog and server handler support either an existing active account or a new account with a temporary password. New-account creation additionally requires `PLATFORM_NEW_OWNER_CREATION_ENABLED=true` and a server-only admin key; both are unavailable in the hosted platform project. No email is sent and the business remains in setup. The temporary password is not automatically forced to change at first sign-in, so that improvement remains a release gate. If an Auth or assignment response is uncertain, the account is preserved for review rather than deleted.
 
 ## Not released
 
-`supabase/planned/platform_console.draft.sql` is not installed. Existing operational isolation drafts remain unapplied. New business registration does not assign owners, send invitations, create business records or activate access. This is the platform directory/registration step, not completed SaaS onboarding.
+`supabase/planned/platform_console.draft.sql` is not installed. Existing operational isolation drafts remain unapplied. Account creation and existing-account assignment are implemented but disabled; invitations and business activation are not implemented. This is not completed SaaS onboarding.
 
-Next: rehearse the platform function with unauthorized/authorized users and audit assertions; finish cross-business acceptance, owner provisioning and activation checks; deploy the paired release to staging; then verify real browser flows. Production remains excluded.
+The combined rollback-only staging rehearsal passed authorized and unauthorized registration and owner-assignment checks, including audit assertions. The added authenticated business-entry and onboarding tests also passed locally. Actual two-business HTTP and file-access tests, account creation, activation and the staging release are still pending; production remains unchanged.
+
+The current onboarding branch passed 326 Vitest tests across 92 files, 37 Node unit tests, TypeScript, lint and a production webpack build. The new-account form and API are implemented behind disabled flags, but live account creation and activation have not been exercised. No customer account was created by the rehearsal.
 
 ## Local verification
 
@@ -27,4 +32,4 @@ The subsequent local preview passed 23 focused tests, TypeScript and scoped lint
 
 ## Routes
 
-Platform entry is `/superadmin`; sign-in preserves that destination. Customer entry remains `/workspaces` and the existing role routes. Slugs identify businesses but do not yet create customer-specific URLs or domains. A future URL selector must resolve authenticated membership before any business request; changing a slug alone must never grant access.
+Platform entry is `/superadmin`; sign-in preserves that destination. With workspace mode enabled, `/b/<slug>` provides an authenticated business-entry link and verifies membership before selecting the workspace. The role routes and workspace chooser remain shared. This is not a custom-domain binding or hostname isolation.

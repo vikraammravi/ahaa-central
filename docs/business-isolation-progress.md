@@ -26,6 +26,7 @@ The draft migration and assertions passed in a single staging BEGIN/ROLLBACK tra
 - Scoped receipt creation, rejected foreign scans/storage paths and the retained monthly/daily ceilings, without contacting Azure.
 - Unchanged existing record values before/after the metadata migration using checksums over every original operational column.
 - Existing atomic fulfillment rollback, stale edits, zero quantities, Ready stock deduction and bounded dashboard rules.
+- Restricted execution privileges, cross-business invoice/pickup operations, and private receipt-bucket policy checks. A narrow request-identity helper supports the restricted database role without granting access to the Auth schema.
 
 Run node scripts/prepare-isolation-rehearsal.mjs to regenerate the rollback-only staging script. It does not connect to a database. The draft remains in supabase/planned; it is not an approved release migration. These checks do not yet cover every callable function or replace HTTP/storage acceptance tests.
 

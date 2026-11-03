@@ -1,10 +1,11 @@
 # Workspace selection and membership-management step
 
-Branch: codex/business-isolation. Workspace mode stays disabled and production is unchanged.
+Branch: codex/saas-onboarding. Workspace mode stays disabled and production is unchanged.
 
 ## Implemented
 
 - `/workspaces` is a flag-gated chooser using authorized memberships. Existing admin, manager and employee URLs stay unchanged.
+- `/b/<slug>` is a flag-gated entry link that checks the signed-in user's authorized memberships before selecting a business. It does not bind access to a hostname.
 - Login and proxy guards resolve the selected membership role; missing/revoked/ambiguous context goes to the chooser while retaining the verified login. Invalid selections can be recovered there.
 - My Profile links to the chooser in workspace mode. Sign-out clears the selection. Different business, role or branch assignments invalidate user-scoped page state.
 - Browser transport blocks writes from a stale workspace page and discards responses arriving after selection changes. Workspace-resolution responses also cannot restore an old selection after another tab switches businesses.
@@ -22,7 +23,7 @@ The combined rollback-only staging rehearsal passed workspace choices, scoped us
 
 ## Remaining release gates
 
-Finish the full cross-business API/storage/function acceptance matrix, then apply the verified release set to staging and enable its feature flag for authenticated browser review. Component tests cover chooser behavior at mobile/tablet/desktop widths, but actual browser layout and account flows still require the staged release. Superadmin screens and customer onboarding are the following feature step.
+Finish the full cross-business API/storage/function acceptance matrix, then apply the verified release set to staging and enable its feature flag for authenticated browser review. Component tests cover chooser behavior, but actual browser layout and account flows still require the staged release. A separate superadmin directory exists, with first-admin assignment for an existing account implemented behind disabled flags. New-account onboarding and activation remain pending.
 
 There are still 16 production tables and 20 staging tables; this step adds no permanent tables. No Vercel environment settings, domains or deployed branches were changed.
 

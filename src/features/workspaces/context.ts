@@ -7,6 +7,11 @@ export const WORKSPACE_CHANGED_EVENT = "ahaa:workspace-changed";
 export type Business = { id: string; name: string; slug: string; settings: Record<string, unknown> };
 export type Workspace = { business: Business; profile: Profile };
 export function businessWorkspacesEnabled() { return process.env.NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED === "true"; }
+/** Accept only a local business entry path; never treat the slug as authorization. */
+export function businessEntrySlug(path: string | null): string | null {
+  const match = path?.match(/^\/b\/([a-z0-9]+(?:-[a-z0-9]+)*)$/);
+  return match && match[1].length >= 2 && match[1].length <= 60 ? match[1] : null;
+}
 export function validBusinessId(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }

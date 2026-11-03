@@ -77,3 +77,19 @@ it("uses the platform sign-in destination for its root and plain login", async (
   expect((await proxy(new NextRequest("https://app.test/"))).headers.get("location")).toBe("https://app.test/superadmin");
   expect((await proxy(new NextRequest("https://app.test/login"))).headers.get("location")).toBe("https://app.test/login?next=/superadmin");
 });
+it("requires sign-in for a business link and preserves its local destination", async () => {
+  db.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+  const response = await proxy(new NextRequest("https://app.test/b/test-business"));
+  expect(response.headers.get("location")).toBe("https://app.test/login?next=%2Fb%2Ftest-business");
+});
+it("lets a signed-in user reach the business entry without trusting an old selection", async () => {
+  const response = await proxy(new NextRequest("https://app.test/b/test-business", { headers: { cookie: "ahaa_business=invalid" } }));
+  expect(response.status).toBe(200);
+  expect(db.rpc).not.toHaveBeenCalled();
+  const login = await proxy(new NextRequest("https://app.test/login?next=%2Fb%2Ftest-business", { headers: { cookie: "ahaa_business=invalid" } }));
+  expect(login.headers.get("location")).toBe("https://app.test/b/test-business");
+});
+it("does not expose business entry on the platform deployment", async () => {
+  vi.stubEnv("APP_SURFACE", "platform");
+  expect((await proxy(new NextRequest("https://app.test/b/test-business"))).status).toBe(404);
+});

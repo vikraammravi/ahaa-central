@@ -1,7 +1,8 @@
-import {expect,it} from "vitest";
+import {expect,it,vi} from "vitest";
 import {loadInvoicePdf} from "@/server/business/billing/pdf-data";
 import {db,queryResult} from "@tests/mocks/supabase";
 import {pdfId,pdfProfile,pdfOrder,pdfCombinedRecord,pdfSnapshot} from "@tests/mocks/invoice-pdf";
+import {adminWorkspace,otherBusinessId} from "@tests/mocks/workspaces";
 type Database=Parameters<typeof loadInvoicePdf>[0];
 function setup(profile=pdfProfile,record=pdfCombinedRecord){
   db.auth.getUser.mockResolvedValue({data:{user:{id:profile.id}},error:null});
@@ -33,4 +34,14 @@ it("only admin sees unsent revisions and paid totals needing review stay flagged
   db.rpc.mockReturnValue(queryResult({...pdfSnapshot,revision:1}));
   const invoice=await loadInvoicePdf(db as unknown as Database,"combined",pdfId);
   expect(invoice.draft).toBe(true);expect(invoice.paymentNeedsReview).toBe(true);expect(db.rpc).toHaveBeenCalledWith("weekly_invoice_details",{p_invoice_id:pdfId,p_live:true});
+});
+it("denies a foreign business invoice when the authorized workspace query returns no row",async()=>{
+  vi.stubEnv("NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED","true");
+  db.auth.getUser.mockResolvedValue({data:{user:{id:adminWorkspace.profile.id}},error:null});
+  db.rpc.mockImplementation(name=>queryResult(name==="current_workspace"?adminWorkspace:pdfSnapshot));
+  db.from.mockReturnValue(queryResult(null));
+  await expect(loadInvoicePdf(db as unknown as Database,"individual",otherBusinessId)).rejects.toMatchObject({status:404});
+  await expect(loadInvoicePdf(db as unknown as Database,"combined",otherBusinessId)).rejects.toMatchObject({status:404});
+  expect(db.rpc).not.toHaveBeenCalledWith("weekly_invoice_details",expect.anything());
+  expect(db.from).not.toHaveBeenCalledWith("profiles");
 });
