@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { Building2, Plus, ShieldCheck } from "lucide-react";
+import { Building2, LayoutDashboard, Plus, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { fetchBusinesses, registerBusiness, type PlatformBusiness } from "../dat
 import { businessWorkspacesEnabled } from "@/features/workspaces/context";
 import { InitialAdminDialog } from "./InitialAdminDialog";
 
-export default function PlatformConsole({ registrationEnabled = false, newOwnerEnabled = false }: { registrationEnabled?: boolean; newOwnerEnabled?: boolean }) {
+export default function PlatformConsole({ registrationEnabled = false, ownerAssignmentEnabled = false, newOwnerEnabled = false }: { registrationEnabled?: boolean; ownerAssignmentEnabled?: boolean; newOwnerEnabled?: boolean }) {
   const list = useAsyncData(fetchBusinesses);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,25 +33,25 @@ export default function PlatformConsole({ registrationEnabled = false, newOwnerE
     } catch (error) { setError(error instanceof Error ? error.message : "Unable to register business."); }
     finally { setBusy(false); }
   }
-  return <main className="mx-auto min-h-screen max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+  return <div className="min-h-screen lg:flex"><aside className="border-b bg-card px-4 py-3 lg:sticky lg:top-0 lg:h-screen lg:w-56 lg:shrink-0 lg:border-b-0 lg:border-r lg:px-4 lg:py-6"><p className="mb-3 flex items-center gap-2 font-semibold"><ShieldCheck className="size-5" />Platform admin</p><nav aria-label="Platform navigation" className="flex gap-2 lg:flex-col"><Button asChild variant="ghost" className="justify-start"><a href="#overview"><LayoutDashboard />Dashboard</a></Button><Button asChild variant="ghost" className="justify-start"><a href="#businesses"><Building2 />Businesses</a></Button></nav></aside><main id="overview" className="mx-auto min-w-0 w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6">
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><p className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4" />Platform administration</p><h1 className="mt-1 text-2xl font-semibold">Superadmin dashboard</h1></div>
       <div className="flex flex-wrap gap-2">{businessWorkspacesEnabled() && <Button asChild variant="outline"><Link href="/workspaces">My workspaces</Link></Button>}<SignOutButton variant="compact" /></div>
     </header>
     <p className="text-sm text-muted-foreground">Each business has its own users and operations. Platform access manages business setup; it does not open customer orders or invoices.</p>
     {!list.loading && list.data && <section aria-label="Business overview" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {[["Registered businesses", list.data.length], ["In setup", list.data.filter(business => !business.isolation_ready || business.status === "provisioning").length], ["Suspended", list.data.filter(business => business.status === "suspended").length]].map(([label, count]) => <Card key={label}><CardContent className="p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{count}</p></CardContent></Card>)}
+      {[["Registered businesses", list.data.length], ["In setup", list.data.filter(business => business.status === "provisioning").length], ["Suspended", list.data.filter(business => business.status === "suspended").length]].map(([label, count]) => <Card key={label}><CardContent className="p-4"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{count}</p></CardContent></Card>)}
     </section>}
     {!registrationEnabled && <Banner tone="info">Business registration is coming next. You can review the business directory here.</Banner>}
-    <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Business directory</h2>{registrationEnabled && <Button onClick={() => { setError(""); setOpen(true); }}><Plus />Add business</Button>}</div>
+    <div id="businesses" className="flex items-center justify-between gap-3"><h2 className="font-semibold">Business directory</h2>{registrationEnabled && <Button onClick={() => { setError(""); setOpen(true); }}><Plus />Add business</Button>}</div>
     {notice && <Banner tone="success">{notice}</Banner>}
     {list.error && <Banner tone="danger">{list.error}<Button variant="ghost" onClick={() => void list.refresh()}>Retry</Button></Banner>}
     {list.loading ? <LoadingState label="Loading businesses…" /> : <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
       {list.data?.map(business => <Card key={business.id}><CardContent className="space-y-3 p-4">
         <div className="flex items-start gap-3"><Building2 className="mt-1 size-5 shrink-0 text-primary" /><div className="min-w-0"><h3 className="break-words text-lg font-semibold">{business.name}</h3><p className="break-all text-sm text-muted-foreground">{business.slug}</p></div></div>
-        <dl className="space-y-2 text-sm"><div className="flex justify-between gap-2"><dt>Status</dt><dd className="capitalize">{business.status}</dd></div><div className="flex justify-between gap-2"><dt>Business access</dt><dd>{business.isolation_ready && business.status === "active" ? "Available to members" : "Setup pending"}</dd></div></dl>
+        <dl className="space-y-2 text-sm"><div className="flex justify-between gap-2"><dt>Status</dt><dd className="capitalize">{business.status}</dd></div><div className="flex justify-between gap-2"><dt>Business access</dt><dd>{business.status === "suspended" ? "Suspended" : business.status === "provisioning" ? "Setup pending" : business.isolation_ready ? "Available to members" : "Existing access"}</dd></div></dl>
         {business.status === "provisioning" && <p className="text-sm text-muted-foreground">First admin: {business.owner_assigned ? "Assigned" : "Not assigned"}</p>}
-        {registrationEnabled && business.status === "provisioning" && !business.isolation_ready && !business.owner_assigned && <Button variant="outline" className="w-full" onClick={() => setOwnerBusiness(business)}>Assign first admin</Button>}
+        {registrationEnabled && ownerAssignmentEnabled && business.status === "provisioning" && !business.isolation_ready && !business.owner_assigned && <Button variant="outline" className="w-full" onClick={() => setOwnerBusiness(business)}>Assign first admin</Button>}
       </CardContent></Card>)}
       {!list.data?.length && !list.error && <p className="text-sm text-muted-foreground">No businesses registered yet.</p>}
     </div>}
@@ -64,5 +64,5 @@ export default function PlatformConsole({ registrationEnabled = false, newOwnerE
       list.mutate(current => current?.map(business => business.id === assignedId ? { ...business, owner_assigned: true } : business) ?? []);
       setOwnerBusiness(null); setNotice("Admin assigned. The business remains in setup until activation is available."); void list.refresh(true);
     }} />
-  </main>;
+  </main></div>;
 }

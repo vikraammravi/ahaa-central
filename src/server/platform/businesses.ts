@@ -63,7 +63,7 @@ export async function assignInitialOwner(request: Request, context: { params: Pr
   try {
     if (!hasSameOrigin(request)) throw new PlatformAccessError("Request not allowed.", 403);
     const session = await platformSession();
-    if (process.env.PLATFORM_BUSINESS_REGISTRATION_ENABLED !== "true") throw new PlatformAccessError("Business registration is not enabled yet.", 409);
+    if (process.env.PLATFORM_BUSINESS_REGISTRATION_ENABLED !== "true" || process.env.PLATFORM_OWNER_ASSIGNMENT_ENABLED !== "true") throw new PlatformAccessError("Admin assignment is not enabled yet.", 409);
     const { id } = await context.params;
     const values = await requestBody(request);
     const email = typeof values.email === "string" ? values.email.trim().toLowerCase() : "";

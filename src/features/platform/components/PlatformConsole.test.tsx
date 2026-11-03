@@ -12,7 +12,7 @@ beforeEach(() => {
   vi.mocked(createBusinessOwner).mockResolvedValue();
 });
 it("offers new-account setup only when separately enabled", async () => {
-  render(<PlatformConsole registrationEnabled newOwnerEnabled />);
+  render(<PlatformConsole registrationEnabled ownerAssignmentEnabled newOwnerEnabled />);
   fireEvent.click(await screen.findByRole("button", { name: "Assign first admin" }));
   fireEvent.click(screen.getByRole("button", { name: "New account" }));
   fireEvent.change(screen.getByLabelText("Admin name"), { target: { value: "Customer Admin" } });
@@ -23,7 +23,7 @@ it("offers new-account setup only when separately enabled", async () => {
   expect(await screen.findByText(/Admin assigned. The business remains in setup/)).toBeInTheDocument();
 });
 it("assigns an existing admin to a business still in setup", async () => {
-  render(<PlatformConsole registrationEnabled />);
+  render(<PlatformConsole registrationEnabled ownerAssignmentEnabled />);
   fireEvent.click(await screen.findByRole("button", { name: "Assign first admin" }));
   fireEvent.change(screen.getByLabelText("Admin email"), { target: { value: "owner@example.invalid" } });
   fireEvent.click(screen.getByRole("button", { name: "Assign admin" }));
@@ -34,7 +34,8 @@ it("shows business setup separately from customer operations", async () => {
   render(<PlatformConsole />);
   expect(await screen.findByText("Ahaa")).toBeInTheDocument();
   expect(screen.getByText("Example Business")).toBeInTheDocument();
-  expect(screen.getAllByText("Setup pending")).toHaveLength(2);
+  expect(screen.getByText("Existing access")).toBeInTheDocument();
+  expect(screen.getByText("Setup pending")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /invoice/i })).not.toBeInTheDocument();
 });
 it("registers a business in a dialog and explains the pending activation", async () => {
@@ -61,4 +62,11 @@ it("shows the starting dashboard with registration unavailable by default", asyn
   expect(await screen.findByRole("heading", { name: "Superadmin dashboard" })).toBeInTheDocument();
   expect(await screen.findByRole("region", { name: "Business overview" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Add business" })).not.toBeInTheDocument();
+});
+it("shows platform navigation while admin assignment remains independently disabled", async () => {
+  render(<PlatformConsole registrationEnabled />);
+  expect(await screen.findByRole("navigation", { name: "Platform navigation" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Businesses" })).toHaveAttribute("href", "#businesses");
+  expect(screen.getByRole("button", { name: "Add business" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Assign first admin" })).not.toBeInTheDocument();
 });

@@ -11,6 +11,7 @@ beforeEach(() => {
   vi.stubEnv("APP_SURFACE", "platform");
   vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "true");
   vi.stubEnv("PLATFORM_BUSINESS_REGISTRATION_ENABLED", "true");
+  vi.stubEnv("PLATFORM_OWNER_ASSIGNMENT_ENABLED", "true");
   vi.stubEnv("PLATFORM_NEW_OWNER_CREATION_ENABLED", "true");
   db.auth.getUser.mockResolvedValue({ data: { user: { id: "platform-user" } }, error: null });
   db.rpc.mockImplementation((name: string) => queryResult(name === "platform_is_administrator" ? true : { id: "new-business", status: "provisioning" }));
@@ -122,6 +123,12 @@ it("does not assign an owner when access, setup or input is invalid", async () =
   expect((await assignInitialOwner(request({ email: "bad" }), context)).status).toBe(400);
   vi.stubEnv("PLATFORM_BUSINESS_REGISTRATION_ENABLED", "false");
   expect((await assignInitialOwner(request({ email: "owner@example.invalid" }), context)).status).toBe(409);
+  expect(db.rpc.mock.calls.some(([name]) => name === "platform_assign_initial_owner")).toBe(false);
+});
+it("keeps admin assignment disabled independently of business registration", async () => {
+  vi.stubEnv("PLATFORM_OWNER_ASSIGNMENT_ENABLED", "false");
+  const response = await assignInitialOwner(request({ email: "owner@example.invalid" }), { params: Promise.resolve({ id: businessId }) });
+  expect(response.status).toBe(409);
   expect(db.rpc.mock.calls.some(([name]) => name === "platform_assign_initial_owner")).toBe(false);
 });
 it("rejects an oversized body even when content length is absent", async () => {
