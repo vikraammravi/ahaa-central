@@ -1,5 +1,7 @@
 # Platform console checkpoint
 
+Current release status (November 4, 2026): the basic dashboard remains on its separate staging-backed Vercel deployment. Business isolation and workspace membership changes are now installed in staging and production; see `business-isolation-progress.md`. Platform registration/owner/onboarding drafts remain unapplied and their flags disabled. This supersedes older statements below that operational isolation was not installed.
+
 Ahaa is a customer business. Platform authorization is a separate explicit grant, not a customer role. The current staging admin identity has both permissions for testing; this does not make every business administrator a platform administrator.
 
 ## Implemented

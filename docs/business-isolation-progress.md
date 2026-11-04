@@ -1,5 +1,7 @@
 # Business isolation development checkpoint
 
+Current release status (November 4, 2026): isolation is installed and workspace mode is enabled in both staging and production. Staging passed live two-business acceptance; production passed migration, access and signed-in admin smoke checks. The basic platform dashboard remains on its separate staging-backed Vercel URL. Onboarding remains deferred. Earlier sections below describe implementation/rehearsal history; see the production promotion section for current evidence.
+
 Branch: codex/business-isolation. No deployment or permanent database change in this step.
 
 ## Implemented
@@ -50,4 +52,20 @@ The user deferred business registration, owner creation, activation and onboardi
 
 The narrowed staging rehearsal passed with private receipt-bucket, storage RLS, trigger and operational privilege checks. The workspace-enabled webpack build, TypeScript, module boundaries and 99 affected workspace/backend/platform regression tests passed. The PDF endpoint now returns a private 400 response for malformed workspace-selection cookies; unexpected initialization errors remain private 500 responses.
 
-`scripts/test-staging-isolation.mjs` prepares actual authenticated Data API/PDF/file checks after cutover, with separate fixture preparation and no Azure scans. Offline validation is not live acceptance. Permanent installation, hosted workspace enablement, live two-business acceptance and production promotion are still pending. Automatic approval review rejected saving the staging flag before the matching database/app prerequisites were complete; the flag was not saved.
+`scripts/test-staging-isolation.mjs` prepares actual authenticated Data API/PDF/file checks after cutover, with separate fixture preparation and no Azure scans. Offline validation is not live acceptance. Automatic approval review initially rejected saving the staging flag before the matching database/app prerequisites were complete.
+
+After explicit coordinated-cutover approval, commit `d839a7e` was pushed to staging (not main), the isolated staging database transaction committed and the workspace flag was saved for the staging branch only. Workspace-enabled Vercel deployment `CebTfC1BHEvfdqrLrpxDW39FPsGq` reported Ready after email reauthentication. A live malformed-cookie API check returned 400, confirming the workspace-enabled handler is active.
+
+Live staging acceptance passed 17 scenario groups across admin, manager, employee and shared identities: own-business positive controls, foreign-record denial, invoice PDF bytes, private signed originals, invalid selections, revoked access and anonymous denial. Disposable setup also passed canonical Ready stock deduction, pickup completion, invoice combining/sending, and unchanged pre-existing stock checks. Both exact test originals and all generated fixture rows/memberships were removed with guarded cleanup; post-cleanup checks confirmed only isolated Ahaa remains and all three Ahaa roles resolve their own workspace. The authenticated platform-directory HTTP check passed. No emails, new Auth accounts or Azure scans were used.
+
+Independent review accepted these tested staging boundaries after cleanup verification. Live browser layout/chooser UX was not re-reviewed. At that staging handoff, production had not yet received the isolation release; the later production section below supersedes that checkpoint. Onboarding remains disabled. Do not run the old foundation-only verification script now: it intentionally expects the pre-migration staging schema.
+
+## Production promotion: November 4, 2026
+
+The user authorized production promotion and privately configured its database password. The production session-pooler host was verified as `aws-0-us-west-2.pooler.supabase.com`; it differs from staging. Private backups include a public-schema/data archive plus a 16-table public-record snapshot and two receipt originals. These do not establish managed Auth, role or complete storage recovery.
+
+The generated production rollback rehearsal passed. Source/manifest review confirmed the production release body matches its rehearsal except comments and transaction completion. The reviewed foundation/isolation/membership transaction committed; no platform-administrator bootstrap or onboarding SQL was included. Production workspace mode was saved for the Production environment, and main was fast-forwarded to `d839a7e`. Vercel deployment `3mQeWRVMcTvmMjwpbisktXTTA9d8` reported Ready.
+
+Post-release checks passed for isolated Ahaa ownership, zero production platform grants, workspace RPC visibility, a private receipt bucket, effective workspace API behavior, anonymous denial, no-index and production/platform route separation. Rollback-only authenticated database-role checks verified existing identities retain their role/branch, dashboard or employee inventory access, and foreign-workspace rejection. These simulated database identities do not constitute managed-Auth sign-in tests.
+
+The user then signed in to production as admin. Browser smoke checks loaded the dashboard, daily stock, orders and invoice list; authenticated invoice download returned a 4,538-byte `%PDF-` file. The empty admin vendor list matched the zero active admin-owned receipts (branch receipts remain separately scoped). The public production bundle referenced only the production Supabase project. No production order, pickup, invoice, file or Auth mutation was used for acceptance; the full mutable two-business workflow was exercised only in staging. The existing basic platform dashboard stays staging-backed at its separate Vercel URL. Add business and onboarding remain disabled.

@@ -1,5 +1,7 @@
 # Workspace selection and membership-management step
 
+Current release status (November 4, 2026): the isolation and membership packages below are now installed in staging and production, with workspace mode enabled. Staging live two-business acceptance and production access/admin smoke checks passed. See `business-isolation-progress.md` for exact deployments and limitations. The following implementation checkpoint is historical; onboarding and new-business activation remain deferred.
+
 Branch: codex/saas-onboarding. Workspace mode stays disabled and production is unchanged.
 
 ## Implemented
