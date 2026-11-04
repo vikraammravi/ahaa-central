@@ -3,7 +3,7 @@ import { queryResult } from "@tests/mocks/supabase";
 import { businessId, workspaceProfile } from "@tests/mocks/workspaces";
 import { purchaseReceipt } from "@tests/mocks/receipts";
 import { receiptAccess } from "./access";
-import { GET, POST } from "./document";
+import { DELETE, GET, POST } from "./document";
 
 vi.mock("./access", async (importOriginal) => {
   const original = await importOriginal<typeof import("./access")>();
@@ -45,4 +45,14 @@ it("never signs or scans an original when the scoped record is inaccessible", as
   expect(scan.status).not.toBe(200);
   expect(storage.download).not.toHaveBeenCalled();
   expect(database.rpc).not.toHaveBeenCalled();
+});
+it("does not delete a receipt outside the selected business and branch", async () => {
+  const query = queryResult(null);
+  database.from.mockReturnValue(query);
+  const response = await DELETE(new Request(`https://app.test/api/receipts/${purchaseReceipt.id}`, { method: "DELETE" }), context);
+  expect(response.status).not.toBe(200);
+  expect(query.eq).toHaveBeenCalledWith("business_id", businessId);
+  expect(query.eq).toHaveBeenCalledWith("location_id", workspaceProfile.location_id);
+  expect(query.eq).toHaveBeenCalledWith("id", purchaseReceipt.id);
+  expect(storage.createSignedUrl).not.toHaveBeenCalled();
 });

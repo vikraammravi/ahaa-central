@@ -45,3 +45,19 @@ it("denies a foreign business invoice when the authorized workspace query return
   expect(db.rpc).not.toHaveBeenCalledWith("weekly_invoice_details",expect.anything());
   expect(db.from).not.toHaveBeenCalledWith("profiles");
 });
+it("denies invoice access when the selected workspace is unavailable",async()=>{
+  vi.stubEnv("NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED","true");
+  db.auth.getUser.mockResolvedValue({data:{user:{id:adminWorkspace.profile.id}},error:null});
+  db.rpc.mockReturnValue(queryResult(null,{message:"Workspace access is unavailable"}));
+  await expect(loadInvoicePdf(db as unknown as Database,"individual",pdfId)).rejects.toMatchObject({status:403});
+  await expect(loadInvoicePdf(db as unknown as Database,"combined",pdfId)).rejects.toMatchObject({status:403});
+  expect(db.from).not.toHaveBeenCalled();
+  expect(db.rpc).not.toHaveBeenCalledWith("weekly_invoice_details",expect.anything());
+});
+it("uses the selected business role when a user cannot access invoices there",async()=>{
+  vi.stubEnv("NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED","true");
+  db.auth.getUser.mockResolvedValue({data:{user:{id:adminWorkspace.profile.id}},error:null});
+  db.rpc.mockReturnValue(queryResult({...adminWorkspace,profile:{...adminWorkspace.profile,role:"BRANCH_EMPLOYEE",location_id:"44444444-4444-4444-8444-444444444444"}}));
+  await expect(loadInvoicePdf(db as unknown as Database,"combined",pdfId)).rejects.toMatchObject({status:403});
+  expect(db.from).not.toHaveBeenCalled();
+});

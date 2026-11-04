@@ -25,6 +25,8 @@ The combined rollback-only staging rehearsal passed workspace choices, scoped us
 
 Finish the full cross-business API/storage/function acceptance matrix, then apply the verified release set to staging and enable its feature flag for authenticated browser review. Component tests cover chooser behavior, but actual browser layout and account flows still require the staged release. A separate superadmin directory exists, with first-admin assignment for an existing account implemented behind disabled flags. New-account onboarding and activation remain pending.
 
+The database release and workspace-enabled app must be coordinated as one staging cutover. The database draft revokes the legacy receipt creation and scan functions, but the currently deployed app calls those functions while workspace mode is off. Applying the database draft on its own would break vendor-invoice uploads and scans. Conversely, enabling workspace mode before its database functions exist fails closed. Prepare a tested cutover and recovery procedure, including an explicit temporary service interruption if needed; do not enable another business during the transition. Verify receipt upload, viewing and scan-limit enforcement after both sides are active, without making an unnecessary paid scan.
+
 There are still 16 production tables and 20 staging tables; this step adds no permanent tables. No Vercel environment settings, domains or deployed branches were changed.
 
 ## Verification
