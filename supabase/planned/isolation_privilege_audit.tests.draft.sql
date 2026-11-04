@@ -3,6 +3,13 @@ begin;
 do $$
 declare table_name text; function_name text;
 begin
+ if not exists(select 1 from storage.buckets where id='purchase-receipts' and public=false) then
+   raise exception 'Receipt bucket is missing or public';
+ end if;
+ if not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
+   where n.nspname='storage' and c.relname='objects' and c.relrowsecurity) then
+   raise exception 'Storage object row security is disabled';
+ end if;
  foreach table_name in array array['locations','catalog_categories','catalog_units','catalog_items','orders','order_lines',
  'pickup_requests','pickup_request_lines','branch_inventory_counts','branch_inventory_lines','weekly_invoices',
  'weekly_invoice_publications','invoice_edits','catering_events','purchase_receipts'] loop
@@ -33,6 +40,11 @@ begin
  end loop;
  if exists(select 1 from pg_roles where rolname='ahaa_operations' and (rolcanlogin or rolbypassrls or rolsuper)) then
    raise exception 'Operations role can bypass isolation';
+ end if;
+ if to_regprocedure('public.deduct_stock_when_order_ready()') is null
+   or exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+     where n.nspname='public' and p.proname='deduct_stock_when_order_ready' and p.prosecdef) then
+   raise exception 'Ready stock trigger is missing or has an unexpected elevated overload';
  end if;
  if not has_schema_privilege('ahaa_operations','app_private','usage') or not has_function_privilege('ahaa_operations','app_private.request_user_id()','execute') then
    raise exception 'Operations role lacks access to the request identity helper';

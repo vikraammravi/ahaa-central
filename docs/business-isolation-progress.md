@@ -43,3 +43,11 @@ The 37 Node unit checks and full 252-test Vitest run passed. After the final rec
 ## Next implementation step
 
 The next-step chooser and membership implementation is recorded in workspace-membership-progress.md. Complete the full API/storage/function acceptance matrix before installing isolation or enabling workspace mode in staging. Superadmin follows the isolation acceptance gate.
+
+## Narrowed delivery scope: basic dashboard and isolation
+
+The user deferred business registration, owner creation, activation and onboarding. The basic platform dashboard is already implemented. `scripts/prepare-isolation-release.mjs` now prepares isolation/membership-only staging and production packages with manifests; production additionally includes its missing foundation, but no platform-admin bootstrap. Default mode is rollback rehearsal and the script never connects to a database.
+
+The narrowed staging rehearsal passed with private receipt-bucket, storage RLS, trigger and operational privilege checks. The workspace-enabled webpack build, TypeScript, module boundaries and 99 affected workspace/backend/platform regression tests passed. The PDF endpoint now returns a private 400 response for malformed workspace-selection cookies; unexpected initialization errors remain private 500 responses.
+
+`scripts/test-staging-isolation.mjs` prepares actual authenticated Data API/PDF/file checks after cutover, with separate fixture preparation and no Azure scans. Offline validation is not live acceptance. Permanent installation, hosted workspace enablement, live two-business acceptance and production promotion are still pending. Automatic approval review rejected saving the staging flag before the matching database/app prerequisites were complete; the flag was not saved.
