@@ -108,6 +108,8 @@ do $$ declare f isolation_fixture%rowtype; begin
  if not exists(select 1 from public.branch_inventory_lines where count_id=f.inventory_b and quantity=3) then raise exception 'Foreign inventory was changed'; end if;
  if public."current_role"()<>'BRANCH_MANAGER' or public.current_location()<>f.branch_b then raise exception 'Global role/location leaked across memberships'; end if;
  if exists(select 1 from public.catalog_items where business_id<>f.business_b) then raise exception 'B catalog leaked'; end if;
+ if exists(select 1 from public.profiles where id=f.outsider_id) then raise exception 'A-only user profile leaked to B'; end if;
+ if exists(select 1 from public.locations where id=f.branch_a) then raise exception 'A branch leaked to B'; end if;
  begin perform public.admin_dashboard_summary(); raise exception 'B manager obtained A admin privileges';
  exception when raise_exception then if sqlerrm='B manager obtained A admin privileges' then raise; end if; end;
 end; $$;
