@@ -49,8 +49,10 @@ export function DataTable<T>({
   tableClassName,
   rowClassName,
   expandedContent,
+  expandedRows,
   renderCard,
   showRowAction=true,
+  wideCompact=false,
 }: {
   data: T[] | null;
   columns: Column<T>[];
@@ -64,10 +66,13 @@ export function DataTable<T>({
   tableClassName?: string;
   rowClassName?: (row: T) => string | undefined;
   expandedContent?: (row: T) => ReactNode;
+  /** Optional desktop rows for content that shares this table's columns. */
+  expandedRows?: (row: T) => ReactNode;
   renderCard?: (row:T)=>ReactNode;
   showRowAction?:boolean;
+  wideCompact?:boolean;
 }) {
-  const compact=useCompactLayout();
+  const compact=useCompactLayout(wideCompact);
   if (loading) {
     return (
       <div className="min-w-0 max-w-full border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">
@@ -136,7 +141,7 @@ export function DataTable<T>({
                     {c.render(row)}
                   </TableCell>
                 ))}
-              </TableRow>{expandedContent?.(row) && <TableRow><TableCell colSpan={columns.length} className="p-4 bg-muted/30">{expandedContent(row)}</TableCell></TableRow>}</Fragment>
+              </TableRow>{expandedRows ? expandedRows(row) : expandedContent?.(row) && <TableRow><TableCell colSpan={columns.length} className="p-4 bg-muted/30">{expandedContent(row)}</TableCell></TableRow>}</Fragment>
             ))}
           </TableBody>
         </Table>

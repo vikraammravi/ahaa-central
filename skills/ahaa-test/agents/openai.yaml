@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ahaa Test Agent"
+  short_description: "Write and run requirement-driven Ahaa regressions"
+  default_prompt: "Use $ahaa-test to test this Ahaa change against its original acceptance criteria."

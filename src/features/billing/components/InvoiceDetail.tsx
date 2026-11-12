@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import Link from "next/link";
 import { InvoiceActions } from "@/features/billing/components/InvoiceActions";
 
-type InvoiceOrder = Order & { locations: Pick<Location, "name" | "address" | "city" | "province"> | null; pickup_requests: { return_status: string | null }[] };
+type InvoiceOrder = Order & { locations: Pick<Location, "name" | "address" | "city" | "province"> | null; pickup_requests: { return_status: string | null }[]; weekly_invoices: {sent_at:string|null;payment_status:string}|null };
 type InvoiceLine = OrderLine & { catalog_items: { name: string; unit_type: string } | null };
 
 export function InvoiceDetail({ orderId, isAdmin = false }: { orderId: string; isAdmin?: boolean }) {
@@ -30,7 +30,7 @@ export function InvoiceDetail({ orderId, isAdmin = false }: { orderId: string; i
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState<InvoiceEdit[]>([]);
   const load = useCallback(async () => {
-    let invoiceQuery = supabase.from("orders").select("*, locations(name, address, city, province), pickup_requests(return_status)").eq("id", orderId);
+    let invoiceQuery = supabase.from("orders").select("*, locations(name, address, city, province), pickup_requests(return_status), weekly_invoices(sent_at,payment_status)").eq("id", orderId);
     if (!isAdmin) invoiceQuery = invoiceQuery.not("weekly_invoice_id", "is", null).eq("status", "COMPLETED");
     const [{ data: invoice, error: invoiceError }, { data: rows, error: lineError }, audit] = await Promise.all([
       invoiceQuery.single(),
@@ -53,7 +53,7 @@ export function InvoiceDetail({ orderId, isAdmin = false }: { orderId: string; i
   }, [load]);
   if (loading) return <LoadingState label="Loading invoice…" />;
   if (!order) return <div className="space-y-3">{error && <Banner tone="danger">{error}</Banner>}<EmptyState title="Invoice unavailable" body={isAdmin ? "This order could not be loaded." : "The final invoice becomes available when central admin sends it."} /></div>;
-  const canEdit = isAdmin && (order.status === "READY" || order.status === "COMPLETED") && order.pickup_approval_status !== "PENDING" && !order.pickup_requests.some((request) => request.return_status === "PENDING");
+  const canEdit = isAdmin && (order.status === "READY" || order.status === "COMPLETED") && order.pickup_approval_status !== "PENDING" && !order.pickup_requests.some((request) => request.return_status === "PENDING") && (!order.weekly_invoice_id || (!!order.weekly_invoices && !order.weekly_invoices.sent_at));
   const subtotal = order.final_subtotal;
   const tax = order.final_tax_amount;
   const total = order.final_total_amount;
@@ -74,6 +74,7 @@ export function InvoiceDetail({ orderId, isAdmin = false }: { orderId: string; i
       <div><p className="text-xs text-muted-foreground uppercase tracking-wide">Bill To</p><p className="font-medium mt-1">{order.locations?.name ?? "Branch"}</p><p className="text-muted-foreground">{[order.locations?.address, order.locations?.city, order.locations?.province].filter(Boolean).join(", ")}</p></div>
     </CardContent></Card>
     {isAdmin && order.pickup_approval_status === "PENDING" && <Banner tone="info">Review the pending pickup request in Branch Orders before editing this invoice.</Banner>}
+    {isAdmin && canEdit && order.weekly_invoices?.payment_status === "PAID" && <Banner tone="info">This combined invoice is marked paid. Review its payment status after changing the invoice.</Banner>}
     {order.status !== "COMPLETED" && <Banner tone="info">This is a draft. Confirm physical pickup, review billing, then combine completed orders into a weekly invoice.</Banner>}
     {order.weekly_invoice_id ? <Banner tone="info"><Link className="underline font-medium" href={`${isAdmin ? "/admin" : "/branch"}/invoices/weekly/${order.weekly_invoice_id}`}>Open Combined Weekly Invoice</Link></Banner> : <Banner tone="info">Review this individual order, then select completed orders in Invoices to create and send a combined weekly invoice.</Banner>}
     <Dialog open={editing && canEdit} onOpenChange={setEditing}><DialogContent aria-describedby={undefined} className="sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto"><DialogHeader><DialogTitle>Edit Invoice — INV-{order.order_number}</DialogTitle></DialogHeader>{editing && <InvoiceEditor key={`${order.id}-${order.invoice_revision}`} order={order} lines={lines} onCancel={() => setEditing(false)} onSaved={async () => { await load(); setEditing(false); }} />}</DialogContent></Dialog>

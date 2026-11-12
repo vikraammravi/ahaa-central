@@ -35,6 +35,32 @@ it("only admin sees unsent revisions and paid totals needing review stay flagged
   const invoice=await loadInvoicePdf(db as unknown as Database,"combined",pdfId);
   expect(invoice.draft).toBe(true);expect(invoice.paymentNeedsReview).toBe(true);expect(db.rpc).toHaveBeenCalledWith("weekly_invoice_details",{p_invoice_id:pdfId,p_live:true});
 });
+it("maps edited unsent combined invoice lines, order amounts and totals to the admin PDF",async()=>{
+  setup(pdfProfile,{...pdfCombinedRecord,sent_at:null as unknown as string,sent_revision:null as unknown as number,revision:1});
+  db.rpc.mockReturnValue(queryResult({
+    ...pdfSnapshot,sent_at:null,revision:1,
+    lines:[{...pdfSnapshot.lines[0],quantity:8,is_taxable:true,subtotal:80,tax:10.4}],
+    orders:[{...pdfSnapshot.orders[0],total:90.4}],subtotal:80,tax:10.4,total:90.4,
+  }));
+  const invoice=await loadInvoicePdf(db as unknown as Database,"combined",pdfId);
+  expect(invoice.draft).toBe(true);
+  expect(invoice.lines).toEqual([{name:pdfSnapshot.lines[0].name,unit:"Bucket",quantity:8,price:10,taxable:true,subtotal:80}]);
+  expect(invoice.orders).toEqual([{number:pdfSnapshot.orders[0].order_number,date:pdfSnapshot.orders[0].order_date,total:90.4}]);
+  expect(invoice).toMatchObject({subtotal:80,tax:10.4,total:90.4});
+  expect(db.rpc).toHaveBeenCalledWith("weekly_invoice_details",{p_invoice_id:pdfId,p_live:true});
+});
+it("keeps a branch PDF on its published snapshot when a different live revision exists",async()=>{
+  setup({...pdfProfile,role:"BRANCH_MANAGER"},{...pdfCombinedRecord,revision:1});
+  db.rpc.mockImplementation((_name,args)=>queryResult(args.p_live
+    ? {...pdfSnapshot,revision:1,subtotal:80,tax:10.4,total:90.4,orders:[{...pdfSnapshot.orders[0],total:90.4}]}
+    : pdfSnapshot));
+  const invoice=await loadInvoicePdf(db as unknown as Database,"combined",pdfId);
+  expect(db.rpc).toHaveBeenCalledWith("weekly_invoice_details",{p_invoice_id:pdfId,p_live:false});
+  expect(invoice.draft).toBe(false);
+  expect(invoice.lines[0]).toMatchObject({quantity:5,taxable:false,subtotal:50});
+  expect(invoice.orders).toEqual([{number:pdfSnapshot.orders[0].order_number,date:pdfSnapshot.orders[0].order_date,total:50}]);
+  expect(invoice).toMatchObject({subtotal:50,tax:0,total:50});
+});
 it("denies a foreign business invoice when the authorized workspace query returns no row",async()=>{
   vi.stubEnv("NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED","true");
   db.auth.getUser.mockResolvedValue({data:{user:{id:adminWorkspace.profile.id}},error:null});

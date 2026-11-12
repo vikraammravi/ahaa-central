@@ -44,6 +44,10 @@ export default function AdminOrdersPage() {
 
   async function updateStatus(id: string, status: OrderStatus) {
     setError(null);
+    if (status === "COMPLETED") {
+      router.push(`/admin/orders/${id}?pickup=1`);
+      return;
+    }
     const { error } = await supabase
       .from("orders")
       .update({ status })
@@ -56,10 +60,10 @@ export default function AdminOrdersPage() {
         <FormSelect<OrderStatus>
           aria-label={`Status for order ${r.order_number}`}
           value={r.status}
-          disabled={r.status === "READY" || r.status === "COMPLETED" || r.status === "CANCELLED" || r.pickup_approval_status === "PENDING"}
+          disabled={r.status === "COMPLETED" || r.status === "CANCELLED" || r.pickup_approval_status === "PENDING" || r.pickup_requests?.some(request => request.return_status === "PENDING")}
           onClick={(e) => e.stopPropagation()}
           onChange={value=>updateStatus(r.id,value)}
-          options={([r.status,nextAdminStatus(r.status),...(r.status==="SUBMITTED"||r.status==="PREPARING"?["CANCELLED"]:[])].filter(Boolean) as OrderStatus[]).map(value=>({value,label:ORDER_STATUS_LABEL[value]}))}
+          options={([r.status,r.status === "READY" ? "COMPLETED" : nextAdminStatus(r.status),...(r.status==="SUBMITTED"||r.status==="PREPARING"?["CANCELLED"]:[])].filter(Boolean) as OrderStatus[]).map(value=>({value,label:ORDER_STATUS_LABEL[value]}))}
         />
       );
   const columns: Column<OrderWithLocation>[] = [

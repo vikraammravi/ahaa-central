@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ahaa Bug Fixer"
+  short_description: "Trace Ahaa bugs through repair, testing and review"
+  default_prompt: "Use $ahaa-fix-bug to reproduce and fix this Ahaa issue with regression tests and final review."

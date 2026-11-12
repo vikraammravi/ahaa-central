@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminInvoices from "@/features/billing/screens/AdminInvoicesScreen";
 import { branch, order } from "@tests/mocks/fixtures";
@@ -22,12 +22,20 @@ it.each([390,820])("invoice cards separate selection from opening and combine fr
   await userEvent.click(screen.getByRole("button",{name:"Clear Selection"}));expect(checkbox).not.toBeChecked();
   await userEvent.click(screen.getByRole("button",{name:"Select All"}));await waitFor(()=>expect(checkbox).toBeChecked());
   await userEvent.click(screen.getByRole("button",{name:"Combine"}));
-  await waitFor(()=>expect(db.rpc).toHaveBeenCalledWith("create_weekly_invoice",expect.objectContaining({p_order_ids:[order.id]})));
+  const preview=await screen.findByRole("dialog",{name:"Review combined invoice"});
+  expect(db.rpc).not.toHaveBeenCalledWith("create_weekly_invoice_checked",expect.anything());
+  await userEvent.click(within(preview).getByRole("button",{name:"Confirm & Combine"}));
+  await waitFor(()=>expect(db.rpc).toHaveBeenCalledWith("create_weekly_invoice_checked",expect.objectContaining({p_order_ids:[order.id]})));
 });
 
 it("select all and combine creates one invoice for completed uncombined orders",async()=>{
   const ordersQuery=queryResult([{...order,locations:branch,pickup_requests:[]}],null,1);db.from.mockImplementation(table=>table==="locations"?queryResult([branch]):ordersQuery);db.rpc.mockReturnValue(queryResult("invoice"));render(<AdminInvoices/>);await screen.findByText("INV-12");expect(ordersQuery.eq).toHaveBeenCalledWith("status","COMPLETED");expect(ordersQuery.not).not.toHaveBeenCalled();
-  await userEvent.type(screen.getByLabelText("From Date"),"2026-10-01");await userEvent.type(screen.getByLabelText("To Date"),"2026-10-12");await userEvent.selectOptions(screen.getByLabelText("Branch"),branch.id);await userEvent.click(screen.getByRole("button",{name:"Select All Eligible Invoices"}));await waitFor(()=>expect(screen.getByRole("checkbox",{name:"Select order 12"})).toBeChecked());await userEvent.click(screen.getByRole("button",{name:"Combine Invoices (1 selected)"}));expect(db.rpc).toHaveBeenCalledWith("create_weekly_invoice",expect.objectContaining({p_order_ids:[order.id],p_location_id:branch.id}));
+  await userEvent.type(screen.getByLabelText("From Date"),"2026-10-01");await userEvent.type(screen.getByLabelText("To Date"),"2026-10-12");await userEvent.selectOptions(screen.getByLabelText("Branch"),branch.id);await userEvent.click(screen.getByRole("button",{name:"Select All Eligible Invoices"}));await waitFor(()=>expect(screen.getByRole("checkbox",{name:"Select order 12"})).toBeChecked());await userEvent.click(screen.getByRole("button",{name:"Combine Invoices (1 selected)"}));
+  const preview=await screen.findByRole("dialog",{name:"Review combined invoice"});
+  expect(within(preview).getByText("1 order selected")).toBeVisible();
+  expect(db.rpc).not.toHaveBeenCalledWith("create_weekly_invoice_checked",expect.anything());
+  await userEvent.click(within(preview).getByRole("button",{name:"Confirm & Combine"}));
+  await waitFor(()=>expect(db.rpc).toHaveBeenCalledWith("create_weekly_invoice_checked",expect.objectContaining({p_order_ids:[order.id],p_location_id:branch.id})));
 });
 
 it("branch alone enables selection and combining without date filters",async()=>{
@@ -38,7 +46,9 @@ it("branch alone enables selection and combining without date filters",async()=>
   expect(screen.getByRole("button",{name:"Select All Eligible Invoices"})).toBeEnabled();
   await userEvent.click(screen.getByRole("checkbox",{name:"Select order 12"}));
   await userEvent.click(screen.getByRole("button",{name:"Combine Invoices (1 selected)"}));
-  await waitFor(()=>expect(db.rpc).toHaveBeenCalledWith("create_weekly_invoice",expect.objectContaining({p_location_id:branch.id,p_start_date:order.order_date,p_end_date:order.order_date,p_order_ids:[order.id]})));
+  const preview=await screen.findByRole("dialog",{name:"Review combined invoice"});
+  await userEvent.click(within(preview).getByRole("button",{name:"Confirm & Combine"}));
+  await waitFor(()=>expect(db.rpc).toHaveBeenCalledWith("create_weekly_invoice_checked",expect.objectContaining({p_location_id:branch.id,p_start_date:order.order_date,p_end_date:order.order_date,p_order_ids:[order.id]})));
 });
 
 it("desktop invoice rows no longer navigate and expose separate edit/PDF actions",async()=>{

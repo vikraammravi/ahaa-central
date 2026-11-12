@@ -1,8 +1,8 @@
 import { supabase } from "@/lib/supabase/client";
 import { lastPage, pageRange, searchFilter } from "@/lib/pagination";
-import type { CateringEvent, CateringStatus } from "@/lib/supabase/types";
+import type { CateringEvent, CateringFulfillment, CateringStatus } from "@/lib/supabase/types";
 import { businessDateKey, businessDayStart } from "@/lib/date-range";
-export type CateringFilters = {page:number;search:string;status:CateringStatus|"ALL";locationId?:string;startDate?:string;endDate?:string};
+export type CateringFilters = {page:number;search:string;status:CateringStatus|"ALL";fulfillment?:CateringFulfillment|"ALL";locationId?:string;startDate?:string;endDate?:string};
 const maintenance=new Map<string,{day:string;request:Promise<string>}>();
 export function completePastCatering(locationId:string,day=businessDateKey(new Date())):Promise<string>{
   const previous=maintenance.get(locationId);
@@ -26,6 +26,7 @@ export async function fetchCatering(filters:CateringFilters,signal:AbortSignal,a
   if(filters.startDate&&filters.endDate&&filters.startDate>filters.endDate)return {rows:[],count:0,page:0};
   let query = supabase.from("catering_events").select("*",{count:"exact"}).order("event_datetime",{ascending:filters.status!=="COMPLETED"}).order("id");
   if(filters.locationId)query=query.eq("location_id",filters.locationId);
+  if(filters.fulfillment && filters.fulfillment!=="ALL")query=query.eq("fulfillment_method",filters.fulfillment);
   if(filters.status!=="ALL") query=query.eq("status",filters.status);
   if(filters.status==="CONFIRMED")query=query.gte("event_datetime",businessDayStart(businessDateKey(asOf))).neq("status","COMPLETED");
   if(filters.startDate)query=query.gte("event_datetime",businessDayStart(filters.startDate));

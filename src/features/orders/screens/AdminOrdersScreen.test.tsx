@@ -2,9 +2,18 @@ import { expect, it } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminOrders from "@/features/orders/screens/AdminOrdersScreen";
-import { db, queryResult } from "@tests/mocks/supabase";
+import { db, queryResult, router } from "@tests/mocks/supabase";
 import { branch, order } from "@tests/mocks/fixtures";
 import { mockViewport } from "@tests/mocks/viewport";
+
+it("opens pickup review when admin selects Completed for a ready order", async () => {
+  const query = queryResult([{...order, status:"READY", locations:{name:branch.name}, pickup_requests:[]}], null, 1);
+  db.from.mockImplementation(table => table === "locations" ? queryResult([branch]) : query);
+  render(<AdminOrders/>);
+  await userEvent.selectOptions(await screen.findByLabelText(`Status for order ${order.order_number}`), "COMPLETED");
+  expect(router.push).toHaveBeenCalledWith(`/admin/orders/${order.id}?pickup=1`);
+  expect(query.update).not.toHaveBeenCalled();
+});
 
 it("admin tablet cards keep status updates and pickup approval available",async()=>{
   mockViewport(900);const query=queryResult([{...order,status:"SUBMITTED",locations:{name:branch.name},pickup_requests:[{status:"APPROVED",requested_at:"2026-10-12"}]}],null,1);

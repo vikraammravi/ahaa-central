@@ -19,7 +19,29 @@ it.each([390,820])("branch View Order shows item cards on %spx screens",async wi
 
 it.each([false,true])("ready pickup permits increasing above prepared quantity (admin=%s)",async canEdit=>{
   db.from.mockImplementation(table=>queryResult(table==="orders"?{...order,status:"READY",locations:{name:branch.name},weekly_invoices:null}:table==="order_lines"?[{id:"line",quantity:5,fulfilled_quantity:5,unit_price:10,is_taxable:false,shortage_reason:null,catalog_items:{name:item.name,unit_type:"Bucket"}}]:[]));
-  render(<OrderDetail orderId="order" canEdit={canEdit}/>);await userEvent.click(await screen.findByRole("button",{name:"Review Pickup"}));await userEvent.click(screen.getByRole("button",{name:`Increase pickup ${item.name}`}));expect(within(screen.getByRole("dialog")).getByLabelText(`Pickup quantity ${item.name}`)).toHaveValue(6);await userEvent.click(screen.getByRole("button",{name:"Request Approval"}));expect(db.rpc).toHaveBeenCalledWith("submit_pickup",expect.objectContaining({p_quantities:[{line_id:"line",quantity:6}]}));
+  render(<OrderDetail orderId="order" canEdit={canEdit}/>);await userEvent.click(await screen.findByRole("button",{name:"Review Pickup"}));await userEvent.click(screen.getByRole("button",{name:`Increase pickup ${item.name}`}));expect(within(screen.getByRole("dialog")).getByLabelText(`Pickup quantity ${item.name}`)).toHaveValue(6);await userEvent.click(screen.getByRole("button",{name:"Request Approval"}));expect(db.rpc).toHaveBeenCalledWith("submit_pickup_with_date",expect.objectContaining({p_quantities:[{line_id:"line",quantity:6}]}));
+});
+
+it.each([false, true])("submits the selected pickup date for admin and branch (admin=%s)", async canEdit => {
+  db.from.mockImplementation(table => queryResult(table === "orders" ? {...order, status:"READY", locations:{name:branch.name}, weekly_invoices:null} : table === "order_lines" ? [invoiceLine] : []));
+  render(<OrderDetail orderId={order.id} canEdit={canEdit}/>);
+  await userEvent.click(await screen.findByRole("button", {name:"Review Pickup"}));
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.clear(dialog.getByLabelText("Pickup Date"));
+  await userEvent.type(dialog.getByLabelText("Pickup Date"), "2026-10-01");
+  await userEvent.click(dialog.getByRole("button", {name:"Confirm Pickup"}));
+  expect(db.rpc).toHaveBeenCalledWith("submit_pickup_with_date", expect.objectContaining({p_pickup_date:"2026-10-01"}));
+});
+
+it("opens the pickup dialog from the admin order list and cancels without submitting", async () => {
+  window.history.replaceState(null, "", "/admin/orders/order?pickup=1");
+  db.from.mockImplementation(table => queryResult(table === "orders" ? {...order, status:"READY", locations:{name:branch.name}, weekly_invoices:null} : table === "order_lines" ? [invoiceLine] : []));
+  render(<OrderDetail orderId="order" canEdit/>);
+  const dialog = within(await screen.findByRole("dialog"));
+  expect(dialog.getByLabelText("Pickup Date")).toBeVisible();
+  await userEvent.click(dialog.getByRole("button", {name:"Back"}));
+  expect(db.rpc).not.toHaveBeenCalled();
+  window.history.replaceState(null, "", "/");
 });
 
 it.each(["SUBMITTED","PREPARING"])("branch edit link is available only for Submitted (%s)",async status=>{

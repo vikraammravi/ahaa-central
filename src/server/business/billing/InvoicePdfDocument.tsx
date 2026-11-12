@@ -14,7 +14,8 @@ const styles=StyleSheet.create({
   heading:{backgroundColor:"#e2eef0",color:"#25616b",fontSize:8,fontFamily:"Helvetica-Bold",paddingHorizontal:5},
   item:{width:"40%",paddingRight:8},qty:{width:"10%",textAlign:"right"},rate:{width:"17%",textAlign:"right"},tax:{width:"12%",textAlign:"right"},amount:{width:"21%",textAlign:"right"},
   unit:{fontSize:8,color:"#697780",marginTop:3},totals:{marginTop:18,marginLeft:"53%",paddingTop:5},total:{borderTopWidth:1,borderTopColor:"#9aadb3",paddingTop:9,fontSize:13,fontFamily:"Helvetica-Bold"},
-  section:{marginTop:22,fontSize:10,fontFamily:"Helvetica-Bold",marginBottom:6},orderRow:{flexDirection:"row",justifyContent:"space-between",fontSize:9,paddingVertical:5,borderBottomWidth:0.5,borderBottomColor:"#e5eaed"},
+  orderSection:{marginTop:22},section:{fontSize:10,fontFamily:"Helvetica-Bold",marginBottom:6},orderRow:{flexDirection:"row",fontSize:9,paddingVertical:5,borderBottomWidth:0.5,borderBottomColor:"#e5eaed"},
+  orderNumber:{width:"40%",paddingLeft:5},orderDate:{width:"30%"},orderTotal:{width:"30%",textAlign:"right",paddingRight:5},
   footer:{position:"absolute",bottom:22,left:36,right:36,textAlign:"center",fontSize:8,color:"#697780"},
 });
 const money=(value:number)=>new Intl.NumberFormat("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
@@ -33,12 +34,17 @@ export function InvoicePdfDocument({invoice}:{invoice:InvoicePdfData}){
         {invoice.payment&&<View style={styles.metaRow}><Text>Payment</Text><Text>{invoice.paymentNeedsReview?"Needs review":invoice.payment==="PAID"?"Paid":"Unpaid"}</Text></View>}
       </View>
     </View>
-    <View style={[styles.row,styles.heading]} fixed><Text style={styles.item}>ITEM / UNIT</Text><Text style={styles.qty}>QTY</Text><Text style={styles.rate}>RATE (CA$)</Text><Text style={styles.tax}>TAX</Text><Text style={styles.amount}>AMOUNT (CA$)</Text></View>
-    {invoice.lines.map((line,index)=><View style={styles.row} key={index} wrap={false} minPresenceAhead={index===invoice.lines.length-1?110:0}><View style={styles.item}><Text>{line.name}{line.unit&&<Text style={styles.unit}> · {line.unit}</Text>}</Text></View><Text style={styles.qty}>{line.quantity}</Text><Text style={styles.rate}>{money(line.price)}</Text><Text style={styles.tax}>{line.taxable?"13%":"N/A"}</Text><Text style={styles.amount}>{money(line.subtotal)}</Text></View>)}
-    <View style={styles.totals} wrap={false}><View style={styles.metaRow}><Text>Subtotal</Text><Text>CA${money(invoice.subtotal)}</Text></View><View style={styles.metaRow}><Text>Tax</Text><Text>CA${money(invoice.tax)}</Text></View><View style={[styles.metaRow,styles.total]}><Text>Total</Text><Text>CA${money(invoice.total)}</Text></View>
+    <View>
+      <View style={[styles.row,styles.heading]} fixed><Text style={styles.item}>ITEM / UNIT</Text><Text style={styles.qty}>QTY</Text><Text style={styles.rate}>RATE (CA$)</Text><Text style={styles.tax}>TAX</Text><Text style={styles.amount}>AMOUNT (CA$)</Text></View>
+      {invoice.lines.map((line,index)=><View style={styles.row} key={index} wrap={false} minPresenceAhead={index===invoice.lines.length-1?110:0}><View style={styles.item}><Text>{line.name}{line.unit&&<Text style={styles.unit}> · {line.unit}</Text>}</Text></View><Text style={styles.qty}>{line.quantity}</Text><Text style={styles.rate}>{money(line.price)}</Text><Text style={styles.tax}>{line.taxable?"13%":"N/A"}</Text><Text style={styles.amount}>{money(line.subtotal)}</Text></View>)}
+    </View>
+    <View style={styles.totals} wrap={false} minPresenceAhead={invoice.orders?.length?90:0}><View style={styles.metaRow}><Text>Subtotal</Text><Text>CA${money(invoice.subtotal)}</Text></View><View style={styles.metaRow}><Text>Tax</Text><Text>CA${money(invoice.tax)}</Text></View><View style={[styles.metaRow,styles.total]}><Text>Total</Text><Text>CA${money(invoice.total)}</Text></View>
       {invoice.payment&&!invoice.paymentNeedsReview&&<View style={styles.metaRow}><Text>Balance due</Text><Text>CA${money(invoice.payment==="PAID"?0:invoice.total)}</Text></View>}
     </View>
-    {!!invoice.orders?.length&&<><Text style={styles.section} minPresenceAhead={35}>Included orders ({invoice.orders.length})</Text>{invoice.orders.map(order=><View key={order.number} style={styles.orderRow} wrap={false}><Text>Order #{order.number}</Text><Text>{date(order.date)}</Text><Text>CA${money(order.total)}</Text></View>)}</>}
+    {!!invoice.orders?.length&&<View style={styles.orderSection}>
+      <View fixed minPresenceAhead={25}><Text style={styles.section}>Included orders ({invoice.orders.length})</Text><View style={[styles.orderRow,styles.heading]}><Text style={styles.orderNumber}>ORDER</Text><Text style={styles.orderDate}>DATE</Text><Text style={styles.orderTotal}>TOTAL (CA$)</Text></View></View>
+      {invoice.orders.map(order=><View key={order.number} style={styles.orderRow} wrap={false}><Text style={styles.orderNumber}>Order #{order.number}</Text><Text style={styles.orderDate}>{date(order.date)}</Text><Text style={styles.orderTotal}>CA${money(order.total)}</Text></View>)}
+    </View>}
     <Text style={styles.footer} fixed render={({pageNumber,totalPages})=>`${invoice.number}  |  All amounts in Canadian dollars  |  Page ${pageNumber} of ${totalPages}`}/>
   </Page></Document>;
 }

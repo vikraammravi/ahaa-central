@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ahaa Developer"
+  short_description: "Implement Ahaa features across existing modules"
+  default_prompt: "Use $ahaa-develop to implement this Ahaa task end to end within the existing architecture."

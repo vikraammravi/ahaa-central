@@ -1,0 +1,95 @@
+-- Run inside a rollback-only transaction after the pickup-date migration.
+do $$
+declare
+  business uuid; admin_id uuid; manager_id uuid; branch uuid;
+  category text := 'Pickup date test ' || gen_random_uuid()::text;
+  item uuid := gen_random_uuid(); target uuid := gen_random_uuid(); line uuid := gen_random_uuid();
+  second_order uuid := gen_random_uuid(); second_line uuid := gen_random_uuid();
+  return_order uuid := gen_random_uuid(); return_line uuid := gen_random_uuid();
+  foreign_business uuid := gen_random_uuid(); foreign_branch uuid := gen_random_uuid(); foreign_order uuid := gen_random_uuid();
+  request_id uuid; count_id uuid := gen_random_uuid(); result text; pickup_day date := (now() at time zone 'America/Toronto')::date - 1;
+  inventory jsonb; failed boolean;
+begin
+  select id into business from public.businesses where slug = 'ahaa' and status = 'active';
+  select user_id into admin_id from public.business_memberships where business_id = business and role::text = 'CENTRAL_ADMIN' and status::text = 'active' limit 1;
+  select user_id, location_id into manager_id, branch from public.business_memberships where business_id = business and role::text = 'BRANCH_MANAGER' and status::text = 'active' and location_id is not null limit 1;
+  if business is null or admin_id is null or manager_id is null then raise exception 'Staging test actors are unavailable'; end if;
+  perform set_config('request.jwt.claim.sub', admin_id::text, true);
+  perform set_config('request.headers', jsonb_build_object('x-business-id', business)::text, true);
+  insert into public.catalog_categories(name,business_id) values(category,business);
+  insert into public.catalog_units(name,business_id) values(category,business);
+  insert into public.catalog_items(id,name,category,unit_type,default_price,is_taxable,available_stock,business_id) values(item,category,category,category,10,false,20,business);
+  insert into public.orders(id,order_number,location_id,created_by,business_id) values(target,-2147483000,branch,manager_id,business);
+  insert into public.order_lines(id,order_id,item_id,quantity,fulfilled_quantity,unit_price,is_taxable,line_total,business_id) values(line,target,item,2,2,10,false,20,business);
+  update public.orders set status='READY' where id=target;
+  if (select available_stock from public.catalog_items where id=item) <> 18 then raise exception 'Ready stock deduction failed'; end if;
+  insert into public.branch_inventory_counts(id,location_id,count_date,submitted_by,submitted_name,notes,flow_version,business_id)
+    values(count_id,branch,pickup_day,manager_id,'Pickup date test','',2,business);
+  insert into public.branch_inventory_lines(count_id,item_id,item_name,unit_type,quantity,opening_quantity,received_quantity,used_quantity,wasted_quantity,adjustment_quantity,business_id)
+    values(count_id,item,category,category,0,0,0,0,0,0,business);
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claim.sub', manager_id::text, true);
+  if has_function_privilege('authenticated','public.submit_pickup(uuid,jsonb,text,boolean)','EXECUTE') then
+    raise exception 'Legacy pickup remains directly executable';
+  end if;
+  failed := false;
+  begin perform public.submit_pickup(target,jsonb_build_array(jsonb_build_object('line_id',line,'quantity',2)),'',false);
+  exception when insufficient_privilege then failed := true; end;
+  if not failed then raise exception 'Undated pickup accepted'; end if;
+  failed := false;
+  begin update public.orders set pickup_date=pickup_day where id=target;
+  exception when insufficient_privilege or raise_exception then failed := true; end;
+  if not failed then raise exception 'Direct pickup date update accepted'; end if;
+  failed := false;
+  begin
+    perform public.submit_pickup_with_date(target,jsonb_build_array(jsonb_build_object('line_id',line,'quantity',2)),'',false,pickup_day+2);
+  exception when raise_exception then failed := true; end;
+  if not failed then raise exception 'Future pickup date accepted'; end if;
+  result := public.submit_pickup_with_date(target,jsonb_build_array(jsonb_build_object('line_id',line,'quantity',1)),'',false,pickup_day);
+  if result <> 'PENDING' then raise exception 'Changed pickup bypassed approval'; end if;
+  select id into request_id from public.pickup_requests where order_id=target and status='PENDING' and pickup_date=pickup_day;
+  if request_id is null then raise exception 'Pickup date missing from approval'; end if;
+  perform set_config('request.jwt.claim.sub', admin_id::text, true);
+  result := public.review_pickup(request_id,true,'',jsonb_build_object(line::text,true));
+  if result <> 'APPROVED' then raise exception 'Approval failed'; end if;
+  if not exists(select 1 from public.orders where id=target and pickup_date=pickup_day and (pickup_confirmed_at at time zone 'America/Toronto')::date=(now() at time zone 'America/Toronto')::date) then raise exception 'Pickup date or audit timestamp missing'; end if;
+  perform set_config('request.jwt.claim.sub', manager_id::text, true);
+  inventory := public.branch_inventory_workspace(pickup_day, null, 0);
+  if not exists(select 1 from jsonb_array_elements(inventory->'items') x where x->>'id'=item::text and (x->>'received_quantity')::int=1) then raise exception 'Pickup not received on selected date'; end if;
+  if not exists(select 1 from jsonb_array_elements(inventory->'items') x where x->>'id'=item::text and (x->>'needs_review')::boolean) then raise exception 'Saved inventory was not flagged for review'; end if;
+  execute 'set local role postgres';
+  perform set_config('request.jwt.claim.sub', admin_id::text, true);
+  insert into public.orders(id,order_number,location_id,created_by,business_id) values(second_order,-2147482999,branch,manager_id,business);
+  insert into public.order_lines(id,order_id,item_id,quantity,fulfilled_quantity,unit_price,is_taxable,line_total,business_id) values(second_line,second_order,item,2,2,10,false,20,business);
+  update public.orders set status='READY' where id=second_order;
+  execute 'set local role authenticated';
+  result := public.submit_pickup_with_date(second_order,jsonb_build_array(jsonb_build_object('line_id',second_line,'quantity',2)),'',false,pickup_day);
+  if result <> 'COMPLETED' or not exists(select 1 from public.orders where id=second_order and pickup_date=pickup_day) then raise exception 'Matching admin pickup did not complete with selected date'; end if;
+  perform set_config('request.jwt.claim.sub', manager_id::text, true);
+  inventory := public.branch_inventory_workspace(pickup_day, null, 0);
+  if not exists(select 1 from jsonb_array_elements(inventory->'items') x where x->>'id'=item::text and (x->>'received_quantity')::int=3) then raise exception 'Matching pickup date missing from inventory'; end if;
+  execute 'set local role postgres';
+  perform set_config('request.jwt.claim.sub', admin_id::text, true);
+  insert into public.orders(id,order_number,location_id,created_by,business_id) values(return_order,-2147482997,branch,manager_id,business);
+  insert into public.order_lines(id,order_id,item_id,quantity,fulfilled_quantity,unit_price,is_taxable,line_total,business_id) values(return_line,return_order,item,2,2,10,false,20,business);
+  update public.orders set status='READY' where id=return_order;
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claim.sub', manager_id::text, true);
+  result := public.submit_pickup_with_date(return_order,jsonb_build_array(jsonb_build_object('line_id',return_line,'quantity',3)),'',true,pickup_day);
+  select id into request_id from public.pickup_requests where order_id=return_order and status='PENDING';
+  perform set_config('request.jwt.claim.sub', admin_id::text, true);
+  result := public.review_pickup(request_id,false,'', '{}'::jsonb);
+  if result <> 'RETURN_PENDING' then raise exception 'Rejected extras did not require return'; end if;
+  result := public.receive_pickup_return(request_id,'');
+  if result <> 'RECEIVED' or not exists(select 1 from public.orders where id=return_order and status='COMPLETED' and pickup_date=pickup_day) then raise exception 'Return completion lost pickup date'; end if;
+  execute 'set local role postgres';
+  insert into public.businesses(id,slug,name,status,isolation_ready) values(foreign_business,'pickup-test-'||foreign_business::text,'Pickup test','active',true);
+  insert into public.locations(id,name,is_central,business_id) values(foreign_branch,'Pickup test',false,foreign_business);
+  insert into public.orders(id,order_number,location_id,created_by,business_id) values(foreign_order,-2147482998,foreign_branch,admin_id,foreign_business);
+  execute 'set local role authenticated';
+  failed := false;
+  begin perform public.submit_pickup_with_date(foreign_order,'[]'::jsonb,'',false,pickup_day);
+  exception when raise_exception then failed := true; end;
+  if not failed then raise exception 'Foreign business pickup accepted'; end if;
+  execute 'set local role postgres';
+end $$;

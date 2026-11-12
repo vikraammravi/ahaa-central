@@ -27,6 +27,7 @@ import Link from "next/link";
 import { OrderTimeline } from "@/features/orders/components/OrderTimeline";
 import { formatDateTime, TAX_RATE, POLL_INTERVAL } from "@/lib/format";
 import { useCompactLayout } from "@/lib/useCompactLayout";
+import { businessDateKey } from "@/lib/date-range";
 import { RecordCards } from "@/components/shared/RecordCards";
 
 type OrderWithLocation = Order & { locations: { name: string } | null; weekly_invoices: {sent_at: string | null} | null };
@@ -53,6 +54,7 @@ export function OrderDetail({
   const [pickupOpen, setPickupOpen] = useState(false);
   const [pickingUp, setPickingUp] = useState(false);
   const [pickupReason, setPickupReason] = useState("");
+  const [pickupDate, setPickupDate] = useState(() => businessDateKey(new Date()));
   const [alreadyCollected, setAlreadyCollected] = useState(false);
   const [requests, setRequests] = useState<PickupRequest[]>([]);
 
@@ -106,6 +108,16 @@ export function OrderDetail({
     return () => window.clearInterval(timer);
   }, [order?.status, load, pickupOpen]);
 
+  useEffect(() => {
+    if (canEdit && order?.status === "READY" && order.pickup_approval_status !== "PENDING" && !requests.some(request => request.return_status === "PENDING") && new URLSearchParams(window.location.search).get("pickup") === "1") {
+      const timer = window.setTimeout(() => {
+        setPickupOpen(true);
+        window.history.replaceState(null, "", window.location.pathname);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [canEdit, order, requests]);
+
   const dirty = lines.some(
     (l) =>
       edits[l.id]?.fulfilled !== l.fulfilled_quantity ||
@@ -142,15 +154,17 @@ export function OrderDetail({
     setPickingUp(true);
     setError(null);
     try {
-      const { error } = await supabase.rpc("submit_pickup", {
+      const { error } = await supabase.rpc("submit_pickup_with_date", {
         p_order_id: order.id,
         p_quantities: lines.map((line) => ({ line_id: line.id, quantity: edits[line.id]?.fulfilled ?? line.fulfilled_quantity })),
         p_reason: pickupReason,
         p_already_collected: alreadyCollected,
+        p_pickup_date: pickupDate,
       });
       if (error) throw error;
       setPickupOpen(false);
       setPickupReason("");
+      setPickupDate(businessDateKey(new Date()));
       setAlreadyCollected(false);
       await load(true);
     } catch (e) {
@@ -462,7 +476,7 @@ export function OrderDetail({
         )}
       </div>
 
-      <Dialog open={pickupOpen && canPickupEdit} onOpenChange={(open)=>{if(!pickingUp)setPickupOpen(open);}}><DialogContent aria-describedby={undefined} className="sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto" showCloseButton={!pickingUp}><DialogHeader><DialogTitle>Confirm Pickup — Order #{order.order_number}</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Enter the total quantity you are picking up. Extra or reduced quantities go to admin for approval.</p><div className="space-y-3">{lines.map(line=><div key={line.id} className="rounded-xl border p-3 space-y-3"><div><p className="font-medium">{line.catalog_items?.name??"Item"}</p><p className="text-xs text-muted-foreground">Ordered: {line.quantity} · Prepared: {line.fulfilled_quantity} {line.catalog_items?.unit_type}</p></div><div className="flex flex-wrap justify-between items-center gap-2"><span className="text-sm">Pickup quantity</span>{columns.find(column=>column.key==="fulfilled")?.render(line)}</div></div>)}</div><div className="space-y-2"><Label htmlFor="pickup-notes">Notes</Label><Input id="pickup-notes" value={pickupReason} onChange={(event)=>setPickupReason(event.target.value)} disabled={pickingUp}/></div>{pickupChanged && <label className="flex gap-2 items-start text-sm"><input type="checkbox" checked={alreadyCollected} onChange={(event)=>setAlreadyCollected(event.target.checked)} disabled={pickingUp}/>These quantities have already been physically collected</label>}{error && <Banner tone="danger">{error}</Banner>}<div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end [&>button]:min-h-11 [&>button]:whitespace-normal"><Button variant="outline" disabled={pickingUp} onClick={()=>setPickupOpen(false)}>Back</Button><Button onClick={branchPickup} disabled={pickingUp||!pickupValid}>{pickingUp?"Submitting…":pickupChanged?"Request Approval":"Confirm Pickup"}</Button></div></DialogContent></Dialog>
+      <Dialog open={pickupOpen && canPickupEdit} onOpenChange={(open)=>{if(!pickingUp)setPickupOpen(open);}}><DialogContent aria-describedby={undefined} className="sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto" showCloseButton={!pickingUp}><DialogHeader><DialogTitle>Confirm Pickup — Order #{order.order_number}</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Enter the total quantity you are picking up. Extra or reduced quantities go to admin for approval.</p><div className="space-y-3">{lines.map(line=><div key={line.id} className="rounded-xl border p-3 space-y-3"><div><p className="font-medium">{line.catalog_items?.name??"Item"}</p><p className="text-xs text-muted-foreground">Ordered: {line.quantity} · Prepared: {line.fulfilled_quantity} {line.catalog_items?.unit_type}</p></div><div className="flex flex-wrap justify-between items-center gap-2"><span className="text-sm">Pickup quantity</span>{columns.find(column=>column.key==="fulfilled")?.render(line)}</div></div>)}</div><div className="space-y-2"><Label htmlFor="pickup-date">Pickup Date</Label><Input id="pickup-date" type="date" value={pickupDate} max={businessDateKey(new Date())} onChange={event=>setPickupDate(event.target.value)} disabled={pickingUp}/></div><div className="space-y-2"><Label htmlFor="pickup-notes">Notes</Label><Input id="pickup-notes" value={pickupReason} onChange={(event)=>setPickupReason(event.target.value)} disabled={pickingUp}/></div>{pickupChanged && <label className="flex gap-2 items-start text-sm"><input type="checkbox" checked={alreadyCollected} onChange={(event)=>setAlreadyCollected(event.target.checked)} disabled={pickingUp}/>These quantities have already been physically collected</label>}{error && <Banner tone="danger">{error}</Banner>}<div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end [&>button]:min-h-11 [&>button]:whitespace-normal"><Button variant="outline" disabled={pickingUp} onClick={()=>setPickupOpen(false)}>Back</Button><Button onClick={branchPickup} disabled={pickingUp||!pickupValid||!pickupDate||pickupDate>businessDateKey(new Date())}>{pickingUp?"Submitting…":pickupChanged?"Request Approval":"Confirm Pickup"}</Button></div></DialogContent></Dialog>
       {compact?<RecordCards data={lines} loading={false} rowKey={line=>line.id} emptyTitle="No line items on this order">{line=><>
         {columns.find(column=>column.key==="product")?.render(line)}
         <dl className="grid grid-cols-2 gap-3 text-sm">{columns.filter(column=>!["product","fulfilled","shortage"].includes(column.key)).map(column=><div key={column.key} className="min-w-0"><dt className="text-xs text-muted-foreground">{column.header}</dt><dd className="mt-1 break-words tabular-nums">{column.render(line)}</dd></div>)}</dl>

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Banner } from "@/components/shared/Banner";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
 import type { PickupRequest } from "@/lib/supabase/types";
 import { DataTable } from "@/components/shared/DataTable";
@@ -65,6 +65,7 @@ export function PickupApprovalPanel({ request, canReview, products, onReviewed }
         <div className="text-sm">
           {request.reason && <p><span className="font-medium">Note:</span> {request.reason}</p>}
           {request.already_collected && <p className="text-xs text-muted-foreground">Quantities were recorded as already physically collected.</p>}
+          {request.pickup_date && <p className="text-xs text-muted-foreground">Pickup date: {formatDate(request.pickup_date)}</p>}
           <p className="mt-1 text-xs text-muted-foreground">Requested by {request.requested_profile?.full_name ?? "Branch manager"} · {formatDateTime(request.requested_at)}</p>
         </div>
         <DataTable data={request.pickup_request_lines} rowKey={line=>line.id} columns={[

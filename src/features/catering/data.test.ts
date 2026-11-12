@@ -55,6 +55,20 @@ it("all statuses respects the selected location, date and search",async()=>{
   expect(query.or).toHaveBeenCalledWith(expect.stringContaining("Nisha"));
 });
 
+it.each(["PICKUP", "DELIVERY"] as const)("filters %s bookings before pagination within the selected branch",async method=>{
+  const query=queryResult([],null,100);db.from.mockReturnValue(query);
+  await fetchCatering({page:1,search:"",status:"ALL",locationId:branch.id,fulfillment:method},new AbortController().signal,asOf);
+  expect(query.eq).toHaveBeenCalledWith("location_id",branch.id);
+  expect(query.eq).toHaveBeenCalledWith("fulfillment_method",method);
+  expect(query.eq.mock.invocationCallOrder.at(-1)).toBeLessThan(query.range.mock.invocationCallOrder[0]);
+});
+
+it("does not filter fulfillment when All methods is selected",async()=>{
+  const query=queryResult([]);db.from.mockReturnValue(query);
+  await fetchCatering({page:0,search:"",status:"ALL",fulfillment:"ALL",locationId:branch.id},new AbortController().signal,asOf);
+  expect(query.eq).not.toHaveBeenCalledWith("fulfillment_method",expect.anything());
+});
+
 it("reversed dates do not query or change records",async()=>{
   db.from.mockClear();
   expect(await fetchCatering({page:0,search:"",status:"ALL",startDate:"2026-10-24",endDate:"2026-10-01"},new AbortController().signal,asOf)).toEqual({rows:[],count:0,page:0});

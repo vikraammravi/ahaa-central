@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ahaa Feature Orchestrator"
+  short_description: "Coordinate Ahaa features from request to review"
+  default_prompt: "Use $ahaa-orchestrate to deliver this Ahaa feature with developer, test and review agents."

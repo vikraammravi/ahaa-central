@@ -21,8 +21,9 @@ export function CateringTable({ events, loading, onEdit, onDelete }: {
   onDelete: (id: string) => Promise<void>;
 }) {
   const compact=useCompactLayout();
-  const fulfillment=(event:CateringEvent)=><div className="space-y-1"><span>{event.fulfillment_method==="DELIVERY"?"Delivery":"Pickup"}</span>{event.fulfillment_method==="DELIVERY"&&event.delivery_address&&<NotesPreview preview={false} text={event.delivery_address} title={`Delivery address — ${event.customer_name}`} description={formatDateTime(event.event_datetime)} buttonLabel="View address" contentLabel="Full delivery address" buttonClassName={compact?"h-11":undefined}/>}</div>;
-  const notes=(event:CateringEvent)=>event.notes?<NotesPreview preview={false} buttonClassName={compact?"mt-0 h-11":undefined} text={event.notes} title={`Notes — ${event.customer_name}`} description={formatDateTime(event.event_datetime)}/>:<span className="text-muted-foreground">—</span>;
+  const hasDeliveryAddress=(event:CateringEvent)=>event.fulfillment_method==="DELIVERY"&&!!event.delivery_address;
+  const fulfillment=(event:CateringEvent)=>event.fulfillment_method==="DELIVERY"?"Delivery":"Pickup";
+  const notes=(event:CateringEvent)=>event.notes||hasDeliveryAddress(event)?<NotesPreview preview={false} buttonClassName={compact?"mt-0 h-11":undefined} text={event.notes??""} title={`Notes — ${event.customer_name}`} description={formatDateTime(event.event_datetime)} details={hasDeliveryAddress(event)?[{label:"Delivery address",value:event.delivery_address!}]:[]}/>:<span className="text-muted-foreground">—</span>;
   const contacts=(event:CateringEvent)=>{
     const href=phoneHref(event.customer_phone),whatsapp=whatsappHref(event.customer_phone);
     return <>

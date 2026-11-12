@@ -32,6 +32,7 @@ export type InvoiceEdit = Omit<Row<"invoice_edits">, "previous_lines" | "updated
   stock_adjustments: { line_id: string; adjustment: number; return_to_stock: boolean | null; previous_quantity: number; quantity: number }[];
 };
 export type PickupRequest = Omit<Row<"pickup_requests">, "status"> & {
+  pickup_date?: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   pickup_request_lines: PickupRequestLine[];
   requested_profile: { full_name: string } | null;

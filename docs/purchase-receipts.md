@@ -1,5 +1,13 @@
 # Purchases and receipts
 
+## Hosted scanner checkpoint — November 5, 2026
+
+Hosted AI is now enabled for Production and the `staging` Preview branch. Other Preview branches have no enable flag and fail closed. This checkpoint supersedes the disabled-scanner release notes below.
+
+After explicit approval, the Azure scanner changed from Selected Networks to All networks; API-key authentication remains required, the key stays server-only, and the resource remains Free F0. This removes the IP restriction: possession of the Azure key would permit direct provider calls outside application quotas. The app still enforces 10 attempts/user/Toronto day and 100/environment/UTC month atomically; these are not an Azure subscription spending guarantee.
+
+Staging deployment `9rchm2BiW7zZkTkuRfJwfW2GbjvY` and production deployment `2ddBTgBAMgSRTAgFTcQSuWBCwvRJ` are Ready at source `9ec7f48`. Staging passed a synthetic upload, scan, extraction, reviewed save/reopen, private PDF download and duplicate-counter preservation check. The approved production browser smoke test passed upload, extraction and reviewed save; opening the original reached the signed private Storage URL, but the browser download helper timed out, so production PDF bytes were not verified in that test. Both exact synthetic records were archived through the app, retaining their originals and usage. One scan was counted per environment (monthly staging 3→4, production 0→1). Existing focused mocked tests passed 14 cases; this release did not modify scanner source or install database migrations.
+
 Admins and branch managers can upload, scan, review and save. Admin records and each branch’s records are isolated. Employees have no access. Separate from branch invoices; saving never changes inventory.
 
 ## Setup

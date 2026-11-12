@@ -42,7 +42,7 @@ export function WeeklyInvoiceDetail({invoiceId,isAdmin=false}:{invoiceId:string;
     <div className="grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-muted-foreground">From Date</p><p className="font-medium">{formatDate(invoice.start_date)}</p></div><div><p className="text-xs text-muted-foreground">To Date</p><p className="font-medium">{formatDate(invoice.end_date)}</p></div></div>
     <InvoicePaymentStatus embedded invoiceId={invoiceId} payment={data.record} revision={isAdmin?data.record.revision:data.record.sent_revision??invoice.revision} isAdmin={isAdmin} onUpdated={()=>refresh(true)}/>
     </CardContent></Card>
-    {isAdmin&&<Banner tone="info">Expand this invoice in the invoice list to review its individual orders. Quantity and tax corrections are made on each individual invoice; unit prices are locked. {data.record?.sent_at&&!sent&&"The branch sees the previous version until this update is sent."}</Banner>}
+    {isAdmin&&<Banner tone="info">Expand this invoice in the invoice list to review its individual orders. Before sending, quantity and tax corrections are made on each individual invoice; unit prices are locked.</Banner>}
     <DataTable data={invoice.lines} columns={columns} rowKey={(line,index)=>`${line.item_id}-${index}`} emptyTitle="No invoice items"/>
     <InvoiceTotals subtotal={invoice.subtotal} tax={invoice.tax} total={invoice.total}/>
   </div>;

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ahaa Final Reviewer"
+  short_description: "Review Ahaa requirements, code and release evidence"
+  default_prompt: "Use $ahaa-review to independently verify this Ahaa change and report unmet requirements."

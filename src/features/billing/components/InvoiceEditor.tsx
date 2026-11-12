@@ -44,7 +44,7 @@ export function InvoiceEditor({ order, lines, onSaved, onCancel }: {
     }
   }
   return <div className="space-y-4">
-    {order.weekly_invoice_id && <Banner tone="info">The branch keeps the last sent invoice until you send this update.</Banner>}
+    {order.weekly_invoice_id && <Banner tone="info">Changes update the combined invoice before it is sent.</Banner>}
     <Banner tone="info">These changes affect billing only. Unit prices are locked. Use pickup approval and return receipt to adjust physical quantities or stock.</Banner>
     <div className="space-y-3">{lines.map((line) => {
       const draft = drafts[line.id];

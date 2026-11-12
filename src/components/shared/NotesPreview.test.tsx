@@ -10,7 +10,8 @@ it("opens full notes in a scrollable dialog preserving entered order and restore
   const trigger=screen.getByRole("button",{name:"View Notes"});await userEvent.click(trigger);
   const dialog=screen.getByRole("dialog",{name:`Notes — ${cateringEvent.customer_name}`});
   const notes=within(dialog).getByRole("region",{name:"Full notes"});
-  expect(notes.textContent).toBe(cateringNotes);expect(notes).toHaveClass("whitespace-pre-wrap","overflow-y-auto","[overflow-wrap:anywhere]");
+  expect(notes.textContent).toBe(cateringNotes);expect(notes).toHaveClass("whitespace-pre-wrap","[overflow-wrap:anywhere]");
+  expect(within(dialog).getByRole("region",{name:"Details"})).toHaveClass("overflow-y-auto");
   expect(within(dialog).queryByRole("button",{name:"Close Notes"})).not.toBeInTheDocument();
   await userEvent.click(within(dialog).getByRole("button",{name:/^Close$/}));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();expect(trigger).toHaveFocus();
