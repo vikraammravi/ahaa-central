@@ -8,13 +8,18 @@ export type PurchaseReceipt = {
   details: ReceiptDetails; warnings: string[]; scan_status: string; created_at: string;
 };
 export const expenseCategories = ["Supplier Invoice", "Miscellaneous"];
+export function roundReceiptAmount(value: number): number {
+  const magnitude = Math.abs(value);
+  return Math.sign(value) * Math.round((magnitude + Number.EPSILON * Math.max(1, magnitude)) * 100) / 100;
+}
 export function emptyReceipt(): ReceiptDetails {
   return { vendor: "", invoiceNumber: "", date: "", currency: "CAD", subtotal: null, tax: null, total: null, items: [] };
 }
 type AzureField = { content?: string; valueString?: string; valueDate?: string; valueNumber?: number; valueCurrency?: { amount?: number; currencyCode?: string }; valueArray?: AzureField[]; valueObject?: Record<string, AzureField>; confidence?: number };
 type AzureResult = { documents?: { fields?: Record<string, AzureField> }[]; pages?: unknown[] };
 export function extractReceipt(result: AzureResult): { details: ReceiptDetails; warnings: string[] } {
-  const fields = result.documents?.[0]?.fields ?? {};
+  const documents = result.documents ?? [];
+  const fields = Object.assign({}, ...documents.map(document => document.fields ?? {}).reverse()) as Record<string, AzureField>;
   const text = (field?: AzureField) => field?.valueString ?? field?.valueDate ?? field?.content ?? "";
   const number = (field?: AzureField) => field?.valueCurrency?.amount ?? field?.valueNumber ?? null;
   const details: ReceiptDetails = {
@@ -23,13 +28,13 @@ export function extractReceipt(result: AzureResult): { details: ReceiptDetails; 
     currency: (fields.InvoiceTotal ?? fields.Total)?.valueCurrency?.currencyCode ?? "CAD",
     subtotal: number(fields.SubTotal ?? fields.Subtotal), tax: number(fields.TotalTax ?? fields.Tax),
     total: number(fields.InvoiceTotal ?? fields.Total),
-    items: (fields.Items?.valueArray ?? []).map(item => {
+    items: documents.flatMap(document => document.fields?.Items?.valueArray ?? []).map(item => {
       const row = item.valueObject ?? {};
       return { description: text(row.Description ?? row.Name), quantity: number(row.Quantity), unitPrice: number(row.UnitPrice ?? row.Price), amount: number(row.Amount ?? row.TotalPrice) };
     }),
   };
   const warnings = Object.entries(fields).filter(([, f]) => f.confidence !== undefined && f.confidence < 0.85).map(([name]) => `Check ${name}: scan confidence is low.`);
-  if ((result.documents?.length ?? 0) > 1) warnings.push("Multiple documents detected. Only the first was extracted; review the complete original.");
+  if (documents.length > 1) warnings.push("Multiple sections detected. Review all items and amounts against the original for duplicates, omissions, or conflicting totals.");
   warnings.push("Free-tier trial: only the first two pages are scanned. Check the original for additional pages.");
   return { details, warnings };
 }

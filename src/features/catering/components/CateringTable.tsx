@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { RowActions } from "@/components/shared/RowActions";
-import { NotesPreview } from "@/components/shared/NotesPreview";
+import { CateringDetailsDialog } from "@/features/catering/components/CateringDetailsDialog";
 import { CATERING_STATUS_BADGE, CATERING_STATUS_LABEL, phoneHref, whatsappHref } from "@/features/catering/domain";
-import { formatDate, formatTime, formatDateTime } from "@/lib/format";
+import { formatDate, formatTime } from "@/lib/format";
 import type { CateringEvent } from "@/lib/supabase/types";
 import { useCompactLayout } from "@/lib/useCompactLayout";
 import { RecordCards } from "@/components/shared/RecordCards";
@@ -21,9 +21,8 @@ export function CateringTable({ events, loading, onEdit, onDelete }: {
   onDelete: (id: string) => Promise<void>;
 }) {
   const compact=useCompactLayout();
-  const hasDeliveryAddress=(event:CateringEvent)=>event.fulfillment_method==="DELIVERY"&&!!event.delivery_address;
   const fulfillment=(event:CateringEvent)=>event.fulfillment_method==="DELIVERY"?"Delivery":"Pickup";
-  const notes=(event:CateringEvent)=>event.notes||hasDeliveryAddress(event)?<NotesPreview preview={false} buttonClassName={compact?"mt-0 h-11":undefined} text={event.notes??""} title={`Notes — ${event.customer_name}`} description={formatDateTime(event.event_datetime)} details={hasDeliveryAddress(event)?[{label:"Delivery address",value:event.delivery_address!}]:[]}/>:<span className="text-muted-foreground">—</span>;
+  const notes=(event:CateringEvent)=><CateringDetailsDialog event={event} compact={compact}/>;
   const contacts=(event:CateringEvent)=>{
     const href=phoneHref(event.customer_phone),whatsapp=whatsappHref(event.customer_phone);
     return <>

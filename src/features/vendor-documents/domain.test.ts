@@ -1,11 +1,17 @@
 import { expect, it } from "vitest";
 import { receiptFilters, emptyReceipt, extractReceipt, receiptWarnings, validReceiptDetails } from "./domain";
-import { invoiceScan, purchaseReceipt } from "@tests/mocks/receipts";
+import { invoiceScan, multiSectionScan, purchaseReceipt } from "@tests/mocks/receipts";
 it("extracts invoice fields and flags low confidence without inventing missing amounts", () => {
   const result = extractReceipt(invoiceScan);
   expect(result.details).toEqual(purchaseReceipt.details);
   expect(result.warnings).toContain("Check TotalTax: scan confidence is low.");
   expect(extractReceipt({}).details.total).toBeNull();
+});
+it("preserves items and invoice fields across scanned document sections", () => {
+ const result = extractReceipt(multiSectionScan);
+ expect(result.details.vendor).toBe("Bombay Foods");
+ expect(result.details.items.map(item => item.description)).toEqual(["Rice", "Flour"]);
+ expect(result.warnings).toContain("Multiple sections detected. Review all items and amounts against the original for duplicates, omissions, or conflicting totals.");
 });
 it("maps retail receipt fields including currency and individual items", () => {
   const result = extractReceipt({ documents: [{ fields: { MerchantName: { valueString: "Costco" }, TransactionDate: { valueDate: "2026-10-30" }, Total: { valueCurrency: { amount: 7, currencyCode: "USD" } }, Items: { valueArray: [{ valueObject: { Name: { valueString: "Milk" }, TotalPrice: { valueCurrency: { amount: 7 } } } }] } } }] });

@@ -9,7 +9,7 @@ import { FormField } from "@/components/shared/FormField";
 import { FormSelect } from "@/components/shared/FormSelect";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useUnsavedChanges } from "@/lib/useUnsavedChanges";
-import { expenseCategories, receiptWarnings, type PurchaseReceipt, type ReceiptDetails } from "@/features/vendor-documents/domain";
+import { expenseCategories, receiptWarnings, roundReceiptAmount, type PurchaseReceipt, type ReceiptDetails } from "@/features/vendor-documents/domain";
 
 export function ReceiptReview({ receipt, busy, onSave, onScan, onClose }: {
   receipt: PurchaseReceipt; busy: boolean;
@@ -25,7 +25,11 @@ export function ReceiptReview({ receipt, busy, onSave, onScan, onClose }: {
   const dirty = JSON.stringify(details) !== JSON.stringify(receipt.details) || category !== receipt.category;
   const canLeave = useUnsavedChanges(dirty, "Leave and discard your unsaved receipt changes?", busy);
   const warnings = receiptWarnings(details);
-  const set = (field: keyof ReceiptDetails, value: string | number | null) => { setReviewed(false); setDetails(d => ({ ...d, [field]: value })); };
+  const set = (field: keyof ReceiptDetails, value: string | number | null) => { setReviewed(false); setDetails(d => {
+    const next = { ...d, [field]: value };
+    if (field === "subtotal" || field === "tax") next.total = next.subtotal === null || next.tax === null ? null : roundReceiptAmount(next.subtotal + next.tax);
+    return next;
+  }); };
   const original = `/api/receipts/${receipt.id}?original=1`;
   const locked = busy || receipt.scan_status === "RUNNING";
   return <section className="space-y-4 rounded-xl border bg-surface p-4 sm:p-5">
@@ -45,6 +49,7 @@ export function ReceiptReview({ receipt, busy, onSave, onScan, onClose }: {
       <div className="space-y-4 min-w-0">
         {receipt.scan_status === "RUNNING" && <div role="status" className="flex items-center gap-2 rounded-lg border p-3 text-sm"><Spinner size="sm" />Scanning invoice… Details will appear when ready. You can return later.</div>}
         {receipt.scan_status === "FAILED" && <p role="alert" className="text-sm text-destructive">Scanning failed. Try again or enter the details manually.</p>}
+        {receipt.warnings?.filter(warning => warning.startsWith("Multiple sections detected.")).map(warning => <p role="status" key={warning} className="rounded-lg border p-3 text-sm">{warning}</p>)}
         {readOnly && <p className="text-sm text-muted-foreground">Completed invoice. Select Edit to make changes or rescan the original.</p>}
         <fieldset disabled={locked || readOnly} className={`space-y-4 ${readOnly ? "[&_input:disabled]:opacity-100 [&_select:disabled]:opacity-100" : "disabled:opacity-60"}`}>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -56,9 +61,9 @@ export function ReceiptReview({ receipt, busy, onSave, onScan, onClose }: {
           <div className="flex items-center justify-between gap-2"><h3 className="font-medium">Items ({details.items.length})</h3>{!readOnly && <Button type="button" size="sm" variant="outline" disabled={details.items.length >= 300} onClick={() => { setReviewed(false); setDetails(d => ({ ...d, items: [...d.items, { description: "", quantity: null, unitPrice: null, amount: null }] })); }}><Plus className="size-4" />Add item</Button>}</div>
           <div className="space-y-3">{details.items.map((item, index) => <div className="rounded-lg border p-3 space-y-3" key={index}>
             <div className="flex items-end gap-2"><FormField label={`Item ${index + 1}`} htmlFor={`item-${index}`} className="flex-1"><Input id={`item-${index}`} value={item.description} maxLength={1000} onChange={e => { setReviewed(false); setDetails(d => ({ ...d, items: d.items.map((v, i) => i === index ? { ...v, description: e.target.value } : v) })); }} /></FormField>{!readOnly && <Button type="button" variant="ghost" size="icon" aria-label={`Remove item ${index + 1}`} onClick={() => { setReviewed(false); setDetails(d => ({ ...d, items: d.items.filter((_, i) => i !== index) })); }}><Trash2 className="size-4" /></Button>}</div>
-            <div className="grid grid-cols-3 gap-2">{(["quantity", "unitPrice", "amount"] as const).map(field => <FormField key={field} label={field === "quantity" ? "Quantity" : field === "unitPrice" ? "Unit price" : "Amount"} htmlFor={`${field}-${index}`}><Input id={`${field}-${index}`} type="number" step="any" value={item[field] ?? ""} onChange={e => { setReviewed(false); const value = e.target.value === "" ? null : Number(e.target.value); setDetails(d => ({ ...d, items: d.items.map((v, i) => i === index ? { ...v, [field]: value } : v) })); }} /></FormField>)}</div>
+            <div className="grid grid-cols-3 gap-2">{(["quantity", "unitPrice", "amount"] as const).map(field => <FormField key={field} label={field === "quantity" ? "Quantity" : field === "unitPrice" ? "Unit price" : "Amount"} htmlFor={`${field}-${index}`}><Input id={`${field}-${index}`} type="number" step="any" value={item[field] ?? ""} onChange={e => { setReviewed(false); const value = e.target.value === "" ? null : Number(e.target.value); setDetails(d => ({ ...d, items: d.items.map((v, i) => { if (i !== index) return v; const next = { ...v, [field]: value }; if (field !== "amount") next.amount = next.quantity === null || next.unitPrice === null ? null : roundReceiptAmount(next.quantity * next.unitPrice); return next; }) })); }} /></FormField>)}</div>
           </div>)}</div>
-          <div className="grid grid-cols-3 gap-2">{(["subtotal", "tax", "total"] as const).map(field => <FormField label={field === "tax" ? "Tax amount" : field === "total" ? "Total" : "Subtotal"} htmlFor={`receipt-${field}`} key={field}><Input id={`receipt-${field}`} type="number" step="0.01" value={details[field] ?? ""} onChange={e => set(field, e.target.value === "" ? null : Number(e.target.value))} /></FormField>)}</div>
+          <div className="grid max-w-sm gap-3">{(["subtotal", "tax", "total"] as const).map(field => <FormField label={field === "tax" ? "Tax amount" : field === "total" ? "Total" : "Subtotal"} htmlFor={`receipt-${field}`} key={field}><Input id={`receipt-${field}`} type="number" step="0.01" value={details[field] ?? ""} onChange={e => set(field, e.target.value === "" ? null : Number(e.target.value))} /></FormField>)}</div>
           {!readOnly && <>
           {!!warnings.length && <ul className="list-disc pl-5 text-sm text-amber-800 dark:text-amber-300">{warnings.map(w => <li key={w}>{w}</li>)}</ul>}
           <div className="flex items-center gap-2 text-sm"><SelectionCheckbox label="I reviewed the original receipt" checked={reviewed} disabled={locked} onChange={setReviewed} /><span>I checked the original receipt and reviewed the details and amounts.</span></div>

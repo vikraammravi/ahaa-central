@@ -16,13 +16,30 @@ beforeEach(() => {
   database.storage.from.mockReturnValue(storage);
   storage.upload.mockResolvedValue({ error: null });
 });
-function request() {
-  const file = receiptUploadFile();
-  const form = { get: (name: string) => name === "file" ? file : "prebuilt-invoice" };
+function request(files = [receiptUploadFile()]) {
+  const form = { get: (name: string) => name === "file" ? files[0] : "prebuilt-invoice", getAll: (name: string) => name === "file" ? files : [] };
   const request = new Request("https://app.test/api/receipts", { method: "POST" });
   vi.spyOn(request, "formData").mockResolvedValue(form as unknown as FormData);
   return request;
 }
+
+it.each([
+  ["more than two files", ["image/jpeg", "image/png", "image/jpeg"]],
+  ["a PDF mixed with an image", ["application/pdf", "image/jpeg"]],
+])("rejects %s before storing or creating a receipt", async (_name, types) => {
+  const files = types.map((type, i) => new File(["data"], `file-${i}`, { type }));
+  const response = await POST(request(files));
+  expect(response.status).toBeGreaterThanOrEqual(400);
+  expect(storage.upload).not.toHaveBeenCalled();
+  expect(database.rpc).not.toHaveBeenCalled();
+});
+
+it("rejects forged image content before accessing storage", async () => {
+  const response = await POST(request([new File(["not an image"], "photo.png", { type: "image/png" })]));
+  expect(response.status).toBeGreaterThanOrEqual(400);
+  expect(storage.upload).not.toHaveBeenCalled();
+  expect(database.rpc).not.toHaveBeenCalled();
+});
 
 it.each([false, true])("restores exactly the stored original path (business prefix=%s)", async prefixed => {
   const filePath = `${prefixed ? businessId + "/" : ""}${purchaseReceipt.id}/original.pdf`;

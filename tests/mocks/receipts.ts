@@ -7,6 +7,10 @@ export const invoiceScan = { documents: [{ fields: {
   InvoiceTotal: { valueCurrency: { amount: 22.6, currencyCode: "CAD" } },
   Items: { valueArray: [{ valueObject: { Description: { valueString: "Rice" }, Quantity: { valueNumber: 2 }, UnitPrice: { valueCurrency: { amount: 10 } }, Amount: { valueCurrency: { amount: 20 } } } }] },
 } }] };
+export const multiSectionScan = { documents: [invoiceScan.documents[0], { fields: {
+  InvoiceTotal: { valueCurrency: { amount: 33.9 } },
+  Items: { valueArray: [{ valueObject: { Description: { valueString: "Flour" }, Quantity: { valueNumber: 1 }, UnitPrice: { valueCurrency: { amount: 10 } }, Amount: { valueCurrency: { amount: 10 } } } }] },
+} }] };
 export const purchaseReceipt: PurchaseReceipt = {
   id: "00000000-0000-4000-8000-000000000001", file_name: "invoice.pdf", category: "Supplier Invoice", status: "DRAFT", scan_status: "SUCCEEDED", warnings: [], created_at: "2026-10-30T12:00:00Z",
   details: { vendor: "Bombay Foods", invoiceNumber: "INV-104", date: "2026-10-30", currency: "CAD", subtotal: 20, tax: 2.6, total: 22.6, items: [{ description: "Rice", quantity: 2, unitPrice: 10, amount: 20 }] },

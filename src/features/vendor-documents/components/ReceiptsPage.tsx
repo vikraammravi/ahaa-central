@@ -51,8 +51,8 @@ export default function ReceiptsPage() {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [receiptId, scanStatus]);
   async function run(action: () => Promise<void>) { setBusy(true); setError(""); setNotice(""); try { await action(); } catch (e) { setError(e instanceof Error ? e.message : "Unable to complete action."); } finally { setBusy(false); } }
-  async function upload(file: File, model: string) {
-    const form = new FormData(); form.set("file", file); form.set("model", model);
+  async function upload(files: File[], model: string) {
+    const form = new FormData(); files.forEach(file => form.append("file", file)); form.set("model", model);
     const data = await api("/api/receipts", { method: "POST", body: form });
     setError("");
     setNotice(data.restored ? "Previously deleted invoice restored. Scan usage is unchanged." : data.duplicate ? "This file already exists in the invoice list." : "Invoice uploaded as a draft. Open Edit to scan and review it.");

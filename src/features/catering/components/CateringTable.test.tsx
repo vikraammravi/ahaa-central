@@ -25,7 +25,11 @@ it("shows delivery address in notes, without a separate address column",async()=
   await userEvent.click(screen.getByRole("button",{name:"Close"}));
   const pickupCells=within(rows[1]).getAllByRole("cell");
   expect(pickupCells[headers.indexOf("Pickup / Delivery")]).toHaveTextContent(/^Pickup$/);
-  expect(pickupCells[headers.indexOf("Notes")]).toHaveTextContent("—");
+  await userEvent.click(within(pickupCells[headers.indexOf("Notes")]).getByRole("button",{name:"View Notes"}));
+  const pickupDialog=screen.getByRole("dialog");
+  expect(within(pickupDialog).getByText(/Pickup/)).toBeVisible();
+  expect(within(pickupDialog).queryByText("Delivery address")).not.toBeInTheDocument();
+  expect(within(pickupDialog).queryByRole("region",{name:"Full notes"})).not.toBeInTheDocument();
   expect(within(rows[1]).queryByRole("button",{name:"View address"})).not.toBeInTheDocument();
 });
 
@@ -35,6 +39,9 @@ it.each([390,820,1280])("shows notes and the full delivery address together at %
   expect(screen.queryByRole("button",{name:"View address"})).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button",{name:"View Notes"}));
   const dialog=screen.getByRole("dialog",{name:`Notes — ${event.customer_name}`});
+  expect(within(dialog).getByText(/4165550100/).closest("p")).toHaveTextContent("Test Customer : 4165550100");
+  expect(within(dialog).getByText("CA$80.00 pending")).toBeVisible();
+  expect(within(dialog).getByText(/Oct 12, 2026.*2:00 PM.*Delivery/)).toBeVisible();
   expect(within(dialog).getByRole("region",{name:"Full notes"})).toHaveTextContent(cateringNotes.replace(/\s+/g," "));
   expect(within(dialog).getByText(/Unit 4, 1180 Simcoe St N/)).toBeVisible();
 });
@@ -53,7 +60,10 @@ it.each([
   });
   render(<Page/>);
   await userEvent.click(await screen.findByRole("button",{name:"View Notes"}));
-  expect(within(screen.getByRole("dialog")).getByText(/Unit 4, 1180 Simcoe St N/)).toBeVisible();
+  const dialog=screen.getByRole("dialog");
+  expect(within(dialog).getByText(/Unit 4, 1180 Simcoe St N/)).toBeVisible();
+  expect(within(dialog).getByText(/4165550100/).closest("p")).toHaveTextContent("Test Customer : 4165550100");
+  expect(within(dialog).getByText("CA$80.00 pending")).toBeVisible();
   await userEvent.click(screen.getByRole("button",{name:"Close"}));
   expect(screen.getByRole("button",{name:"Edit"})).toBeEnabled();
 });
@@ -78,6 +88,14 @@ it("does not show an address for a pickup booking even when it has notes",async(
   expect(within(dialog).getByRole("region",{name:"Full notes"}).textContent).toBe(cateringNotes);
   expect(within(dialog).queryByText("Delivery address")).not.toBeInTheDocument();
   expect(within(dialog).queryByText("Old address")).not.toBeInTheDocument();
+});
+
+it("shows a zero balance without marking the booking as pending",async()=>{
+  render(<CateringTable events={[{...event,balance_due:0}]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);
+  await userEvent.click(screen.getByRole("button",{name:"View Notes"}));
+  const dialog=screen.getByRole("dialog");
+  expect(within(dialog).getByText("CA$0.00 balance")).toBeVisible();
+  expect(within(dialog).queryByText(/pending/i)).not.toBeInTheDocument();
 });
 
 it("catering exposes correct call and Canadian WhatsApp links",()=>{

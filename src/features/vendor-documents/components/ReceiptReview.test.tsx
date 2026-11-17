@@ -73,3 +73,50 @@ it("can cancel an unchanged edit and lock the completed invoice again", async ()
  expect(screen.getByLabelText(/^Vendor/)).toBeDisabled();
  expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
 });
+
+it("calculates item and invoice totals from the entered values and saves them", async () => {
+ const save = vi.fn().mockResolvedValue(undefined);
+ render(<ReceiptReview receipt={purchaseReceipt} busy={false} onSave={save} onScan={vi.fn()} onClose={vi.fn()} />);
+ const quantity = screen.getByLabelText("Quantity");
+ const price = screen.getByLabelText("Unit price");
+ await userEvent.clear(quantity);
+ expect(screen.getByLabelText("Amount")).toHaveValue(null);
+ await userEvent.type(quantity, "3");
+ await userEvent.clear(price);
+ await userEvent.type(price, "4.25");
+ expect(screen.getByLabelText("Amount")).toHaveValue(12.75);
+ await userEvent.clear(screen.getByLabelText("Subtotal"));
+ await userEvent.type(screen.getByLabelText("Subtotal"), "12.75");
+ await userEvent.clear(screen.getByLabelText("Tax amount"));
+ expect(screen.getByLabelText("Total")).toHaveValue(null);
+ await userEvent.type(screen.getByLabelText("Tax amount"), "1.66");
+ expect(screen.getByLabelText("Total")).toHaveValue(14.41);
+ await userEvent.click(screen.getByRole("checkbox"));
+ await userEvent.click(screen.getByRole("button", { name: "Save reviewed receipt" }));
+ expect(save).toHaveBeenCalledWith(expect.objectContaining({ subtotal: 12.75, tax: 1.66, total: 14.41, items: [expect.objectContaining({ quantity: 3, unitPrice: 4.25, amount: 12.75 })] }), "Supplier Invoice");
+});
+
+it("rounds calculated values to cents", async () => {
+ render(<ReceiptReview receipt={purchaseReceipt} busy={false} onSave={vi.fn()} onScan={vi.fn()} onClose={vi.fn()} />);
+ await userEvent.clear(screen.getByLabelText("Quantity"));
+ await userEvent.type(screen.getByLabelText("Quantity"), "3");
+ await userEvent.clear(screen.getByLabelText("Unit price"));
+ await userEvent.type(screen.getByLabelText("Unit price"), "0.335");
+ expect(screen.getByLabelText("Amount")).toHaveValue(1.01);
+ await userEvent.clear(screen.getByLabelText("Quantity"));
+ await userEvent.type(screen.getByLabelText("Quantity"), "1");
+ await userEvent.clear(screen.getByLabelText("Unit price"));
+ await userEvent.type(screen.getByLabelText("Unit price"), "10.075");
+ expect(screen.getByLabelText("Amount")).toHaveValue(10.08);
+ await userEvent.clear(screen.getByLabelText("Subtotal"));
+ await userEvent.type(screen.getByLabelText("Subtotal"), "10.075");
+ await userEvent.clear(screen.getByLabelText("Tax amount"));
+ await userEvent.type(screen.getByLabelText("Tax amount"), "0");
+ expect(screen.getByLabelText("Total")).toHaveValue(10.08);
+});
+
+it("shows the warning when the scan detected multiple sections", () => {
+ const warning = "Multiple sections detected. Review all items and amounts against the original for duplicates, omissions, or conflicting totals.";
+ render(<ReceiptReview receipt={{ ...purchaseReceipt, warnings: [warning] }} busy={false} onSave={vi.fn()} onScan={vi.fn()} onClose={vi.fn()} />);
+ expect(screen.getByText(warning)).toBeVisible();
+});

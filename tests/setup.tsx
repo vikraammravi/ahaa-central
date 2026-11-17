@@ -17,6 +17,7 @@ beforeEach(()=>{
   db.auth.updateUser.mockResolvedValue({error:null});
   db.auth.resetPasswordForEmail.mockResolvedValue({error:null});
   vi.stubGlobal("fetch",vi.fn().mockRejectedValue(new Error("Unexpected network request in UI tests")));
+  if (typeof window === "undefined") return;
   Element.prototype.scrollIntoView=vi.fn();
   window.matchMedia=vi.fn().mockReturnValue({matches:false,addListener:vi.fn(),removeListener:vi.fn(),addEventListener:vi.fn(),removeEventListener:vi.fn()});
   render(<ConfirmationHost/>);
