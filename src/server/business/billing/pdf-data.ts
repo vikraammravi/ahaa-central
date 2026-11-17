@@ -8,6 +8,7 @@ import { BUSINESS_TIME_ZONE } from "@/lib/format";
 import { loadSessionProfile } from "@/features/workspaces/session";
 
 type Database = Awaited<ReturnType<typeof createSupabaseServer>>;
+const itemNameCollator = new Intl.Collator("en-CA", { sensitivity: "base", numeric: true });
 export class InvoicePdfError extends Error {
   constructor(message:string,public status:number){super(message);}
 }
@@ -44,7 +45,8 @@ export async function loadInvoicePdf(db:Database,kind:InvoicePdfKind,id:string):
   const location=Array.isArray(record.locations)?record.locations[0]:record.locations;
   return {number:weeklyNumber(id),date:invoiceDate,
     period:{from:invoice.start_date,to:invoice.end_date},branch:{name:invoice.branch_name,address:address(location)},
-    lines:invoice.lines.map(line=>({name:line.name,unit:line.unit_type,quantity:line.quantity,price:Number(line.unit_price),taxable:line.is_taxable,subtotal:Number(line.subtotal)})),
+    lines:invoice.lines.map(line=>({name:typeof line.name==="string"?line.name:"Item",unit:line.unit_type,quantity:line.quantity,price:Number(line.unit_price),taxable:line.is_taxable,subtotal:Number(line.subtotal)}))
+      .sort((a,b)=>itemNameCollator.compare(a.name.trim(),b.name.trim())),
     subtotal:Number(invoice.subtotal),tax:Number(invoice.tax),total:Number(invoice.total),draft,
     payment:record.payment_status,paymentNeedsReview:paymentNeedsReview(record,invoice.revision),
     orders:invoice.orders.map(order=>({number:order.order_number,date:order.order_date,total:Number(order.total)})),

@@ -1,7 +1,10 @@
 import {expect,it,vi} from "vitest";
+import {cloneElement} from "react";
+import {pdf} from "@react-pdf/renderer";
 import {loadInvoicePdf} from "@/server/business/billing/pdf-data";
+import {InvoicePdfDocument} from "@/server/business/billing/InvoicePdfDocument";
 import {db,queryResult} from "@tests/mocks/supabase";
-import {pdfId,pdfProfile,pdfOrder,pdfCombinedRecord,pdfSnapshot} from "@tests/mocks/invoice-pdf";
+import {pdfId,pdfProfile,pdfOrder,pdfCombinedRecord,pdfSnapshot,unsortedCombinedPdfSnapshot,combinedPdfSnapshotWithMissingNames} from "@tests/mocks/invoice-pdf";
 import {adminWorkspace,otherBusinessId} from "@tests/mocks/workspaces";
 type Database=Parameters<typeof loadInvoicePdf>[0];
 function setup(profile=pdfProfile,record=pdfCombinedRecord){
@@ -9,6 +12,47 @@ function setup(profile=pdfProfile,record=pdfCombinedRecord){
   db.from.mockImplementation(table=>queryResult(table==="profiles"?profile:table==="orders"?pdfOrder:record));
   db.rpc.mockReturnValue(queryResult(pdfSnapshot));
 }
+type LayoutNode={value?:string;children?:LayoutNode[]};
+function layoutText(node:LayoutNode):string{return [node.value??"",...(node.children??[]).map(layoutText)].join(" ");}
+it.each(["admin draft","branch published"])("sorts names in the rendered combined PDF for %s without changing the snapshot",async role=>{
+  const isAdmin=role==="admin draft";
+  setup(isAdmin?pdfProfile:{...pdfProfile,role:"BRANCH_MANAGER"},isAdmin?{...pdfCombinedRecord,sent_at:null as unknown as string,sent_revision:null as unknown as number}:pdfCombinedRecord);
+  const snapshot=structuredClone(unsortedCombinedPdfSnapshot);
+  const original=structuredClone(snapshot);
+  db.rpc.mockReturnValue(queryResult(snapshot));
+  const invoice=await loadInvoicePdf(db as unknown as Database,"combined",pdfId);
+  expect(db.rpc).toHaveBeenCalledWith("weekly_invoice_details",{p_invoice_id:pdfId,p_live:isAdmin});
+  expect(invoice.lines.map(({name})=>name)).toEqual(["Apple 2","apple 2","apple 10","Banana","Zucchini"]);
+  expect(invoice.lines.map(({quantity,price,subtotal})=>({quantity,price,subtotal}))).toEqual([
+    {quantity:3,price:4,subtotal:12},{quantity:4,price:3,subtotal:12},{quantity:2,price:5,subtotal:10},{quantity:5,price:2,subtotal:10},{quantity:1,price:7,subtotal:7},
+  ]);
+  expect(invoice).toMatchObject({subtotal:51,tax:0,total:51,draft:isAdmin});
+  expect(snapshot).toEqual(original);
+  let pages:LayoutNode[]=[];
+  const document=cloneElement(InvoicePdfDocument({invoice}),{onRender:(result:unknown)=>{pages=(result as {_INTERNAL__LAYOUT__DATA_:LayoutNode})._INTERNAL__LAYOUT__DATA_.children??[];}});
+  const blob=await pdf(document).toBlob();
+  expect(blob.size).toBeGreaterThan(0);
+  const rendered=pages.map(layoutText).join(" ").replace(/\s+/g," ");
+  const indices=["Apple 2","apple 2","apple 10","Banana","Zucchini"].map(name=>rendered.indexOf(name));
+  expect(indices.every(index=>index>=0)).toBe(true);
+  expect(indices).toEqual([...indices].sort((a,b)=>a-b));
+});
+it("preserves item order on individual invoice PDFs",async()=>{
+  setup();
+  db.from.mockImplementation(table=>queryResult(table==="profiles"?pdfProfile:{...pdfOrder,order_lines:[{...pdfOrder.order_lines[0],catalog_items:{name:"Zucchini",unit_type:"Box"}},{...pdfOrder.order_lines[0],catalog_items:{name:"Apple",unit_type:"Bag"}}]}));
+  const invoice=await loadInvoicePdf(db as unknown as Database,"individual",pdfId);
+  expect(invoice.lines.map(line=>line.name)).toEqual(["Zucchini","Apple"]);
+});
+it("handles missing legacy item names without changing the published snapshot",async()=>{
+  setup({...pdfProfile,role:"BRANCH_MANAGER"});
+  const snapshot=structuredClone(combinedPdfSnapshotWithMissingNames);
+  const original=structuredClone(snapshot);
+  db.rpc.mockReturnValue(queryResult(snapshot));
+  const invoice=await loadInvoicePdf(db as unknown as Database,"combined",pdfId);
+  expect(invoice.lines.map(line=>line.name)).toEqual(["Banana","Item","Item"]);
+  expect(invoice.lines.map(line=>line.subtotal)).toEqual([10,5,15]);
+  expect(snapshot).toEqual(original);
+});
 it("requires sign-in and disallows employees",async()=>{
   await expect(loadInvoicePdf(db as unknown as Database,"combined",pdfId)).rejects.toMatchObject({status:401});
   setup({...pdfProfile,role:"BRANCH_EMPLOYEE"});
