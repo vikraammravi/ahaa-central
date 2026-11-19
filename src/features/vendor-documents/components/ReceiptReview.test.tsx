@@ -47,6 +47,11 @@ it("opens the original separately and hides currency and extraction warnings", (
  expect(screen.queryByText(/scan confidence is low/)).not.toBeInTheDocument();
  expect(screen.getByRole("link", { name: "View original" })).toHaveAttribute("target", "_blank");
 });
+it("shows a review reminder when invoice rows were recovered from the table", () => {
+ const warning = "Items recovered from the invoice table. Check every item and amount against the original before saving.";
+ render(<ReceiptReview receipt={{ ...purchaseReceipt, warnings: [warning] }} busy={false} onSave={vi.fn()} onScan={vi.fn()} onClose={vi.fn()} />);
+ expect(screen.getByRole("status")).toHaveTextContent(warning);
+});
 
 it("keeps completed invoices read-only and hides Rescan until Edit is selected", async () => {
  const save = vi.fn().mockResolvedValue(undefined);

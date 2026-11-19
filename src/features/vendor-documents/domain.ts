@@ -1,3 +1,5 @@
+import { recoverInvoiceTableItems, type InvoiceTable } from "./invoice-table";
+
 export type ReceiptItem = { description: string; quantity: number | null; unitPrice: number | null; amount: number | null };
 export type ReceiptDetails = {
   vendor: string; invoiceNumber: string; date: string; currency: string;
@@ -16,7 +18,7 @@ export function emptyReceipt(): ReceiptDetails {
   return { vendor: "", invoiceNumber: "", date: "", currency: "CAD", subtotal: null, tax: null, total: null, items: [] };
 }
 type AzureField = { content?: string; valueString?: string; valueDate?: string; valueNumber?: number; valueCurrency?: { amount?: number; currencyCode?: string }; valueArray?: AzureField[]; valueObject?: Record<string, AzureField>; confidence?: number };
-type AzureResult = { documents?: { fields?: Record<string, AzureField> }[]; pages?: unknown[] };
+type AzureResult = { documents?: { fields?: Record<string, AzureField> }[]; pages?: unknown[]; tables?: InvoiceTable[] };
 export function extractReceipt(result: AzureResult): { details: ReceiptDetails; warnings: string[] } {
   const documents = result.documents ?? [];
   const fields = Object.assign({}, ...documents.map(document => document.fields ?? {}).reverse()) as Record<string, AzureField>;
@@ -33,7 +35,11 @@ export function extractReceipt(result: AzureResult): { details: ReceiptDetails; 
       return { description: text(row.Description ?? row.Name), quantity: number(row.Quantity), unitPrice: number(row.UnitPrice ?? row.Price), amount: number(row.Amount ?? row.TotalPrice) };
     }),
   };
+  const recovered = documents.length === 1 && fields.InvoiceTotal && fields.VendorName ? recoverInvoiceTableItems(result.tables, details.subtotal) : null;
+  const usedTable = recovered !== null && recovered.length > details.items.length;
+  if (usedTable) details.items = recovered;
   const warnings = Object.entries(fields).filter(([, f]) => f.confidence !== undefined && f.confidence < 0.85).map(([name]) => `Check ${name}: scan confidence is low.`);
+  if (usedTable) warnings.push("Items recovered from the invoice table. Check every item and amount against the original before saving.");
   if (documents.length > 1) warnings.push("Multiple sections detected. Review all items and amounts against the original for duplicates, omissions, or conflicting totals.");
   warnings.push("Free-tier trial: only the first two pages are scanned. Check the original for additional pages.");
   return { details, warnings };
@@ -44,7 +50,10 @@ export function receiptWarnings(details: ReceiptDetails): string[] {
   if (!details.date || !/^\d{4}-\d{2}-\d{2}$/.test(details.date) || Number.isNaN(Date.parse(details.date))) warnings.push("Enter the invoice date.");
   if (details.total === null) warnings.push("Enter the invoice total.");
   if (details.subtotal !== null && details.tax !== null && details.total !== null && Math.abs(details.subtotal + details.tax - details.total) > 0.02) warnings.push("Subtotal plus tax does not match the total. Check discounts, tips and other charges.");
-  if (details.items.length && details.items.every(item => item.amount !== null) && details.subtotal !== null && Math.abs(details.items.reduce((sum, item) => sum + (item.amount ?? 0), 0) - details.subtotal) > 0.02) warnings.push("Item amounts do not match the subtotal. Check missing items and discounts.");
+  if (details.items.length && details.subtotal !== null) {
+    if (details.items.some(item => item.amount === null)) warnings.push("Some item amounts are missing. Check all items against the original.");
+    else if (Math.abs(details.items.reduce((sum, item) => sum + (item.amount ?? 0), 0) - details.subtotal) > 0.02) warnings.push("Item amounts do not match the subtotal. Check missing items and discounts.");
+  }
   return warnings;
 }
 export function validReceiptDetails(value: unknown): value is ReceiptDetails {
