@@ -38,7 +38,7 @@ it.each([390,820,1280])("shows notes and the full delivery address together at %
   render(<CateringTable events={[{...deliveryCateringEvent,notes:cateringNotes}]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);
   expect(screen.queryByRole("button",{name:"View address"})).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button",{name:"View Notes"}));
-  const dialog=screen.getByRole("dialog",{name:`Notes — ${event.customer_name}`});
+  const dialog=screen.getByRole("dialog",{name:"Notes"});
   expect(within(dialog).getByText(/4165550100/).closest("p")).toHaveTextContent("Test Customer : 4165550100");
   expect(within(dialog).getByText("CA$80.00 pending")).toBeVisible();
   expect(within(dialog).getByText(/Oct 12, 2026.*2:00 PM.*Delivery/)).toBeVisible();
@@ -84,7 +84,7 @@ it("tablet catering cards preserve notes, contacts and edit actions",async()=>{
 it("does not show an address for a pickup booking even when it has notes",async()=>{
   render(<CateringTable events={[{...event,notes:cateringNotes,delivery_address:"Old address"}]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);
   await userEvent.click(screen.getByRole("button",{name:"View Notes"}));
-  const dialog=screen.getByRole("dialog",{name:`Notes — ${event.customer_name}`});
+  const dialog=screen.getByRole("dialog",{name:"Notes"});
   expect(within(dialog).getByRole("region",{name:"Full notes"}).textContent).toBe(cateringNotes);
   expect(within(dialog).queryByText("Delivery address")).not.toBeInTheDocument();
   expect(within(dialog).queryByText("Old address")).not.toBeInTheDocument();
@@ -109,7 +109,7 @@ it("keeps View Notes in its own column, hides the phone text and preserves full 
   const cells=screen.getAllByRole("row")[1].querySelectorAll("td");
   expect(within(cells[headers.indexOf("Notes")]).getByRole("button",{name:"View Notes"})).toBeVisible();
   await userEvent.click(screen.getByRole("button",{name:"View Notes"}));
-  const dialog=screen.getByRole("dialog",{name:`Notes — ${event.customer_name}`});
+  const dialog=screen.getByRole("dialog",{name:"Notes"});
   expect(within(dialog).getByRole("region",{name:"Full notes"}).textContent).toBe(cateringNotes);
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import type { CateringEvent } from "@/lib/supabase/types";
 import { useState } from "react";
@@ -53,10 +53,9 @@ export function CateringDetailsDialog({ event, compact }: { event: CateringEvent
 
   return <Dialog onOpenChange={(open) => { if (!open) setFeedback(""); }}>
     <DialogTrigger asChild><Button variant="outline" size="sm" className={compact ? "h-11" : "min-h-9"}>View Notes</Button></DialogTrigger>
-    <DialogContent className="sm:max-w-2xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
+    <DialogContent aria-describedby={undefined} className="sm:max-w-2xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
       <DialogHeader className="shrink-0 pr-8">
-        <DialogTitle className="break-words">Notes — {event.customer_name}</DialogTitle>
-        <DialogDescription>Catering booking details</DialogDescription>
+        <DialogTitle className="break-words">Notes</DialogTitle>
       </DialogHeader>
       <div role="region" aria-label="Details" tabIndex={0} className="min-h-0 space-y-4 overflow-y-auto overscroll-contain rounded text-sm focus-visible:outline-2 focus-visible:outline-ring">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
