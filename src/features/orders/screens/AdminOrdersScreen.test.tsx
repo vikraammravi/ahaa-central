@@ -42,3 +42,31 @@ it("filters branch orders by branch and date before pagination",async()=>{
   expect(screen.queryByLabelText("To Date")).not.toBeInTheDocument();
   expect(query.range).toHaveBeenLastCalledWith(0,24);
 });
+
+it.each([390,820,1280])("shows completed pickup date without a status dropdown at %spx",async width=>{
+  mockViewport(width);
+  const completed={...order,status:"COMPLETED",pickup_date:"2026-10-14",created_at:"2026-10-12T12:00:00Z",locations:{name:branch.name},pickup_requests:[]};
+  db.from.mockImplementation(table=>table==="locations"?queryResult([branch]):queryResult([completed],null,1));
+  render(<AdminOrders/>);
+  expect(await screen.findByText("Completed")).toBeVisible();
+  expect(screen.queryByLabelText(`Status for order ${order.order_number}`)).not.toBeInTheDocument();
+  if(width===1280){
+    expect(screen.getByRole("columnheader",{name:"Pickup Date"})).toBeVisible();
+    expect(screen.getByText("Oct 14, 2026")).toBeVisible();
+    expect(screen.getByText("Oct 12, 2026")).toBeVisible();
+  } else {
+    expect(screen.getByText(/Pickup: Oct 14, 2026/)).toBeVisible();
+    expect(screen.getByText(/Submitted: Oct 12, 2026/)).toBeVisible();
+  }
+  expect(screen.queryByText(/8:00 AM/)).not.toBeInTheDocument();
+});
+
+it("shows an empty pickup date for a ready order and keeps its status selector",async()=>{
+  mockViewport(1280);
+  db.from.mockImplementation(table=>table==="locations"?queryResult([branch]):queryResult([{...order,status:"READY",pickup_date:null,locations:{name:branch.name},pickup_requests:[]}],null,1));
+  render(<AdminOrders/>);
+  expect(await screen.findByLabelText(`Status for order ${order.order_number}`)).toBeEnabled();
+  expect(screen.getByRole("columnheader",{name:"Pickup Date"})).toBeVisible();
+  const index=screen.getAllByRole("columnheader").findIndex(header=>header.textContent==="Pickup Date");
+  expect(screen.getByRole("row",{name:/#12/}).querySelectorAll("td")[index]).toHaveTextContent("—");
+});

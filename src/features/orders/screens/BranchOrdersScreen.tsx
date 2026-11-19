@@ -59,6 +59,7 @@ export default function BranchInvoicesPage() {
   const columns: Column<BranchOrder>[] = [
     { key: "number", header: "Order #", render: order => <span className="font-medium">#{order.order_number}</span> },
     { key: "date", header: "Placed", render: order => formatDate(order.order_date) },
+    { key: "pickupDate", header: "Pickup Date", render: order => order.pickup_date ? formatDate(order.pickup_date) : "—" },
     { key: "total", header: "Total", align: "right", render: order => formatMoney(order.final_total_amount) },
     { key: "status", header: "Status", render: order => <StatusBadge status={ORDER_STATUS_BADGE[order.status]} label={ORDER_STATUS_LABEL[order.status]} /> },
     { key: "approval", header: "Pickup Approval", render: order => <PickupApprovalBadge requests={order.pickup_requests ?? []} /> },
@@ -68,6 +69,7 @@ export default function BranchInvoicesPage() {
   const emptyBody=search.trim()||status!=="ALL"?"Try another order number or status.":"Choose Place Order to place your first order.";
   const orderList=compact?<RecordCards data={data?.rows??null} loading={loading} rowKey={order=>order.id} emptyTitle={emptyTitle} emptyBody={emptyBody}>{order=><>
     <div className="flex items-start justify-between gap-2"><div><h3 className="font-medium">Order #{order.order_number}</h3><p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p></div><StatusBadge status={ORDER_STATUS_BADGE[order.status]} label={ORDER_STATUS_LABEL[order.status]}/></div>
+    <p className="text-xs text-muted-foreground">Pickup: {order.pickup_date ? formatDate(order.pickup_date) : "—"}</p>
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm"><div><p className="text-xs text-muted-foreground">Pickup Approval</p><PickupApprovalBadge requests={order.pickup_requests??[]}/></div><div className="text-right"><p className="text-xs text-muted-foreground">Total</p><p className="font-medium">{formatMoney(order.final_total_amount)}</p></div></div>
     <div className="border-t pt-3">{orderActions(order)}</div>
   </>}</RecordCards>:<DataTable data={data?.rows??null} columns={columns} loading={loading} rowKey={order=>order.id} onRowClick={order=>router.push(`/branch/invoices/${order.id}`)} emptyTitle={emptyTitle} emptyBody={emptyBody}/>;

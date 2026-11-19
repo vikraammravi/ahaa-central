@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useAsyncData } from "@/lib/useAsyncData";
 import { Pagination } from "@/components/shared/Pagination";
-import { formatMoney, formatDateTime, POLL_INTERVAL } from "@/lib/format";
+import { formatMoney, formatDate, POLL_INTERVAL } from "@/lib/format";
 import { RecordCards } from "@/components/shared/RecordCards";
 import { useCompactLayout } from "@/lib/useCompactLayout";
 import { Button } from "@/components/ui/button";
@@ -56,11 +56,11 @@ export default function AdminOrdersPage() {
     else await refresh(true);
   }
 
-  const statusControl=(r:OrderWithLocation)=>(
+  const statusControl=(r:OrderWithLocation)=>r.status === "COMPLETED" ? null : (
         <FormSelect<OrderStatus>
           aria-label={`Status for order ${r.order_number}`}
           value={r.status}
-          disabled={r.status === "COMPLETED" || r.status === "CANCELLED" || r.pickup_approval_status === "PENDING" || r.pickup_requests?.some(request => request.return_status === "PENDING")}
+          disabled={r.status === "CANCELLED" || r.pickup_approval_status === "PENDING" || r.pickup_requests?.some(request => request.return_status === "PENDING")}
           onClick={(e) => e.stopPropagation()}
           onChange={value=>updateStatus(r.id,value)}
           options={([r.status,r.status === "READY" ? "COMPLETED" : nextAdminStatus(r.status),...(r.status==="SUBMITTED"||r.status==="PREPARING"?["CANCELLED"]:[])].filter(Boolean) as OrderStatus[]).map(value=>({value,label:ORDER_STATUS_LABEL[value]}))}
@@ -77,8 +77,9 @@ export default function AdminOrdersPage() {
       key: "date",
       header: "Submitted",
       hideOn: "sm",
-      render: (r) => formatDateTime(r.created_at),
+      render: (r) => formatDate(r.created_at),
     },
+    { key: "pickupDate", header: "Pickup Date", render: r => r.pickup_date ? formatDate(r.pickup_date) : "—" },
     {
       key: "requested",
       header: "Requested",
@@ -123,7 +124,7 @@ export default function AdminOrdersPage() {
       </FilterBar>
       {compact?<RecordCards data={rows} loading={loading} rowKey={row=>row.id} emptyTitle="No branch orders yet">{row=><>
         <div className="flex items-start justify-between gap-2"><div><h3 className="font-medium">Order #{row.order_number}</h3><p className="text-sm break-words">{row.locations?.name??"—"}</p></div><StatusBadge status={ORDER_STATUS_BADGE[row.status]} label={ORDER_STATUS_LABEL[row.status]}/></div>
-        <p className="text-xs text-muted-foreground">{formatDateTime(row.created_at)}</p>
+        <p className="text-xs text-muted-foreground">Submitted: {formatDate(row.created_at)} · Pickup: {row.pickup_date ? formatDate(row.pickup_date) : "—"}</p>
         <dl className="grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-muted-foreground">Requested</dt><dd>{formatMoney(row.total_amount)}</dd></div><div><dt className="text-xs text-muted-foreground">Final</dt><dd>{formatMoney(row.final_total_amount)}</dd></div></dl>
         <div><p className="text-xs text-muted-foreground">Pickup Approval</p><PickupApprovalBadge requests={row.pickup_requests??[]}/></div>
         <CardActions className="border-t pt-3">{statusControl(row)}<Button asChild variant="outline"><Link href={`/admin/orders/${row.id}`}>View Order</Link></Button></CardActions>

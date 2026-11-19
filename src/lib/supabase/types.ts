@@ -15,6 +15,7 @@ export type Location = WithDefaults<Row<"locations">, "is_central" | "created_at
 export type Profile = WithDefaults<Row<"profiles">, "full_name" | "created_at" | "updated_at">;
 export type CatalogItem = WithDefaults<Row<"catalog_items">, "available_stock" | "is_active" | "is_taxable" | "updated_at">;
 export type Order = Omit<WithDefaults<Row<"orders">, "status" | "order_date" | "created_at" | "updated_at">, "pickup_approval_status"> & {
+  pickup_date?: string | null;
   pickup_approval_status: "PENDING" | "APPROVED" | "REJECTED" | null;
   weekly_invoice_id: string | null;
   pickup_confirmed_by: string | null;

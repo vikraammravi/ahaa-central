@@ -37,3 +37,23 @@ it("filters orders by number and status on the server",async()=>{
   await user.type(screen.getByLabelText("Search Order Number"),"invalid");
   expect(await screen.findByText("No matching orders")).toBeVisible();
 });
+
+it.each([390,820,1280])("shows the recorded pickup date on branch orders at %spx",async width=>{
+  mockViewport(width);
+  db.from.mockReturnValue(queryResult([{...order,pickup_date:"2026-10-14",weekly_invoices:null,pickup_requests:[]}],null,1));
+  render(<BranchInvoices/>);
+  if(width===1280){
+    expect(await screen.findByText("Oct 14, 2026")).toBeVisible();
+    expect(screen.getByRole("columnheader",{name:"Pickup Date"})).toBeVisible();
+  } else expect(await screen.findByText(/Pickup: Oct 14, 2026/)).toBeVisible();
+  expect(screen.queryByText(/8:00 AM/)).not.toBeInTheDocument();
+});
+
+it("shows an empty pickup date for orders without a pickup",async()=>{
+  mockViewport(1280);
+  db.from.mockReturnValue(queryResult([{...order,status:"READY",pickup_date:null,weekly_invoices:null,pickup_requests:[]}],null,1));
+  render(<BranchInvoices/>);
+  await screen.findByText(`#${order.order_number}`);
+  const row=screen.getByRole("row",{name:/#12/});
+  expect(row).toHaveTextContent("—");
+});

@@ -116,3 +116,61 @@ it("keeps View Notes in its own column, hides the phone text and preserves full 
 it("catering blocks ambiguous contact links",()=>{
   render(<CateringTable events={[{...event,customer_phone:"123"}]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);expect(screen.getByRole("button",{name:"No valid phone number"})).toBeDisabled();expect(screen.queryByRole("link",{name:/WhatsApp/})).not.toBeInTheDocument();
 });
+
+it.each([390,820,1280])("copies all delivery booking details at %spx",async width=>{
+  mockViewport(width);
+  const user=userEvent.setup();
+  const write=vi.spyOn(navigator.clipboard,"writeText").mockResolvedValue();
+  render(<CateringTable events={[{...deliveryCateringEvent,notes:cateringNotes}]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);
+  await user.click(screen.getByRole("button",{name:"View Notes"}));
+  await user.click(screen.getByRole("button",{name:"Copy details"}));
+  expect(write).toHaveBeenCalledTimes(1);
+  const text=write.mock.calls[0][0];
+  expect(text).toContain("Customer: Test Customer");
+  expect(text).toContain("Phone: 4165550100");
+  expect(text).toContain("Oct 12, 2026");
+  expect(text).toContain("Method: Delivery");
+  expect(text).toContain("Unit 4, 1180 Simcoe St N");
+  expect(text).toContain("CA$80.00 pending");
+  expect(text).toContain(cateringNotes);
+  expect(await screen.findByRole("status")).toHaveTextContent("Details copied.");
+  write.mockRestore();
+});
+
+it("shares booking details only after clicking Share",async()=>{
+  const user=userEvent.setup();
+  const share=vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator,"share",{configurable:true,value:share});
+  try {
+    render(<CateringTable events={[{...event,notes:cateringNotes}]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);
+    await user.click(screen.getByRole("button",{name:"View Notes"}));
+    expect(share).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button",{name:"Share"}));
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({text:expect.stringContaining(cateringNotes)}));
+    expect(share.mock.calls[0][0].text).toContain("Method: Pickup");
+    expect(share.mock.calls[0][0].text).not.toContain("Delivery address:");
+  } finally { Reflect.deleteProperty(navigator,"share"); }
+});
+
+it("falls back to copying when sharing is unavailable and reports copy failures",async()=>{
+  const user=userEvent.setup();
+  const write=vi.spyOn(navigator.clipboard,"writeText").mockRejectedValue(new Error("Denied"));
+  render(<CateringTable events={[event]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);
+  await user.click(screen.getByRole("button",{name:"View Notes"}));
+  await user.click(screen.getByRole("button",{name:"Share"}));
+  expect(write).toHaveBeenCalledOnce();
+  expect(await screen.findByRole("status")).toHaveTextContent("Unable to copy details");
+  write.mockRestore();
+});
+
+it("copies details when native sharing is unavailable",async()=>{
+  const user=userEvent.setup();
+  const write=vi.spyOn(navigator.clipboard,"writeText").mockResolvedValue();
+  render(<CateringTable events={[event]} loading={false} onEdit={vi.fn()} onDelete={vi.fn()}/>);
+  await user.click(screen.getByRole("button",{name:"View Notes"}));
+  await user.click(screen.getByRole("button",{name:"Share"}));
+  expect(write).toHaveBeenCalledOnce();
+  expect(write.mock.calls[0][0]).toContain("Customer: Test Customer");
+  expect(await screen.findByRole("status")).toHaveTextContent("Details copied.");
+  write.mockRestore();
+});
