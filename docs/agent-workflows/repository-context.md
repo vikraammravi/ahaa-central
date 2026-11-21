@@ -60,3 +60,7 @@ Git pushes, Vercel builds, environment variables and database migrations are sep
 ## Hosted scanner checkpoint: November 5, 2026
 
 Hosted AI scanning is now enabled in Production and only the staging Preview branch after approved Azure network change to All networks (key authentication/server-only key retained, resource Free F0). Staging9rchm2BiW7zZkTkuRfJwfW2GbjvY and production2ddBTgBAMgSRTAgFTcQSuWBCwvRJ Ready at9ec7f48. Synthetic hosted scans passed extraction/review/save in both; staging additionally verified reopen, private PDF bytes and duplicate usage preservation. Both fixtures archived with counters/originals retained. Live read-only quota checks enforce10/user/day +100/environment/month; stage3→4/prod0→1 attempts. Production original redirect worked but browser download timed out, so do not claim its bytes verified. No scanner source changes or migrations. See docs/purchase-receipts.md; older hosted-AI-disabled checkpoints are historical.
+
+## Deployment topology — November 20, 2026
+
+The superadmin/operations console deploys only from the `platform` branch (Vercel project `operations-platform-admin`, staging Supabase); Ahaa deploys from `main` (production) and the ahaa-central project skips `platform` builds. `staging.aahastore.com` was removed from Vercel (DNS record at the registrar still to delete). Commit `2049952` is live on the operations console; `main`/`staging` remain at `41a301c`. See `docs/environments.md`. Older references to a hosted `staging.aahastore.com` are historical.
