@@ -25,3 +25,29 @@ jobs:
         with:
           name: ui-coverage
           path: coverage/
+
+  # Catches what breaks a Vercel deploy (the tests above do not run a build).
+  # Placeholder public values only: no secrets are needed or used.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Business build (main)
+        run: npx next build --webpack
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
+      - name: Platform build (operations console)
+        run: npx next build --webpack
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          APP_SURFACE: platform
+          PLATFORM_CONSOLE_ENABLED: "true"
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
