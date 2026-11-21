@@ -21,6 +21,13 @@ export async function proxy(request: NextRequest) {
   } else if (isPlatformApi || pathname === "/superadmin" || pathname.startsWith("/superadmin/") || (pathname === "/login" && request.nextUrl.searchParams.get("next") === "/superadmin")) {
     return new NextResponse("Not found.", { status: 404 });
   }
+  // The invitation fragment is removed by the page as soon as it loads. Keep
+  // the document private and prevent referrer transmission during navigation.
+  if (pathname === "/accept-invite") {
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
+  }
   // API handlers enforce their own session/role checks. Surface separation applies first.
   if (pathname.startsWith("/api/")) return response;
   const businessMode = businessWorkspacesEnabled();

@@ -1,6 +1,9 @@
 import fs from "node:fs/promises";
 
-// Generate a transaction for manual staging execution; never connect to a database.
+// Historical: business isolation and memberships are installed in staging and production.
+// Platform onboarding SQL lives in platform_onboarding.draft.sql (see
+// prepare-platform-onboarding-rehearsal.mjs). Generates a rollback-only transaction;
+// never connects to a database.
 const migration = (await fs.readFile("supabase/planned/business_isolation.draft.sql", "utf8"))
   .replace(/^begin;\r?\n/m, "").replace(/^commit;\s*$/m, "");
 const assertions = (await fs.readFile("supabase/planned/business_isolation.tests.draft.sql", "utf8"))
@@ -10,10 +13,6 @@ const membershipMigration = (await fs.readFile("supabase/planned/workspace_membe
 const membershipAssertions = (await fs.readFile("supabase/planned/workspace_memberships.tests.draft.sql", "utf8"))
   .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
 const regression = (await fs.readFile("supabase/tests/operations_refactor.sql", "utf8"))
-  .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
-const platformMigration = (await fs.readFile("supabase/planned/platform_console.draft.sql", "utf8"))
-  .replace(/^begin;\r?\n/m, "").replace(/^commit;\s*$/m, "");
-const platformAssertions = (await fs.readFile("supabase/planned/platform_console.tests.draft.sql", "utf8"))
   .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
 const privilegeAssertions = (await fs.readFile("supabase/planned/isolation_privilege_audit.tests.draft.sql", "utf8"))
   .replace(/^begin;\r?\n/m, "").replace(/^rollback;\s*$/m, "");
@@ -38,6 +37,6 @@ const selectAhaa = "select set_config('request.headers',jsonb_build_object('x-bu
 await fs.mkdir(".local-backups/saas", { recursive: true });
 await fs.writeFile(".local-backups/saas/isolation-rehearsal.sql", [
   "-- STAGING ONLY. Entire migration, privilege changes and fixtures roll back.",
-  "begin;", baseline, migration, membershipMigration, platformMigration, unchanged, privilegeAssertions, assertions, membershipAssertions, platformAssertions, selectAhaa, regression, "rollback;",
+  "begin;", baseline, migration, membershipMigration, unchanged, privilegeAssertions, assertions, membershipAssertions, selectAhaa, regression, "rollback;",
 ].join("\n"));
 console.log("Prepared .local-backups/saas/isolation-rehearsal.sql (rollback-only; no database connection).");

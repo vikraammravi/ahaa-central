@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,9 +15,26 @@ import { chooseWorkspace, fetchWorkspaceChoices } from "../data";
 
 export default function WorkspaceChooser() {
   const router = useRouter();
-  const list = useAsyncData(fetchWorkspaceChoices);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
+  // Someone with exactly one available business goes straight in; the chooser is for several.
+  const autoOpened = useRef(false);
+  const load = useCallback(async (signal: AbortSignal) => {
+    const choices = await fetchWorkspaceChoices(signal);
+    const [only] = choices;
+    if (!autoOpened.current && choices.length === 1 && only.status === "active" && only.business_status === "active" && only.isolation_ready) {
+      autoOpened.current = true;
+      try {
+        const workspace = await chooseWorkspace(only.business_id);
+        router.replace(userHome(workspace.profile.role)); router.refresh();
+      } catch (error) {
+        // Fall back to the chooser with the reason; never hide the list.
+        setError(error instanceof Error ? error.message : "Unable to open workspace.");
+      }
+    }
+    return choices;
+  }, [router]);
+  const list = useAsyncData(load);
   async function open(id: string) {
     setBusy(id); setError("");
     try { const workspace = await chooseWorkspace(id); router.replace(userHome(workspace.profile.role)); router.refresh(); }

@@ -6,9 +6,16 @@ One repository currently builds two deployments. This is route/API separation in
 | --- | --- | --- |
 | APP_SURFACE | business (default if absent) | platform |
 | PLATFORM_CONSOLE_ENABLED | false / absent | true |
-| PLATFORM_BUSINESS_REGISTRATION_ENABLED | false / absent | false |
-| NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED | unchanged; currently off | false |
-| Database | Existing environment-specific connection | Staging only |
+| PLATFORM_BUSINESS_REGISTRATION_ENABLED | false / absent | false until the onboarding package is installed |
+| PLATFORM_OWNER_INVITATIONS_ENABLED | absent | false until installed |
+| PLATFORM_OWNER_ASSIGNMENT_ENABLED | absent | false until installed |
+| PLATFORM_BUSINESS_ACTIVATION_ENABLED | absent | false until installed |
+| BUSINESS_APP_ORIGIN | absent | the business app origin invitees use (https; http://localhost only outside production) |
+| BUSINESS_OWNER_ACCEPTANCE_ENABLED | false until installed (needs workspace mode and the server-only Supabase secret key) | absent |
+| NEXT_PUBLIC_BUSINESS_WORKSPACES_ENABLED | per environment | false |
+| Database | Existing environment-specific connection | Staging only (see below) |
+
+Planned (user decision, November 20, 2026): keep this staging console for testing and add a second platform project for production, connected to the production database (pool model: Ahaa and new businesses share it, separated by `business_id`). It is not created yet. Invitation links must point at a business app origin that serves `/accept-invite` with `BUSINESS_OWNER_ACCEPTANCE_ENABLED=true` against the same database.
 
 Platform project: `operations-platform-admin`, importing the `staging` branch. Its default Vercel domain is used initially. Its Vercel Production environment is the stable deployment of this test platform project; it still connects to the staging database, not Ahaa production.
 

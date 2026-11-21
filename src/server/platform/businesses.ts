@@ -2,7 +2,6 @@ import "server-only";
 import { hasSameOrigin } from "@/lib/request-origin";
 import { PlatformAccessError, platformSession } from "./access";
 import { validBusinessId } from "@/features/workspaces/context";
-import { createSupabaseAdmin } from "@/lib/supabase/admin";
 
 const headers = { "Cache-Control": "private, no-store" };
 function failure(error: unknown) {
@@ -30,16 +29,31 @@ async function requestBody(request: Request): Promise<Record<string, unknown>> {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new PlatformAccessError("Invalid business details.", 400);
   return input as Record<string, unknown>;
 }
+type InvitationSummary = { business_id: string; name: string; email: string; state: string; created_at: string; expires_at: string; completed_at: string | null };
+// Latest invitation per business, without secrets. Optional: the directory still loads if it is unavailable.
+async function invitationSummaries(session: Awaited<ReturnType<typeof platformSession>>, businessIds: string[]): Promise<Map<string, InvitationSummary> | null> {
+  if (process.env.PLATFORM_BUSINESS_REGISTRATION_ENABLED !== "true" || process.env.PLATFORM_OWNER_INVITATIONS_ENABLED !== "true" || !businessIds.length) return new Map();
+  try {
+    const result = await session.rpc("platform_owner_invitation_summary", { p_business_ids: businessIds });
+    if (result.error || !Array.isArray(result.data)) return null;
+    return new Map((result.data as InvitationSummary[]).map(row => [row.business_id, row]));
+  } catch { return null; }
+}
 export async function listBusinesses() {
   try {
     const session = await platformSession();
     const { data, error } = await session.from("businesses").select("id,name,slug,status,isolation_ready,created_at,business_memberships(role)").order("name").limit(100);
     if (error) throw error;
-    const businesses = (data ?? []).map(({ business_memberships, ...business }) => ({
-      ...business,
-      owner_assigned: Array.isArray(business_memberships) && business_memberships.some(member => member.role === "CENTRAL_ADMIN"),
-    }));
-    return Response.json({ businesses }, { headers });
+    const invitations = await invitationSummaries(session, (data ?? []).map(business => business.id));
+    const businesses = (data ?? []).map(({ business_memberships, ...business }) => {
+      const invitation = invitations?.get(business.id);
+      return {
+        ...business,
+        owner_assigned: Array.isArray(business_memberships) && business_memberships.some(member => member.role === "CENTRAL_ADMIN"),
+        invitation: invitation ? { name: invitation.name, email: invitation.email, state: invitation.state, created_at: invitation.created_at, expires_at: invitation.expires_at, completed_at: invitation.completed_at } : null,
+      };
+    });
+    return Response.json({ businesses, invitationsUnavailable: invitations === null }, { headers });
   } catch (error) { return failure(error); }
 }
 export async function createBusiness(request: Request) {
@@ -80,32 +94,20 @@ export async function assignInitialOwner(request: Request, context: { params: Pr
   } catch (error) { return failure(error); }
 }
 
-export async function createInitialOwner(request: Request, context: { params: Promise<{ id: string }> }) {
+export async function activateBusiness(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     if (!hasSameOrigin(request)) throw new PlatformAccessError("Request not allowed.", 403);
     const session = await platformSession();
-    if (process.env.PLATFORM_BUSINESS_REGISTRATION_ENABLED !== "true" || process.env.PLATFORM_NEW_OWNER_CREATION_ENABLED !== "true") throw new PlatformAccessError("New account setup is not enabled yet.", 409);
+    if (process.env.PLATFORM_BUSINESS_REGISTRATION_ENABLED !== "true" || process.env.PLATFORM_BUSINESS_ACTIVATION_ENABLED !== "true") throw new PlatformAccessError("Business activation is not enabled yet.", 409);
     const { id } = await context.params;
-    const values = await requestBody(request);
-    const email = typeof values.email === "string" ? values.email.trim().toLowerCase() : "";
-    const name = typeof values.name === "string" ? values.name.trim() : "";
-    const password = typeof values.password === "string" ? values.password : "";
-    if (!validBusinessId(id) || !name || name.length > 200 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12 || password.length > 128) throw new PlatformAccessError("Enter a name, valid email and a password of 12–128 characters.", 400);
-    const actor = await session.auth.getUser();
-    if (actor.error || !actor.data.user) throw new PlatformAccessError("Sign in to continue.", 401);
-    const ready = await session.rpc("platform_can_create_owner", { p_business_id: id });
-    if (ready.error || ready.data !== true) throw new PlatformAccessError("This business is not ready for new account setup.", 409);
-    let admin: ReturnType<typeof createSupabaseAdmin>;
-    try { admin = createSupabaseAdmin(); } catch { throw new PlatformAccessError("Account creation is not configured.", 503); }
-    let created: Awaited<ReturnType<typeof admin.auth.admin.createUser>>;
-    try { created = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: name } }); }
-    catch { throw new PlatformAccessError("Account creation could not be confirmed. Review the account before retrying.", 503); }
-    if (created.error || !created.data.user) throw new PlatformAccessError("Account creation could not be confirmed. Check whether the email already has an account before retrying.", 409);
-    let assigned: Awaited<ReturnType<typeof admin.rpc>>;
-    try { assigned = await admin.rpc("platform_assign_new_owner", { p_business_id: id, p_actor_id: actor.data.user.id, p_user_id: created.data.user.id, p_name: name }); }
-    catch { throw new PlatformAccessError("Account setup could not be confirmed. Review the account before retrying; the login has been preserved.", 503); }
-    // Never delete a login after an uncertain remote response: assignment may have committed.
-    if (assigned.error || assigned.data !== true) throw new PlatformAccessError("Account setup could not be confirmed. Review the account before retrying; the login has been preserved.", 503);
-    return Response.json({ assigned: true }, { status: 201, headers });
+    if (!validBusinessId(id)) throw new PlatformAccessError("Choose a valid business.", 400);
+    const result = await session.rpc("activate_platform_business", { p_business_id: id });
+    if (result.error) {
+      if (result.error.code === "P0002") throw new PlatformAccessError("Business not found.", 404);
+      if (result.error.code === "55000") throw new PlatformAccessError("This business is not ready for activation. Check the assigned admin and isolation setup.", 409);
+      if (result.error.code === "42501") throw new PlatformAccessError("Platform access is required.", 403);
+      throw result.error;
+    }
+    return Response.json({ business: result.data }, { headers });
   } catch (error) { return failure(error); }
 }

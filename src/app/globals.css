@@ -146,3 +146,44 @@ h1, h2, .heading-tight {
     @apply font-sans;
   }
 }
+
+/*
+ * Platform (superadmin) surface: its own neutral SaaS palette, applied only when
+ * APP_SURFACE=platform (class set on <html> in the root layout). Ahaa is unaffected.
+ */
+.platform-surface {
+  --background: #F6F7F9;
+  --surface: #FFFFFF;
+  --surface-warm: #FFFFFF;
+  --foreground: #0F172A;
+  --saffron: #4F46E5;
+  --saffron-hover: #4338CA;
+  --saffron-soft: #EEF2FF;
+  --forest: #0F172A;
+  --forest-hover: #020617;
+  --forest-soft: #F1F5F9;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  --primary: #4F46E5;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --accent: #EEF2FF;
+  --accent-foreground: #3730A3;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #6366F1;
+  --radius: 0.625rem;
+  --sidebar: #0B1120;
+  --sidebar-foreground: #CBD5E1;
+  --sidebar-primary: #818CF8;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #1E293B;
+  --sidebar-ring: #6366F1;
+}

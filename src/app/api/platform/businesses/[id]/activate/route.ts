@@ -1,0 +1,1 @@
+export { activateBusiness as POST } from "@/server/platform/businesses";

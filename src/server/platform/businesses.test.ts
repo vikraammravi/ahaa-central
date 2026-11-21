@@ -1,63 +1,47 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { db, queryResult } from "@tests/mocks/supabase";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { assignInitialOwner, createBusiness, createInitialOwner, listBusinesses } from "./businesses";
+import * as businessModule from "./businesses";
+import { activateBusiness, assignInitialOwner, createBusiness, listBusinesses } from "./businesses";
+import { existsSync } from "node:fs";
+import { exampleSummaryRow, invitationBusinessId } from "@tests/mocks/platform-invitations";
 import { businessId } from "@tests/mocks/workspaces";
 import { platformBusinesses } from "@tests/mocks/platform";
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServer: vi.fn(() => db) }));
-const privileged = vi.hoisted(() => ({ rpc: vi.fn(), auth: { admin: { createUser: vi.fn() } } }));
-vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdmin: vi.fn(() => privileged) }));
 beforeEach(() => {
   vi.stubEnv("APP_SURFACE", "platform");
   vi.stubEnv("PLATFORM_CONSOLE_ENABLED", "true");
   vi.stubEnv("PLATFORM_BUSINESS_REGISTRATION_ENABLED", "true");
   vi.stubEnv("PLATFORM_OWNER_ASSIGNMENT_ENABLED", "true");
-  vi.stubEnv("PLATFORM_NEW_OWNER_CREATION_ENABLED", "true");
+  vi.stubEnv("PLATFORM_BUSINESS_ACTIVATION_ENABLED", "true");
+  vi.stubEnv("PLATFORM_OWNER_INVITATIONS_ENABLED", "false");
   db.auth.getUser.mockResolvedValue({ data: { user: { id: "platform-user" } }, error: null });
   db.rpc.mockImplementation((name: string) => queryResult(name === "platform_is_administrator" ? true : { id: "new-business", status: "provisioning" }));
   db.from.mockReturnValue(queryResult([]));
-  privileged.auth.admin.createUser.mockResolvedValue({ data: { user: { id: "new-user" } }, error: null });
-  privileged.rpc.mockResolvedValue({ data: true, error: null });
 });
-it("creates a first admin only after the platform and isolation preflight checks", async () => {
-  db.rpc.mockReturnValue(queryResult(true));
-  const response = await createInitialOwner(request({ name: " Customer Admin ", email: "Owner@example.invalid", password: "temporary-pass-123" }), { params: Promise.resolve({ id: businessId }) });
-  expect(response.status).toBe(201);
-  expect(db.rpc).toHaveBeenCalledWith("platform_can_create_owner", { p_business_id: businessId });
-  expect(privileged.rpc).toHaveBeenCalledWith("platform_assign_new_owner", { p_business_id: businessId, p_actor_id: "platform-user", p_user_id: "new-user", p_name: "Customer Admin" });
-  expect(JSON.stringify(await response.json())).not.toContain("temporary-pass-123");
+it("activates only through the authorized business activation operation", async () => {
+  const response = await activateBusiness(request({}), { params: Promise.resolve({ id: businessId }) });
+  expect(response.status).toBe(200);
+  expect(response.headers.get("cache-control")).toContain("no-store");
+  expect(db.rpc).toHaveBeenCalledWith("activate_platform_business", { p_business_id: businessId });
+  expect(db.from).not.toHaveBeenCalled();
 });
-it("never creates an account when isolation is not ready", async () => {
-  db.rpc.mockImplementation((name: string) => queryResult(name === "platform_is_administrator"));
-  const response = await createInitialOwner(request({ name: "Owner", email: "owner@example.invalid", password: "temporary-pass-123" }), { params: Promise.resolve({ id: businessId }) });
-  expect(response.status).toBe(409);
-  expect(privileged.auth.admin.createUser).not.toHaveBeenCalled();
-});
-it("rejects untrusted requests and disabled account creation before touching Auth", async () => {
+it("does not activate for untrusted origins, invalid IDs, disabled activation, or non-platform users", async () => {
   const context = { params: Promise.resolve({ id: businessId }) };
-  const input = { name: "Owner", email: "owner@example.invalid", password: "temporary-pass-123" };
-  expect((await createInitialOwner(request(input, "https://other.test"), context)).status).toBe(403);
-  vi.stubEnv("PLATFORM_NEW_OWNER_CREATION_ENABLED", "false");
-  expect((await createInitialOwner(request(input), context)).status).toBe(409);
-  expect(privileged.auth.admin.createUser).not.toHaveBeenCalled();
+  expect((await activateBusiness(request({}, "https://other.test"), context)).status).toBe(403);
+  expect((await activateBusiness(request({}), { params: Promise.resolve({ id: "../admin" }) })).status).toBe(400);
+  vi.stubEnv("PLATFORM_BUSINESS_ACTIVATION_ENABLED", "false");
+  expect((await activateBusiness(request({}), context)).status).toBe(409);
+  vi.stubEnv("PLATFORM_BUSINESS_ACTIVATION_ENABLED", "true");
+  db.rpc.mockReturnValue(queryResult(false));
+  expect((await activateBusiness(request({}), context)).status).toBe(403);
+  expect(db.rpc.mock.calls.some(([name]) => name === "activate_platform_business")).toBe(false);
 });
-it("reports uncertain creation outcomes without exposing secrets", async () => {
-  db.rpc.mockReturnValue(queryResult(true));
-  privileged.auth.admin.createUser.mockRejectedValue(new Error("private network detail"));
-  const response = await createInitialOwner(request({ name: "Owner", email: "owner@example.invalid", password: "temporary-pass-123" }), { params: Promise.resolve({ id: businessId }) });
-  expect(response.status).toBe(503);
-  const result = JSON.stringify(await response.json());
-  expect(result).toContain("Review the account before retrying");
-  expect(result).not.toContain("temporary-pass-123");
-  expect(result).not.toContain("private network detail");
-  expect(privileged.rpc).not.toHaveBeenCalled();
-});
-it("preserves an account for review when assignment cannot be confirmed", async () => {
-  db.rpc.mockReturnValue(queryResult(true));
-  privileged.rpc.mockRejectedValue(new Error("network error"));
-  const response = await createInitialOwner(request({ name: "Owner", email: "owner@example.invalid", password: "temporary-pass-123" }), { params: Promise.resolve({ id: businessId }) });
-  expect(response.status).toBe(503);
-  expect((await response.json()).error).toMatch(/preserved/);
+it.each([["P0002", 404], ["55000", 409], ["42501", 403]])("returns a safe response when activation fails with %s", async (code, status) => {
+  db.rpc.mockImplementation((name: string) => name === "platform_is_administrator" ? queryResult(true) : queryResult(null, { message: "private database detail", code } as { message: string }));
+  const response = await activateBusiness(request({}), { params: Promise.resolve({ id: businessId }) });
+  expect(response.status).toBe(status);
+  expect(JSON.stringify(await response.json())).not.toContain("private database detail");
 });
 it("can enable the dashboard while registration remains disabled", async () => {
   vi.stubEnv("PLATFORM_BUSINESS_REGISTRATION_ENABLED", "false");
@@ -152,4 +136,67 @@ it.each([
   const response = await assignInitialOwner(request({ email: "owner@example.invalid" }), { params: Promise.resolve({ id: businessId }) });
   expect(response.status).toBe(status);
   expect(await response.json()).toEqual({ error: message });
+});
+const directoryRow = { id: invitationBusinessId, name: "Example Business", slug: "example-business", status: "provisioning", isolation_ready: false, created_at: "2026-11-02T00:00:00Z", business_memberships: [] };
+const listRpcNames = () => db.rpc.mock.calls.map(([name]) => name);
+it("does not read invitation summaries unless registration and invitations are both enabled", async () => {
+  db.from.mockReturnValue(queryResult([directoryRow]));
+  for (const [registration, invitations] of [["true", "false"], ["false", "true"]]) {
+    vi.stubEnv("PLATFORM_BUSINESS_REGISTRATION_ENABLED", registration);
+    vi.stubEnv("PLATFORM_OWNER_INVITATIONS_ENABLED", invitations);
+    const result = await (await listBusinesses()).json();
+    expect(result).toEqual({ businesses: [expect.objectContaining({ id: invitationBusinessId, owner_assigned: false, invitation: null })], invitationsUnavailable: false });
+  }
+  expect(listRpcNames()).not.toContain("platform_owner_invitation_summary");
+});
+it("attaches the latest invitation per business without any token material", async () => {
+  vi.stubEnv("PLATFORM_OWNER_INVITATIONS_ENABLED", "true");
+  const other = { ...directoryRow, id: businessId, slug: "other" };
+  db.from.mockReturnValue(queryResult([directoryRow, other]));
+  db.rpc.mockImplementation((name: string) => queryResult(name === "platform_is_administrator" ? true : [exampleSummaryRow]));
+  const response = await listBusinesses();
+  const text = await response.text();
+  const result = JSON.parse(text);
+  expect(db.rpc).toHaveBeenCalledWith("platform_owner_invitation_summary", { p_business_ids: [invitationBusinessId, businessId] });
+  expect(result.invitationsUnavailable).toBe(false);
+  const { name, email, state, created_at, expires_at, completed_at } = exampleSummaryRow;
+  const visible = { name, email, state, created_at, expires_at, completed_at };
+  expect(result.businesses[0].invitation).toEqual(visible);
+  expect(result.businesses[1].invitation).toBeNull();
+  expect(text).not.toContain("token");
+  expect(text).not.toContain("never-returned");
+});
+it("ignores summary rows for businesses outside the listed page", async () => {
+  vi.stubEnv("PLATFORM_OWNER_INVITATIONS_ENABLED", "true");
+  db.from.mockReturnValue(queryResult([{ ...directoryRow, id: businessId }]));
+  db.rpc.mockImplementation((name: string) => queryResult(name === "platform_is_administrator" ? true : [exampleSummaryRow]));
+  const result = await (await listBusinesses()).json();
+  expect(result.businesses).toEqual([expect.objectContaining({ id: businessId, invitation: null })]);
+  expect(JSON.stringify(result)).not.toContain(exampleSummaryRow.email);
+});
+it("skips the summary for an empty directory", async () => {
+  vi.stubEnv("PLATFORM_OWNER_INVITATIONS_ENABLED", "true");
+  db.from.mockReturnValue(queryResult([]));
+  expect(await (await listBusinesses()).json()).toEqual({ businesses: [], invitationsUnavailable: false });
+  expect(listRpcNames()).not.toContain("platform_owner_invitation_summary");
+});
+it.each([
+  ["returns an error", () => queryResult(null, { message: "private database detail" })],
+  ["returns a non-list", () => queryResult({ unexpected: true })],
+  ["throws", () => { throw new Error("private network detail"); }],
+])("still loads the directory and flags invitations unavailable when the summary %s", async (_label, summary) => {
+  vi.stubEnv("PLATFORM_OWNER_INVITATIONS_ENABLED", "true");
+  db.from.mockReturnValue(queryResult([directoryRow]));
+  db.rpc.mockImplementation((name: string) => name === "platform_is_administrator" ? queryResult(true) : summary());
+  const response = await listBusinesses();
+  expect(response.status).toBe(200);
+  const text = await response.text();
+  const result = JSON.parse(text);
+  expect(result.invitationsUnavailable).toBe(true);
+  expect(result.businesses).toEqual([expect.objectContaining({ id: invitationBusinessId, invitation: null })]);
+  expect(text).not.toContain("private");
+});
+it("no longer offers temporary-password owner creation", () => {
+  expect(businessModule).not.toHaveProperty("createInitialOwner");
+  expect(existsSync("src/app/api/platform/businesses/[id]/owner/new/route.ts")).toBe(false);
 });

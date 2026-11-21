@@ -8,6 +8,7 @@ export function AuthShell({
   footer,
   showBrand = true,
   brandName = "Aaha Central · Truly South",
+  brand,
 }: {
   title?: string;
   subtitle?: string;
@@ -15,6 +16,8 @@ export function AuthShell({
   footer?: ReactNode;
   showBrand?: boolean;
   brandName?: string;
+  /** Replaces the default (Ahaa) logo, e.g. on the platform sign-in. */
+  brand?: ReactNode;
 }) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -22,7 +25,7 @@ export function AuthShell({
         <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-6 sm:p-8 shadow-sm">
           {showBrand && (
             <div className="flex justify-center mb-6">
-              <Logo variant="full" size="lg" href="/" />
+              {brand ?? <Logo variant="full" size="lg" href="/" />}
             </div>
           )}
           {(title || subtitle) && (

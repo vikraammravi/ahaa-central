@@ -93,3 +93,20 @@ it("does not expose business entry on the platform deployment", async () => {
   vi.stubEnv("APP_SURFACE", "platform");
   expect((await proxy(new NextRequest("https://app.test/b/test-business"))).status).toBe(404);
 });
+it("keeps invitation acceptance on the business deployment and protects the page from caching and referrers", async () => {
+  vi.stubEnv("APP_SURFACE", "business");
+  db.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+  const response = await proxy(new NextRequest("https://app.test/accept-invite"));
+  expect(response.status).toBe(200);
+  expect(response.headers.get("cache-control")).toContain("no-store");
+  expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  expect(response.headers.get("location")).toBeNull();
+  expect(db.auth.getUser).not.toHaveBeenCalled();
+});
+it("rejects invitation acceptance routes on the platform deployment", async () => {
+  vi.stubEnv("APP_SURFACE", "platform");
+  for (const path of ["/accept-invite", "/api/onboarding/accept"]) {
+    expect((await proxy(new NextRequest(`https://app.test${path}`))).status).toBe(404);
+  }
+  expect(db.auth.getUser).not.toHaveBeenCalled();
+});

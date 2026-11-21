@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState, FormEvent } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { PlatformBrand } from "@/features/platform/components/PlatformBrand";
+import { PLATFORM_NAME } from "@/features/platform/brand";
 import { Banner } from "@/components/shared/Banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,8 +67,8 @@ function LoginInner() {
     <AuthShell
       title={next === "/superadmin" ? "Superadmin sign in" : "Welcome back"}
       subtitle={next === "/superadmin" ? "Sign in to manage businesses on the platform." : "Sign in to keep the kitchen moving."}
-      showBrand={next !== "/superadmin"}
-      brandName={next === "/superadmin" ? "Platform administration" : undefined}
+      brand={next === "/superadmin" ? <PlatformBrand subtitle="Platform admin" /> : undefined}
+      brandName={next === "/superadmin" ? PLATFORM_NAME : undefined}
     >
       {(activated || reset) && (
         <Banner tone="success" className="mb-4">
@@ -91,7 +93,7 @@ function LoginInner() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@aaha.com"
+            placeholder={next === "/superadmin" ? "you@company.com" : "you@aaha.com"}
             required
             autoComplete="email"
           />
