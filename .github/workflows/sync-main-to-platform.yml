@@ -1,0 +1,46 @@
+name: Sync main into platform
+# main = Ahaa business app, platform = operations/superadmin console.
+# Whenever main changes, open (or refresh) a pull request that brings it into
+# platform, so the two branches never drift apart. A person reviews and merges it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write
+concurrency:
+  group: sync-main-to-platform
+  cancel-in-progress: false
+jobs:
+  open-sync-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Open or refresh the main → platform pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch origin platform main
+          if git merge-base --is-ancestor origin/main origin/platform; then
+            echo "platform already contains main; nothing to sync."
+            exit 0
+          fi
+          behind=$(git rev-list --count origin/platform..origin/main)
+          existing=$(gh pr list --base platform --head main --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh pr comment "$existing" --body "main moved to ${GITHUB_SHA::7}; platform is now ${behind} commit(s) behind."
+            echo "Updated existing pull request #$existing"
+            exit 0
+          fi
+          gh pr create --base platform --head main \
+            --title "Sync main into platform" \
+            --body "Automated: platform is ${behind} commit(s) behind main.
+
+          Merge this so the operations console has Ahaa's latest fixes and shared code.
+          - Resolve any conflicts in this pull request (not on main).
+          - Database migrations are shared: confirm each new migration in this sync is applied where needed.
+          - Merging deploys the operations console (Vercel project operations-platform-admin)."
