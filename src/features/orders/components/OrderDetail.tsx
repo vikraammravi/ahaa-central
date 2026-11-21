@@ -13,6 +13,7 @@ import { Banner } from "@/components/shared/Banner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/Spinner";
 import { saveOrderFulfillment } from "@/features/orders/fulfillment-data";
+import { updateOrderStatus } from "@/features/orders/admin-data";
 import { supabase } from "@/lib/supabase/client";
 import {
   ORDER_STATUS_BADGE,
@@ -141,12 +142,12 @@ export function OrderDetail({
     if (!order) return;
     const next = nextAdminStatus(order.status);
     if (!next) return;
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: next })
-      .eq("id", order.id);
-    if (error) setError(error.message);
-    else load();
+    try {
+      await updateOrderStatus(order.id, next);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update status");
+    }
   }
 
   async function branchPickup() {
@@ -176,12 +177,12 @@ export function OrderDetail({
 
   async function cancelOrder() {
     if (!order) return;
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: "CANCELLED" })
-      .eq("id", order.id);
-    if (error) setError(error.message);
-    else load();
+    try {
+      await updateOrderStatus(order.id, "CANCELLED");
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to cancel order");
+    }
   }
 
   if (loading) {

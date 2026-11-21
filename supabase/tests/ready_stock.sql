@@ -20,7 +20,7 @@ begin
     raise exception 'An active admin and branch location are required for testing.';
   end if;
   insert into public.catalog_items (name, category, unit_type, default_price, available_stock, low_stock_threshold)
-  values ('Stock test (rolled back)', 'Pantry', 'Box', 1, 10, 3) returning id into product;
+  values ('Stock test (rolled back)', (select name from public.catalog_categories where is_active order by name limit 1), (select name from public.catalog_units where is_active order by name limit 1), 1, 10, 3) returning id into product;
   insert into public.orders (location_id, order_number) values (location, -2147483647) returning id into order_id;
   insert into public.order_lines (order_id, item_id, quantity, fulfilled_quantity, unit_price, is_taxable, line_total)
   values (order_id, product, 5, 3, 1, false, 5);
@@ -44,6 +44,7 @@ begin
   insert into public.orders (location_id, order_number) values (location, -2147483646) returning id into second_order;
   insert into public.order_lines (order_id, item_id, quantity, fulfilled_quantity, unit_price, is_taxable, line_total)
   values (second_order, product, 8, 8, 1, false, 8);
+  update public.orders set status = 'PREPARING' where id = second_order;
   failed := false;
   begin
     update public.orders set status = 'READY' where id = second_order;
@@ -52,7 +53,7 @@ begin
   if not failed then raise exception 'Insufficient stock was accepted'; end if;
   select available_stock into stock from public.catalog_items where id = product;
   if stock <> 7 then raise exception 'Failed Ready changed stock'; end if;
-  if not exists (select 1 from public.orders where id = second_order and status = 'SUBMITTED' and stock_deducted_at is null) then
+  if not exists (select 1 from public.orders where id = second_order and status = 'PREPARING' and stock_deducted_at is null) then
     raise exception 'Failed Ready changed the order status or deduction marker';
   end if;
 end;

@@ -19,3 +19,10 @@ export async function fetchOrders(filters: OrderFilters, signal: AbortSignal): P
   if (filters.page > lastPage(result.count ?? 0)) return fetchOrders({ ...filters, page: lastPage(result.count ?? 0) }, signal);
   return { rows: (result.data ?? []) as OrderWithLocation[], count: result.count ?? 0, page: filters.page };
 }
+
+// Single browser path for status changes. Database triggers enforce stock
+// deduction on Ready, pickup approval and role permissions.
+export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
+  const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+  if (error) throw new Error(error.message);
+}

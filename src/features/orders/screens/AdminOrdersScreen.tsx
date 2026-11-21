@@ -9,14 +9,13 @@ import { PickupApprovalBadge } from "@/features/orders/components/PickupApproval
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Banner } from "@/components/shared/Banner";
-import { supabase } from "@/lib/supabase/client";
 import {
   ORDER_STATUS_BADGE,
   ORDER_STATUS_LABEL,
   nextAdminStatus,
 } from "@/features/orders/domain";
 import type { OrderStatus } from "@/lib/supabase/types";
-import { fetchOrders } from "@/features/orders/admin-data";
+import { fetchOrders, updateOrderStatus } from "@/features/orders/admin-data";
 import { fetchLocations } from "@/features/locations/data";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { type OrderWithLocation } from "@/features/orders/admin-data";
@@ -48,12 +47,12 @@ export default function AdminOrdersPage() {
       router.push(`/admin/orders/${id}?pickup=1`);
       return;
     }
-    const { error } = await supabase
-      .from("orders")
-      .update({ status })
-      .eq("id", id);
-    if (error) setError(error.message);
-    else await refresh(true);
+    try {
+      await updateOrderStatus(id, status);
+      await refresh(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update status");
+    }
   }
 
   const statusControl=(r:OrderWithLocation)=>r.status === "COMPLETED" ? null : (
