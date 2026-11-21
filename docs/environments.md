@@ -5,10 +5,10 @@ Two Vercel projects build this repository, kept separate by branch (updated Nove
 | Project | Deployment | Branch | Supabase | Domain |
 | --- | --- | --- | --- | --- |
 | ahaa-central (Ahaa business) | Production | main | znfedioxsrvvjtfnpszw | https://www.aahastore.com |
-| ahaa-central (Ahaa business) | Preview | staging and feature branches (never `platform`) | rvldwakcwxbnqyuttzkn | Vercel preview URLs only |
+| ahaa-central (Ahaa business) | Preview | feature branches (never `platform`) | rvldwakcwxbnqyuttzkn | Vercel preview URLs only |
 | operations-platform-admin (superadmin / operations) | Production | platform | rvldwakcwxbnqyuttzkn | https://operations-platform-admin.vercel.app |
 
-- `staging.aahastore.com` was removed from the ahaa-central project on November 20, 2026 (user decision). Its DNS record still exists at the registrar (nameservers `*.dns-parking.com`) and now resolves to a Vercel 404; delete it there. The `staging` branch and the staging Supabase project remain.
+- `staging.aahastore.com` was removed from the ahaa-central project on November 20, 2026 (user decision). Its DNS record still exists at the registrar (nameservers `*.dns-parking.com`) and now resolves to a Vercel 404; delete it there. The `staging` branch was deleted the same day (it matched `main`); the staging Supabase project remains for previews, the operations console and local development. See `docs/release-process.md` (added via `chore/release-automation`).
 - ahaa-central's Ignored Build Step is a custom command that skips only the `platform` branch: `if [ "$VERCEL_GIT_COMMIT_REF" = "platform" ]; then exit 0; else exit 1; fi`. Superadmin code ships only through `platform`.
 - Without a hosted Ahaa staging site, check Ahaa changes locally against the staging database (or a Vercel preview URL) before promoting `main`.
 
